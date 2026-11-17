@@ -378,7 +378,8 @@ second function that computes its size.
 - Text is exactly what `textBounds` gives. `baseline` is the first text's
   alphabetic baseline y, or `null` when the drawing has no text or a rotation
   or skew turns it.
-- A placed picture is its declared `width × height`. Backgrounds, lights and
+- A placed picture is its box: `width × height` from its origin, or for one
+  that sizes itself, the box around what it paints. Backgrounds, lights and
   `erase` shapes add nothing; a clip cuts the box.
 - Measuring does not return the drawing: return it as well, or testing mode
   warns that it was not returned.
@@ -425,31 +426,43 @@ drawn in a few poses, a sign. A picture's drawing is reused across frames, so
 a still part costs nothing to keep.
 
 ```ts
+// Drawn around the middle of its floor; it sizes itself.
 const STALL = (v: View, colour: string): Picture =>
-  v.picture({ key: "stall", width: 120, height: 90, deps: [colour] }, () => [
-    v.rect(0, 30, 120, 60, { fill: colour }),
-    v.polygon([[0, 30], [60, 0], [120, 30]], { fill: "#7c2d12" }),
+  v.picture({ key: "stall", deps: [colour] }, () => [
+    v.rect(-60, -60, 120, 60, { fill: colour }),
+    v.polygon([[-60, -60], [0, -90], [60, -60]], { fill: "#7c2d12" }),
   ]);
 
 export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   const red = STALL(v, "#b91c1c");
   return [
-    v.place(red, 20, 200),
-    v.place(STALL(v, "#1d4ed8"), 160, 200),          // a second version
-    v.at({ translate: [300, 200], scale: 0.5 }, v.place(red, 0, 0)),
+    v.place(red, 80, 290),                           // floor's middle at (80, 290)
+    v.place(STALL(v, "#1d4ed8"), 220, 290),          // a second version
+    v.at({ translate: [360, 290], scale: 0.5 }, v.place(red, 0, 0)),
   ];
 }
 ```
 
-- `v.picture({ key, width, height, deps?, paper? }, body)` returns a
+- `v.picture({ key, width?, height?, deps?, paper? }, body)` returns a
   `Picture`. `body` returns the picture's drawing in the picture's own
-  coordinates, 0..width and 0..height. `v.place(picture, x, y, { opacity?,
-  blend?, erase?, material?, tint? }?)` puts its top-left at (x, y), under the
-  scopes around it. `tint` is a colour the picture's colours move toward, by
+  coordinates. `v.place(picture, x, y, { opacity?, blend?, erase?,
+  material?, tint? }?)` puts the body's (0, 0) at (x, y), under the scopes
+  around it.
+- **Size.** Leave `width` and `height` out and the picture sizes itself:
+  its box is the box around everything its drawing paints, strokes, brush
+  marks, blur, glow and shadow included. Draw it around a point that is
+  convenient to place by (a tree's base at (0, 0), placed at the base), not
+  inside a box you compute. `picture.x`, `picture.y`, `picture.width` and
+  `picture.height` give its box in its own coordinates (`x`, `y` are often
+  negative). Its body has no size to read: `v.width`, `v.height`,
+  `v.background` and `keepInside` text are errors there. Give a size when the
+  body needs one (a background, a full-canvas layer) or the picture should
+  take a fixed room in a layout: the box is then 0..width × 0..height.
+  Either way the size clips nothing: drawing outside the box is kept. `tint` is a colour the picture's colours move toward, by
   the colour's alpha: `tint: "oklch(0.85 0.04 240 / 0.4)"` takes a far tree
   40% of the way to haze. It is applied as the kept image is laid down, so
   it makes no new version.
-- A **version** is the key, the size, the `paper` and the values of `deps`. `body` runs
+- A **version** is the key, the size (or that it has none), the `paper` and the values of `deps`. `body` runs
   only when the version is new, and a new version is drawn again at every
   scale it is placed at: changing `deps` costs a full draw (see
   [BRUSHES.md](./BRUSHES.md#animation-and-pictures)). Put in `deps` everything the body reads that
@@ -460,9 +473,8 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   version without running `body`. A `Picture` from an earlier frame is
   refused at `place`. Versions not asked for stay kept for a while (within a
   memory budget), so poses that come back are not recorded again.
-- Inside `body`, `v.width` and `v.height` are the picture's size, and
-  `keepInside` text keeps inside the picture's box. Drawing outside the box
-  is kept, so glows and shadows can spill over it.
+- Inside a sized picture's `body`, `v.width` and `v.height` are the
+  picture's size, and `keepInside` text keeps inside its box.
 - `log`, `snapshot`, `cursor` and `control` are errors inside `body`.
 - A placed picture draws as if its drawing were drawn there: brush widths,
   effect lengths and text follow the scale of the scopes around it.

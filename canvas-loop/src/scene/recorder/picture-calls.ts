@@ -11,6 +11,7 @@ import { versionName } from "../outline.js";
 import type { PaperSettings, PictureVersion, PixelsVersion, SceneNode } from "../nodes.js";
 import { PictureHandle, REUSE_WINDOW, checkPictureOptions, copyDeps, firstDifference, sameData } from "./pictures.js";
 import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
+import { inkBox } from "../bounds.js";
 import type { PictureTable } from "./pictures.js";
 
 /** What the recorder lends a picture call. */
@@ -19,7 +20,7 @@ export interface PictureScope {
   readonly audit: boolean;
   readonly frame: object;
   /** Record a body in the picture's own coordinates, box and paper; `again` for a testing-mode re-record of a kept version. */
-  readonly recordBody: (name: string, a: { size: { width: number; height: number }; paper: PaperSettings; body: () => unknown; again: boolean }) => readonly SceneNode[];
+  readonly recordBody: (name: string, a: { size: { width: number; height: number } | undefined; paper: PaperSettings; body: () => unknown; again: boolean }) => readonly SceneNode[];
   readonly warn: (once: string, message: string) => void;
   /** A new version was recorded, taking `ms`. */
   readonly recorded: (key: string, ms: number) => void;
@@ -50,28 +51,40 @@ function warnStale(s: PictureScope, a: { name: string; version: Version; diff: s
   s.warn(`${shared ? "shared" : "stale"} ${a.version.key}`, `${a.name} ${why}; first difference at ${a.diff}`);
 }
 
+/** A self-sizing picture's box: around everything its drawing paints (`inkBox`), out to whole logical pixels; empty at the origin when it paints nothing. */
+function selfSize(children: readonly SceneNode[]): { x: number; y: number; width: number; height: number } {
+  const box = inkBox(children);
+  if (box === null) return { x: 0, y: 0, width: 0, height: 0 };
+  const x = Math.floor(box.x0);
+  const y = Math.floor(box.y0);
+  return { x, y, width: Math.ceil(box.x1) - x, height: Math.ceil(box.y1) - y };
+}
+
 export function recordPicture(s: PictureScope, a: { options: PictureOptions; body: () => unknown }): PictureHandle {
-  const { key, width, height } = checkPictureOptions(a.options, "picture");
+  const { key, size } = checkPictureOptions(a.options, "picture");
   const deps = copyDeps(a.options.deps, key);
   const paper = a.options.paper === undefined ? DEFAULT_PAPER : resolvePaper(a.options.paper);
-  const found = s.table.find({ kind: "picture", key, width, height, deps, paper });
+  const found = s.table.find({ kind: "picture", key, size, deps, paper });
   if (found !== undefined && !(s.audit && s.table.auditDue(found))) return new PictureHandle(found, s.frame);
   const name = versionName({ kind: "picture", key, deps });
   const t0 = clock();
-  const children = s.recordBody(name, { size: { width, height }, paper, body: a.body, again: found !== undefined });
+  const children = s.recordBody(name, { size, paper, body: a.body, again: found !== undefined });
   if (found?.kind === "picture") {
     const diff = firstDifference({ a: found.children, b: children }, name);
     if (diff !== undefined) warnStale(s, { name, version: found, diff });
     return new PictureHandle(found, s.frame);
   }
+  const box = size === undefined ? selfSize(children) : { x: 0, y: 0, ...size };
   s.recorded(key, clock() - t0);
-  return added(s, { kind: "picture", key, width, height, deps, paper, children });
+  return added(s, { kind: "picture", key, sized: size !== undefined, ...box, deps, paper, children });
 }
 
 export function recordPixels(s: PictureScope, a: { options: PictureOptions; fill: Fill }): PictureHandle {
-  const { key, width, height } = checkPictureOptions(a.options, "pixels");
+  const { key, size } = checkPictureOptions(a.options, "pixels");
+  if (size === undefined) throw new SketchUsageError({ detail: `pixels "${key}": width and height are required` });
+  const { width, height } = size;
   const deps = copyDeps(a.options.deps, key);
-  const found = s.table.find({ kind: "pixels", key, width, height, deps });
+  const found = s.table.find({ kind: "pixels", key, size, deps });
   if (found !== undefined && !(s.audit && s.table.auditDue(found))) return new PictureHandle(found, s.frame);
   const t0 = clock();
   const given = new Uint8ClampedArray(width * height * 4);

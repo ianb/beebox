@@ -183,7 +183,7 @@ export function sceneOutline(scene: Scene, colors?: ColorParser): string {
   for (const v of versions) {
     if (done.has(v)) continue;
     done.add(v);
-    out.push(`${versionName(v)} ${r(v.width)}×${r(v.height)}`);
+    out.push(`${versionName(v)} ${r(v.width)}×${r(v.height)}${v.kind === "picture" && !v.sized ? ` sized to its drawing from (${r(v.x)}, ${r(v.y)})` : ""}`);
     if (v.kind === "picture") outlineInto(out, { nodes: v.children, depth: 1, versions, cx: { colors, lighting: undefined } });
   }
   return out.join("\n");

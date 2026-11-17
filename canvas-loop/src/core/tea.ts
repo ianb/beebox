@@ -282,7 +282,7 @@ export interface View {
   /** Record a reusable drawing (see PictureOptions): `body` returns it, and runs only when the version is new. Place it with `place`. */
   picture(options: PictureOptions, body: () => Drawing): Picture;
   /** A fixed-resolution image: `fill` writes RGBA bytes into `data` (width × height × 4, zeroed) when the version is new. */
-  pixels(options: PictureOptions, fill: (image: { data: Uint8ClampedArray; width: number; height: number }) => void): Picture;
+  pixels(options: PictureOptions & { readonly width: number; readonly height: number }, fill: (image: { data: Uint8ClampedArray; width: number; height: number }) => void): Picture;
   /** A picture with its top-left at (x, y), under the transforms around it. */
   place(picture: Picture, x: number, y: number, options?: PlaceOptions): DrawingNode;
   /** The paper texture that grainy brushes and `effects.paper` read, for every drawing in `children`. A picture takes its own `paper` option instead. */

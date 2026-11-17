@@ -270,7 +270,8 @@ group, so give it a group with light and dark parts.
 Lengths (blur, glow, shadow offset, bleed, hatch spacing) are in the
 coordinates where the group is: under `at({ scale: 0.5 })` a blur is half as
 wide, and a shadow's offset turns with a rotation. A group's layer grows to
-hold its blur, glow and shadow, and a picture keeps what spills past its box.
+hold its blur, glow and shadow, and a picture keeps what spills past its box
+(one without a size takes all of it into its box).
 Effects work under scales along the axes and under rotation with a uniform
 scale; under `skew`, or a rotated non-uniform scale, an effect is an error.
 
@@ -432,12 +433,12 @@ each frame:
 
 - A still background goes in one picture with no `deps`. A static part that
   changes with a param puts the param in `deps`:
-  `v.picture({ key: "sky", width: 600, height: 300, deps: [p.dusk] }, () => drawSky(v, p.dusk))`.
+  `v.picture({ key: "sky", deps: [p.dusk] }, () => drawSky(v, p.dusk))`.
 - A thing that moves but keeps its look (a character, a boat, a cloud) is a
   picture placed at a new position each frame. Draw each pose as its own
   version (`deps: [pose]`) and switch between them. A pose not shown for a
   while stays kept, so a walk cycle draws each pose once:
-  `v.picture({ key: "walker", width: 80, height: 120, deps: [kind, pose] }, () => paintWalker(v, kind, pose))`.
+  `v.picture({ key: "walker", deps: [kind, pose] }, () => paintWalker(v, kind, pose))`.
   Do not pack poses into one sheet picture and clip to one.
 - The renderer keeps a placed picture's pixels while its version, scale and
   rotation stay the same; a move reuses them, since placements snap to whole
@@ -463,8 +464,8 @@ each frame:
   option) gives the same since its last call.
 
 ```ts
-const boat = v.picture({ key: "boat", width: 120, height: 60 }, () => paintBoat(v));
-return v.place(boat, x - 60, y - 40 + Math.round(Math.sin(model.frame / 30) * 3));  // bob
+const boat = v.picture({ key: "boat" }, () => paintBoat(v));             // drawn around its waterline's middle
+return v.place(boat, x, y + Math.round(Math.sin(model.frame / 30) * 3));  // bob
 ```
 
 - A mark's randomness comes from its points, so a mark whose points move

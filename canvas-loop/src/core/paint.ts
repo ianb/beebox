@@ -313,6 +313,9 @@ export type RootDrawing = DrawingNode | readonly Drawing[] | null | false;
 /** A reusable drawing, recorded once and placed any number of times. */
 export interface Picture {
   readonly pictureBrand: never;
+  /** The left and top of its box in its own coordinates: 0 for a sized picture, where its drawing starts for one that sizes itself. */
+  readonly x: number;
+  readonly y: number;
   readonly width: number;
   readonly height: number;
 }
@@ -322,9 +325,14 @@ export interface PictureOptions {
   readonly key: string;
   /** Everything the body reads that can change. Omitted: never changes. Testing mode re-records to catch missing deps. */
   readonly deps?: readonly unknown[];
-  /** The picture's layout box (0..width, 0..height); drawing outside it is kept. */
-  readonly width: number;
-  readonly height: number;
+  /**
+   * The picture's layout box (0..width, 0..height); drawing outside it is kept.
+   * Leave both out and the picture sizes itself: its box is the box around
+   * everything its drawing paints (strokes, brush marks, effects), and inside
+   * its body `v.width`, `v.height`, `v.background` and `keepInside` are errors.
+   */
+  readonly width?: number;
+  readonly height?: number;
   /** The paper its brushed strokes and effects use (part of the version); default the default paper. A picture never takes the paper of where it is placed. */
   readonly paper?: Paper;
 }

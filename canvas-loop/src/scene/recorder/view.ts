@@ -26,7 +26,7 @@ import type { Geom, PaperSettings, SceneNode, ShapeNode, TextNode } from "../nod
 import { callSite } from "../call-site.js";
 import type { CallSite } from "../call-site.js";
 import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
-import { PictureTable, placedVersion } from "./pictures.js";
+import { PictureTable, placedVersion, sizeToRead } from "./pictures.js";
 import { recordPicture, recordPixels } from "./picture-calls.js";
 import type { PictureScope } from "./picture-calls.js";
 import { RecorderNotes } from "./notes.js";
@@ -75,7 +75,7 @@ export class SceneRecorder extends PureHelpers implements View {
   #made: Map<SceneNode, string> | undefined;
   /** How many testing-mode re-records of kept pictures are running: their nodes are not counted as made, but may still take nodes that were. */
   #again = 0;
-  #size: { width: number; height: number };
+  #size: { width: number; height: number } | undefined;
   /** The picture whose body is recording, for messages; undefined at the top level. */
   #picture: string | undefined;
   /** The frame's outputs that are not drawing (section 8). */
@@ -101,12 +101,12 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#resolver = new Resolver({ notes: this.#notes, audit: this.#audit, text: this.#text, texts: this.#texts, papers: this.#papers, sites: () => this.#sites });
   }
 
-  /** The canvas size, or the picture's inside a picture body (section 5). */
+  /** The canvas size, or the picture's inside a sized picture's body (section 5); a self-sizing picture's body has none, and `sizeToRead` refuses it. */
   get width(): number {
-    return this.#size.width;
+    return sizeToRead(this.#size, { call: "v.width", picture: this.#picture }).width;
   }
   get height(): number {
-    return this.#size.height;
+    return sizeToRead(this.#size, { call: "v.height", picture: this.#picture }).height;
   }
 
   /** After a run (testing mode): drawings off the canvas, or unboxed text crossing its edge, on every frame. */
@@ -184,6 +184,7 @@ export class SceneRecorder extends PureHelpers implements View {
   // ── shapes ──
   background(paint: Paint): DrawingNode {
     this.#notes.live("background");
+    sizeToRead(this.#size, { call: "v.background (it fills the picture's box)", picture: this.#picture });
     return this.#stamp({ kind: "background", paint: copyPaint(paint, "background") }, "background");
   }
   rect(...[x, y, w, h, style]: [number, number, number, number, Style]): DrawingNode {
@@ -225,10 +226,11 @@ export class SceneRecorder extends PureHelpers implements View {
     if (this.#text === undefined) throw new UnsupportedCallError({ call: `v.${call}`, detail: "this recorder was made without the runtime's text measurer" });
     return this.#text;
   }
-  /** `content` laid out where no transform moves it, kept inside the canvas or the picture's box. */
+  /** `content` laid out where no transform moves it, kept inside the canvas or the picture's box (only keepInside reads that size). */
   #layText(content: string | readonly TextRun[], at: { box: TextBox; options: TextOptions | undefined; call: string }): ReturnType<typeof recordText> {
     checkContent(content, at);
-    return recordText(content, { box: at.box, options: at.options ?? {}, measurer: this.#measurer("text"), matrix: IDENTITY, canvas: this.#size });
+    const canvas = at.options?.keepInside === true ? sizeToRead(this.#size, { call: `${at.call} with keepInside`, picture: this.#picture }) : (this.#size ?? this.#canvas);
+    return recordText(content, { box: at.box, options: at.options ?? {}, measurer: this.#measurer("text"), matrix: IDENTITY, canvas });
   }
   /** Text laid out where no transform moves it; a `keepInside` node is laid out again by the walk under its transform. */
   text(...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]): DrawingNode {
@@ -299,7 +301,7 @@ export class SceneRecorder extends PureHelpers implements View {
 
   // ── pictures (section 5, R7) ──
   /** Record `body` as a picture's nodes, then resolve them: its own coordinates, box and paper. A re-record (testing mode) keeps no call sites and counts no node as made. */
-  #recordBody(name: string, a: { size: { width: number; height: number }; paper: PaperSettings; body: () => unknown; again: boolean }): readonly SceneNode[] {
+  #recordBody(name: string, a: { size: { width: number; height: number } | undefined; paper: PaperSettings; body: () => unknown; again: boolean }): readonly SceneNode[] {
     const saved = { size: this.#size, picture: this.#picture, sites: this.#sites, again: this.#again };
     // A re-record is compared and dropped: its nodes keep no stack (one per node was most of a picture-heavy run's time) and are not counted as made.
     // A new version is kept, even one first asked for inside a re-record: its nodes get both.
@@ -320,7 +322,7 @@ export class SceneRecorder extends PureHelpers implements View {
   picture(options: PictureOptions, body: () => unknown): Picture {
     return recordPicture(this.#scope("picture"), { options, body });
   }
-  pixels(options: PictureOptions, fill: (image: { data: Uint8ClampedArray; width: number; height: number }) => void): Picture {
+  pixels(options: PictureOptions & { readonly width: number; readonly height: number }, fill: (image: { data: Uint8ClampedArray; width: number; height: number }) => void): Picture {
     return recordPixels(this.#scope("pixels"), { options, fill });
   }
   place(...[picture, x, y, options]: [Picture, number, number, PlaceOptions?]): DrawingNode {

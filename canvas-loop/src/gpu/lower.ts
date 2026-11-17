@@ -11,7 +11,7 @@ import type { BlendMode } from "../core/paint.js";
 import type { BrushExpander } from "../scene/brush/expand.js";
 import type { ColorParser } from "../scene/colors.js";
 import { det, invert, mul } from "../scene/mat.js";
-import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene/nodes.js";
+import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PixelsVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene/nodes.js";
 import { MAX_CASTER_HEIGHT } from "../scene/nodes.js";
 import type { Effects, Material } from "../core/tea.js";
 import type { Rgba } from "../scene/colors.js";
@@ -35,8 +35,15 @@ import { linearKey } from "../scene/hash.js";
 import type { RasterCache } from "./rasters.js";
 import { TILE, tilesOver, wholeLayer } from "./rasters.js";
 import { readsSurroundings } from "./picture-reads.js";
+import { versionRect } from "../scene/bounds.js";
 import { ShapeGeometry } from "./shape-geometry.js";
 import { lineQuads } from "./text.js";
+
+/** A version's box as a rect geometry (a self-sizing picture's from its drawing), where its `background` fills. */
+const rectOf = (v: PictureVersion | PixelsVersion): Geom => {
+  const r = versionRect(v);
+  return { kind: "rect", x: r.x0, y: r.y0, w: r.x1 - r.x0, h: r.y1 - r.y0 };
+};
 
 interface Here {
   readonly job: Job;
@@ -275,7 +282,7 @@ export class Lowering {
       this.#placeTiles(n, { version: v, m, here });
       return;
     }
-    const ground = fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, m);
+    const ground = fillRings(rectOf(v), m);
     // R8: the placement's material for the picture's shapes that have none.
     const mat = here.mat === undefined ? undefined : { ...here.mat, fallback: n.material ?? here.mat.fallback };
     const job = this.#job(`place ${v.kind} "${v.key}"`, {
@@ -307,7 +314,7 @@ export class Lowering {
     const vis = { x0: here.visible.x0 - ix, y0: here.visible.y0 - iy, x1: here.visible.x1 - ix, y1: here.visible.y1 - iy };
     if (isEmpty(vis)) return;
     const raster = `${linearKey(rm)}|${this.#brush.ratio}`;
-    const ground = fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, rm);
+    const ground = fillRings(rectOf(v), rm);
     const grid = tilesOver(vis);
     const tint = n.tint === undefined ? undefined : this.#colors(n.tint);
     const tiles = readsSurroundings(v) ? [wholeLayer(grid, { raster, name: v.key })] : grid.map((t) => ({ key: `${raster}|${t.x0 / TILE},${t.y0 / TILE}`, tile: t }));

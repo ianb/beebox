@@ -164,6 +164,11 @@ export interface TextNode {
 export interface PictureVersion {
   readonly kind: "picture";
   readonly key: string;
+  /** False when the picture sizes itself: its box is then the box around everything its drawing paints, from (x, y). */
+  readonly sized: boolean;
+  /** The box's left and top in the picture's own coordinates: 0 for a sized picture. */
+  readonly x: number;
+  readonly y: number;
   readonly width: number;
   readonly height: number;
   readonly deps: readonly unknown[] | undefined;

@@ -6,6 +6,7 @@
 // or a shadow caster in a lit room).
 import type { Effects, Material } from "../core/tea.js";
 import { arcSweep } from "./geometry/flatten.js";
+import { brushGrowth } from "./brush-reach.js";
 import { apply, matrixOf, maxScale, mul } from "./mat.js";
 import type { Geom, Mat, PictureVersion, PixelsVersion, SceneNode, ShapeStyle } from "./nodes.js";
 
@@ -76,25 +77,59 @@ export function effectsReach(e: Effects | undefined): number {
   return Math.max(3 * (e.blur ?? 0), 3 * (e.glow?.blur ?? 0), shadow, (e.wash?.bleed ?? 0) * Math.SQRT2);
 }
 
-/** A shape's outline padded by how far its ink reaches: half the stroke (a miter can reach 5 weights), a brush's spread, its own effects. */
+/** Whether a stroke along `g` turns a corner, where a miter join can reach past it. */
+const hasCorners = (g: Geom): boolean => !(g.kind === "ellipse" || (g.kind === "poly" && !g.closed && g.points.length <= 2));
+
+/** How far a stroke reaches past the outline: a plain one by up to a weight (a square cap), a miter at a corner up to 5 weights; a brushed one by its wobble, its marks' reach (brush-reach.ts) and a 2 px edge. */
+function strokeReach(g: Geom, s: ShapeStyle): number {
+  if (s.brush !== undefined) return (s.brush.gesture.wobble ?? 0) + brushGrowth(s.brush.brush, s.weight) + 2;
+  if (s.stroke === undefined) return 0;
+  return s.join === "miter" && hasCorners(g) ? 5 * s.weight : s.weight;
+}
+
+/** A shape's outline padded by how far its ink reaches: its stroke (`strokeReach`) and its own effects. */
 export function shapeBox(g: Geom, s: ShapeStyle): Box {
-  const stroke = s.stroke === undefined && s.brush === undefined ? 0 : s.brush !== undefined ? 2 * s.weight : s.join === "miter" ? 5 * s.weight : s.weight;
-  return pad(geomBox(g), stroke + effectsReach(s.effects));
+  return pad(geomBox(g), strokeReach(g, s) + effectsReach(s.effects));
 }
 
 const casts = (m: Material | undefined): boolean => (m?.castsShadow ?? false) !== false;
 const kept = new WeakMap<PictureVersion, Box | undefined>();
 
+/** A version's box in its own coordinates: a sized picture's 0..width × 0..height, a self-sized one's from its drawing. */
+export function versionRect(v: PictureVersion | PixelsVersion): Box {
+  const x0 = v.kind === "picture" ? v.x : 0;
+  const y0 = v.kind === "picture" ? v.y : 0;
+  return { x0, y0, x1: x0 + v.width, y1: y0 + v.height };
+}
+
 /** Everything a version's body draws, in its own coordinates, or undefined when it holds a light or a shadow caster (placed in a lit room, it can reach anywhere). */
 export function versionBox(v: PictureVersion | PixelsVersion): Box | undefined {
-  if (v.kind === "pixels") return { x0: 0, y0: 0, x1: v.width, y1: v.height };
+  if (v.kind === "pixels") return versionRect(v);
   if (kept.has(v)) return kept.get(v);
-  const box = nodesBox(v.children, { m: [1, 0, 0, 1, 0, 0], v });
+  const box = nodesBox(v.children, { m: [1, 0, 0, 1, 0, 0], ground: versionRect(v), own: false });
   kept.set(v, box);
   return box;
 }
 
-function nodesBox(nodes: readonly SceneNode[], a: { m: Mat; v: PictureVersion }): Box | undefined {
+/**
+ * Everything `nodes` can paint themselves, in their own coordinates, or null
+ * when they paint nothing: a light adds nothing and a shadow caster counts by
+ * its own ink (the shadows it casts fall where a lit room puts them). A
+ * self-sizing picture's box (`v.picture` without a size). `background` has no
+ * box here: the caller refuses it.
+ */
+export function inkBox(nodes: readonly SceneNode[]): Box | null {
+  const box = nodesBox(nodes, { m: [1, 0, 0, 1, 0, 0], ground: EMPTY, own: true }) ?? EMPTY;
+  return box.x0 > box.x1 || box.y0 > box.y1 ? null : box;
+}
+
+/** A placed version's own ink, for `inkBox`: a background fills its box. */
+function ownBox(v: PictureVersion | PixelsVersion): Box {
+  return v.kind === "pixels" ? versionRect(v) : (nodesBox(v.children, { m: [1, 0, 0, 1, 0, 0], ground: versionRect(v), own: true }) ?? EMPTY);
+}
+
+/** `ground`: the box a background fills; `own`: lights and shadow casters count by their own ink instead of reaching anywhere. */
+function nodesBox(nodes: readonly SceneNode[], a: { m: Mat; ground: Box; own: boolean }): Box | undefined {
   let box = EMPTY;
   for (const n of nodes) {
     const b = nodeBox(n, a);
@@ -104,11 +139,11 @@ function nodesBox(nodes: readonly SceneNode[], a: { m: Mat; v: PictureVersion })
   return box;
 }
 
-function nodeBox(n: SceneNode, a: { m: Mat; v: PictureVersion }): Box | undefined {
+function nodeBox(n: SceneNode, a: { m: Mat; ground: Box; own: boolean }): Box | undefined {
   const { m } = a;
   switch (n.kind) {
     case "shape":
-      return casts(n.style.material) ? undefined : transformed(m, shapeBox(n.geom, n.style));
+      return casts(n.style.material) && !a.own ? undefined : transformed(m, shapeBox(n.geom, n.style));
     case "text": {
       // Each line from its first pen position to two sizes past its last (a glyph is narrower), a line height either side.
       const halo = n.halo?.width ?? 0;
@@ -116,7 +151,7 @@ function nodeBox(n: SceneNode, a: { m: Mat; v: PictureVersion }): Box | undefine
       return transformed(m, lines.reduce(union, EMPTY));
     }
     case "background":
-      return transformed(m, { x0: 0, y0: 0, x1: a.v.width, y1: a.v.height });
+      return transformed(m, a.ground);
     case "at":
       return nodesBox(n.children, { ...a, m: mul(m, n.matrix) });
     case "group": {
@@ -128,12 +163,12 @@ function nodeBox(n: SceneNode, a: { m: Mat; v: PictureVersion }): Box | undefine
     case "mask":
       return nodesBox(n.body, a);
     case "place": {
-      if (casts(n.material)) return undefined;
-      const inner = versionBox(n.picture);
+      if (casts(n.material) && !a.own) return undefined;
+      const inner = a.own ? ownBox(n.picture) : versionBox(n.picture);
       return inner === undefined ? undefined : transformed(mul(m, matrixOf({ translate: [n.x, n.y] })), inner);
     }
     case "light":
-      return undefined;
+      return a.own ? EMPTY : undefined;
     case "debug":
       return EMPTY;
   }

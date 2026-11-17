@@ -24,7 +24,7 @@ import { readDirBytes, readTranscript, teaRunOptions, tmpDir } from "../helpers.
 import { parity } from "./compare.js";
 import { CASE_NAMES, drawDraft, fixtures } from "./fixtures.js";
 import { brushBlends, brushParity, frozen, brushStability, expansionCache, paperScopes } from "./brush-cases.js";
-import { pictureBackground, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
+import { pictureBackground, pictureSpill, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
 import { rotatedText, subRun, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves, washCanvasEdge } from "./paint-cases.js";
@@ -197,6 +197,7 @@ onGpu("paper is scoped to its group; a picture keeps the paper where it was reco
 onGpu("placing a picture replays it under the placement transform (R7)", placementReplays);
 onGpu("placement opacity, erase and blend apply to the picture's layer", placeOptions);
 onGpu("background inside a picture fills the picture's box, not the canvas", pictureBackground);
+onGpu("a picture's size never clips its drawing; a self-sizing box holds every painted pixel", pictureSpill);
 onGpu("pixels images are sampled bilinearly at their own resolution", pixelImages);
 onGpu("text sits where today's does, at today's size, through the glyph atlas", async (handle, t) => {
   if (text !== undefined) await textParity(handle, { t, text });

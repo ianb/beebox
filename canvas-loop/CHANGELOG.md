@@ -5,6 +5,16 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Pictures size themselves.** `v.picture` without `width` and `height`
+  takes the box around everything its drawing paints: strokes, brush marks
+  (scatter, bristle spread and wobble), blur, glow and shadow. `place` puts
+  the body's (0, 0) at (x, y), so draw a tree around its base and place it
+  there. `Picture` gains `x` and `y`, its box's left and top. In such a body
+  `v.width`, `v.height`, `v.background` and `keepInside` are errors. Giving
+  only one of `width` and `height` is an error. A size never clipped and
+  still does not. The off-canvas check's boxes now hold a stamp brush's
+  scatter (they could miss it), and a corner-free stroke (a line, an
+  ellipse) no longer pads by a miter.
 - **Soft noise.** A `noise` voice takes `color` (`white`, `pink`, `brown`)
   and `attack` seconds (less than `duration`), which swells it in and lets
   it fall away over the rest of its duration: wind and leaves. Without them it sounds as before.
