@@ -25,7 +25,9 @@ export function isComposerFocusKey(event: KeyboardEvent): boolean {
   return event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "l";
 }
 
-const OVERLAY = "dialog, [role='dialog'], [role='alertdialog'], [aria-modal='true'], [role='menu'], [role='listbox']";
+// No `listbox`: search results render one inline at rest, and a popup
+// listbox keeps focus in its combobox input, which Enter already skips.
+const OVERLAY = "dialog, [role='dialog'], [role='alertdialog'], [aria-modal='true'], [role='menu']";
 
 /**
  * A modal, popover or menu is open somewhere and owns the keyboard. `Menu`,

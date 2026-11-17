@@ -31,6 +31,8 @@ function setup(voice: Voice, page: Page) {
       h(SelectionCapture, { onCapture: ({ text }: { text: string }) => { log.captured.push(text); }, children: h("p", { id: "page-text" }, "Quoted words") }),
       h("input", { id: "other-field" }),
       h("button", { id: "other-button", type: "button" }, "Other"),
+      // Inline search results, mounted at rest (SearchResults.tsx): not an overlay.
+      h("div", { role: "listbox", "aria-label": "Search results" }),
       page.overlay === "menu" ? h("div", { role: "menu", tabIndex: -1 }, h("button", { id: "menu-item", role: "menuitem", type: "button" }, "Item")) : null,
       page.overlay === "dialog" ? h("dialog", { open: true }, h("button", { id: "dialog-button", type: "button" }, "In dialog")) : null,
       h("textarea", { id: "bbx-composer-input", readOnly: voice.isTranscribing }),
