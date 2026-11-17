@@ -138,10 +138,12 @@ function flatten(diagnostic: ChainedDiagnostic, depth: number): string {
 /**
  * A removed View member the compiler cannot find, or a `draw` that returns
  * nothing, gets what replaces it, as the recorder's `RemovedCallError` would
- * say. The added line reads `<call> was removed: <replacement>`.
+ * say. The added line reads `<call> was removed: <replacement>`. A `draw` that
+ * returns a `Drawing` (which may be undefined) is told to wrap it in a list.
  */
 function withReplacement(message: string): string {
   if (message.includes("Type 'void' is not assignable to type 'RootDrawing'")) return `${message}\n  ${STATEMENT_DRAW.call} was removed: ${STATEMENT_DRAW.replacement}`;
+  if (message.includes("Type 'undefined' is not assignable to type 'RootDrawing'")) return `${message}\n  a Drawing may be undefined, which draw may not return (it means a draw that forgot to return); return a list instead: return [tree(v, model)]`;
   const name = /^Property '(\w+)' does not exist on type 'View'/u.exec(message)?.[1];
   const call = `v.${name ?? ""}`;
   return name !== undefined && Object.hasOwn(REPLACEMENTS, call) ? `${message}\n  ${call} was removed: ${Reflect.get(REPLACEMENTS, call)}` : message;

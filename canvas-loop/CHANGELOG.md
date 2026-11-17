@@ -5,6 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Smaller messages.** A `draw` that returns a component's `Drawing` (which
+  may be `undefined`) gets a type-check line saying to return a list. A
+  faint-mark warning for a mark drawn in a picture body names the picture
+  version (`faint mark (line in picture "wood-oak-2" [3])`).
 - **`place(…, { tint })`.** A colour the placed picture's colours move
   toward, by the colour's alpha, keeping the picture's alpha. It is applied
   as the kept image is laid down (a per-draw value in the draw shader), so

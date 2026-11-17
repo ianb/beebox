@@ -157,7 +157,7 @@ export class SceneSurface implements FrameSurface {
   #warnFaint(): void {
     const marks = this.#renderer.peaks.flatMap((p) => {
       const site = this.#recorder.markSite(p.node);
-      return site === undefined ? [] : [{ call: p.node.call, alpha: p.alpha, get line() { return site.line; } }];
+      return site === undefined ? [] : [{ call: p.node.call, alpha: p.alpha, picture: site.picture, get line() { return site.line.line; } }];
     });
     for (const message of faintWarnings(marks, this.#faint)) this.#o.host.recordLog({ level: "warn", message });
   }

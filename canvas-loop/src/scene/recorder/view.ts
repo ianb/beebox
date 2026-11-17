@@ -35,7 +35,7 @@ import { clipGeoms, copyCommands, copyPaint, copyPoints, resolveGroup, resolvePl
 import { debugBoxesOf } from "./debug.js";
 import { recordText } from "./text.js";
 import type { GlyphMissing } from "./text-checks.js";
-import { Audit } from "./audit.js";
+import { Audit, type MarkSite } from "./audit.js";
 import { PureHelpers } from "./helpers.js";
 import { holdsNonReceiving, resolveLight } from "./light.js";
 import { Resolver } from "./resolve.js";
@@ -112,7 +112,7 @@ export class SceneRecorder extends PureHelpers implements View {
   readonly offCanvasWarnings = (): string[] => this.#audit?.offCanvas.warnings() ?? [];
 
   /** Testing mode: where the sketch drew brushed mark `node`, when the faint-mark check judges it (audit.ts). */
-  readonly markSite = (node: ShapeNode): CallSite | undefined => this.#audit?.markSite(node);
+  readonly markSite = (node: ShapeNode): MarkSite | undefined => this.#audit?.markSite(node);
 
   /** Forget every picture version, so each body records again (a web font finished loading, draft section 20). */
   readonly forgetPictures = (): void => this.#table.clear();

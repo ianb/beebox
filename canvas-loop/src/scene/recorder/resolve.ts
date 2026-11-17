@@ -167,7 +167,7 @@ export class Resolver {
         const r = withPaper(n, ctx.paper);
         if (audit !== undefined) {
           const site = this.#site(n);
-          audit.shape(r, { seen: !ctx.inMask, site: site ?? NO_SITE });
+          audit.shape(r, { seen: !ctx.inMask, site: site ?? NO_SITE, picture: ctx.picture });
           // Checked against the canvas, except in a picture body (placed anywhere) or a mask's artwork.
           if (ctx.picture === undefined && !ctx.inMask) audit.offCanvas.shape(n.call, { geom: n.geom, style: n.style, matrix: ctx.matrix, lit: ctx.lit > 0, site });
         }

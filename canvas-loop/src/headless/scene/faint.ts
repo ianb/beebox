@@ -16,6 +16,8 @@ export interface MeasuredMark {
   readonly call: string;
   readonly alpha: number;
   readonly line: string | undefined;
+  /** The picture version whose body drew it, as `picture "tuft" [1]`; undefined at the top level. */
+  readonly picture?: string | undefined;
 }
 
 /** What a run has warned about so far. */
@@ -39,7 +41,7 @@ export function faintWarnings(marks: readonly MeasuredMark[], state: FaintState)
       out.push("faint marks: more marks are too faint to see; further warnings suppressed");
       continue;
     }
-    out.push(`faint mark (${m.call}): its paint, brush and paper grain reach only ${Math.round(m.alpha * 100)}% opacity, so it will barely show; raise the paint's alpha or the brush's opacity, or add gesture({ faint: true }) if faint is intended (group and placement opacity are not counted, so fading with them does not warn)${m.line === undefined ? "" : ` (at ${m.line})`}`);
+    out.push(`faint mark (${m.call}${m.picture === undefined ? "" : ` in ${m.picture}`}): its paint, brush and paper grain reach only ${Math.round(m.alpha * 100)}% opacity, so it will barely show; raise the paint's alpha or the brush's opacity, or add gesture({ faint: true }) if faint is intended (group and placement opacity are not counted, so fading with them does not warn)${m.line === undefined ? "" : ` (at ${m.line})`}`);
   }
   return out;
 }
