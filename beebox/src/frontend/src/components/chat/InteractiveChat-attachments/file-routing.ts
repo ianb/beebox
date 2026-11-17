@@ -52,9 +52,10 @@
  */
 export const INLINE_PHOTO_LIMIT = 3;
 
-/** The one property routing reads off a file — the MIME type the browser gave it. */
+/** What routing reads off a file: the MIME type the browser gave it, and its name when that type is empty. */
 export interface RoutableFile {
   readonly type: string;
+  readonly name: string;
 }
 
 /**
@@ -68,8 +69,15 @@ export interface RoutedFiles<T> {
   readonly upload: T[];
 }
 
+/**
+ * A browser without a HEIC entry in its MIME table (Chrome on Windows, for
+ * one) hands an iPhone photo over with an empty `type`. The name is the only
+ * sign it is a photo; the image path then checks the bytes (`lib/heif/sniff.ts`).
+ */
+const UNTYPED_PHOTO_NAME = /\.hei[cf]$/i;
+
 function isPhoto(file: RoutableFile): boolean {
-  return file.type.startsWith("image/");
+  return file.type.startsWith("image/") || (file.type === "" && UNTYPED_PHOTO_NAME.test(file.name));
 }
 
 /**

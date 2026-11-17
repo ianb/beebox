@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-16T23:36:09Z
-Total documents: 702
+Generated: 2026-11-17T07:41:40Z
+Total documents: 708
 
 ## Issues
 
@@ -51,6 +51,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/file-layout.check.subplan.md** — "Layout check: the script that enforces the file-layout rules" (184 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.moves.subplan.md** — "Layout moves: bring the tree to zero layout-check findings" (149 lines) · shipped history · implemented
 - **docs/implemented-plans/finish-preflight-tested-delta.md** — "finish-preflight reports the delta since a tested revision" (212 lines) · shipped history · implemented
+- **docs/implemented-plans/heic-in-chat-composer.md** — "Accept HEIC photos in the chat composer" (143 lines) · shipped history · implemented
 - **docs/implemented-plans/input-extraction.review.md** — "Plan Engineering Review — input-extraction (codex cross-model pass)" (86 lines) · implementation review
 - **docs/implemented-plans/interrupted-chat-wake.md** — "An interrupted chat wakes itself to decide about its unfinished work" (180 lines) · shipped history · implemented
 - **docs/implemented-plans/local-password-auth.review.md** — "Cross-model review — local-password-auth (Codex, 2026-07-19)" (81 lines) · implementation review
@@ -91,6 +92,8 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
 - **docs/plans/admin-encrypted-backups.md** — "Configure encrypted backups in Admin" (261 lines) · proposal · partial
+- **docs/plans/canvas-loop-examples.review.md** — "Plan review — canvas-loop examples" (40 lines) · plan review
+- **docs/plans/canvas-loop-layout-text-hits.review.md** — "Cross-model review — canvas-loop layout boxes, text runs and named hits" (36 lines) · plan review
 - **docs/plans/canvas-loop-scene/README.md** — "canvas-loop scene: Stage 0 notes" (79 lines) · proposal
 - **docs/plans/canvas-loop-scene/stage5/checkpoint5.md** — "Checkpoint 5: summary for the boxholder" (40 lines) · proposal
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
@@ -119,6 +122,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -237,6 +241,7 @@ Referenced by:
 - docs/implemented-plans/frontend-dom-harness.md:68 (mention) — - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
 - docs/implemented-plans/frontend-unify-formatters-refresh-storage.md:59 (mention) — - Root `AGENTS.md`, "Implement and verify": reuse the platform mechanism
 - docs/implemented-plans/frontend-visual-near-duplicates.md:61 (mention) — - Root `AGENTS.md`: reuse the existing primitive before inventing one. A, C, E,
+- docs/implemented-plans/heic-in-chat-composer.md:28 (mention) — - Root `AGENTS.md`: "Treat unsolicited tool output … as a bug." The choice of libheif build was decided by build output:
 - docs/implemented-plans/ios-audio-session-routing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/ios-per-box-device-lock.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/knowledge-audit-plugins.md:43 (mention) — - Root `AGENTS.md`, knowledge-audit guidance: "When fixing failures, prefer
@@ -312,6 +317,8 @@ Referenced by:
 - docs/plans/asset-offbox-storage.md:365 (mention) — remote (`AGENTS.md`). Asset push belongs in the same place, so the
 - docs/plans/box-commentary-surface.md:383 (mention) — (AGENTS.md exempts "per-box config, throwaway replies, and personal memory"),
 - docs/plans/canvas-loop-box-figures.subplan.md:189 (mention) — - **Production changes need the boxholder's own yes** (root `AGENTS.md`,
+- docs/plans/canvas-loop-examples.subplan.md:50 (mention) — AGENTS.md's Examples section and TEA.md's two gallery mentions moved into
+- docs/plans/canvas-loop-layout-text-hits.subplan.md:995 (mention) — entry), docs 75 (TEA.md 64, AGENTS.md 5, CHANGELOG 6): 124. The
 - docs/plans/change-based-test-selection.md:338 (mention) — per-worktree `AGENTS.md` mirrors regenerate from it.
 - docs/plans/chat-photo-batch-upload.md:53 (link) — - [`beebox/AGENTS.md`](../../AGENTS.md):101 — *"Read before writing. Don't
 - docs/plans/chat-scroll-model.md:217 (mention) — harness, all scenarios green, `decideScroll` deleted, nested AGENTS.md and
@@ -1197,6 +1204,7 @@ Referenced by:
 - docs/implemented-plans/box-view-guidance-and-checks.md:718 (mention) — (`docs/box-work.md`, "Rules for every box"), with this worktree's engine.
 - docs/implemented-plans/journey-simulated-notifications.md:49 (mention) — - **Hand check, 2026-10-23**, throwaway box made per `beebox/docs/box-work.md` ("Making a throwaway box"): `BBX_NOTIFY_F
 - docs/implemented-plans/remove-telegram.md:95 (mention) — - **Keep data, drop code** (`docs/box-work.md`, and the boxholder's standing
+- docs/plans/canvas-loop-layout-text-hits.subplan.md:988 (mention) — `box-work.md` says, and the audit then ran.
 - docs/testing.md:108 (link) — each lives and what not to touch: [box work](box-work.md).
 - docs/testing/knowledge-audits.md:150 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 - ../.claude/skills/box-work/SKILL.md:8 (mention) — Read `beebox/docs/box-work.md` for the task at hand. Three rules apply before anything runs:
@@ -1496,6 +1504,7 @@ Referenced by:
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/file-layout.md:50 (mention) — (`docs/engineering-principles.md:87-93`): *"a cluster that encodes its
 - docs/implemented-plans/file-wordless-captures.md:104 (mention) — - `beebox/docs/engineering-principles.md`: reuse over new machinery. The plan adds no card type, no capture state and no
+- docs/implemented-plans/heic-in-chat-composer.md:26 (mention) — - `beebox/docs/engineering-principles.md` §4, "Resilient AND never silent": a decoder that cannot load must say so. The
 - docs/implemented-plans/hq-dictation-switch.md:29 (mention) — `docs/engineering-principles.md` #8: no new attribute, no new registry —
 - docs/implemented-plans/hub-healthz-box-aggregation.md:32 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
 - docs/implemented-plans/ios-audio-session-routing.md:34 (mention) — - `beebox/docs/engineering-principles.md:49` — **4. Resilient AND never
@@ -3111,7 +3120,7 @@ References:
 
 #### docs/box/whats-new.md
 
-Title: "What's new in Bee Box" | 19 lines | current reference
+Title: "What's new in Bee Box" | 20 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/whats-new.md:110 (mention) — `docs/box/whats-new.md` is in every install.
@@ -3438,6 +3447,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md:19 (mention) — docs/chat/sessions.md and the chat steering design are reconciled.
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:53 (mention) — (See `docs/chat/sessions.md`.)
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:72 (link) — - [Chat session lifecycle](../../beebox/docs/chat/sessions.md) — how
+- ../issues/features/2026-11-16-deploy-resumes-the-chats-it-cut-short.md:17 (link) — [Session lifecycle](../../beebox/docs/chat/sessions.md) and the [termination notes plan](../../beebox/docs/implemented-p
 - ../research/imbue-studio/chat-app.md:274 (mention) — `sessions.md` queue/drain. **Adopt** the states table, "never swallowed",
 
 References:
@@ -5212,6 +5222,7 @@ Title: "A chat learns why and when its background tasks were cut off" | 199 line
 Referenced by:
 - docs/chat/sessions.md:60 (link) — - **Evict.** Registry eviction calls `stop()`. The sweep and the live cap skip a chat with a live background task until
 - docs/implemented-plans/interrupted-chat-wake.md:10 (mention) — (`docs/implemented-plans/chat-termination-notes.md`). That turn comes only
+- ../issues/features/2026-11-16-deploy-resumes-the-chats-it-cut-short.md:17 (link) — [Session lifecycle](../../beebox/docs/chat/sessions.md) and the [termination notes plan](../../beebox/docs/implemented-p
 
 References:
 - → docs/implemented-plans/maintenance-live-tasks.md (mention)
@@ -6502,6 +6513,15 @@ References:
 - → ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md (link)
 - → docs/connectors/google-auth.md (mention)
 - → docs/server/health-checks.md (mention)
+
+#### docs/implemented-plans/heic-in-chat-composer.md **[ORPHAN]**
+
+Title: "Accept HEIC photos in the chat composer" | 143 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/features/2026-11-16-accept-heic-images-in-chat.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
 
 #### docs/implemented-plans/hq-always.md
 
@@ -9730,16 +9750,20 @@ References:
 
 #### docs/plans/canvas-brushes.md
 
-Title: "canvas-loop brushes: an iterative drawing space for agents" | 553 lines | proposal | active
+Title: "canvas-loop brushes: an iterative drawing space for agents" | 559 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/canvas-brushes-effects.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The boxholder asked to look
 - docs/implemented-plans/canvas-brushes-paint.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The effects subplan
 - docs/implemented-plans/canvas-loop-scene.md:45 (mention) — candidate, `canvas-brushes.md` Track D).
 - docs/implemented-plans/canvas-sound-library.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). Figures written by box
+- docs/plans/canvas-loop-examples.subplan.md:10 (link) — A subplan of [canvas-brushes.md](canvas-brushes.md). canvas-loop has two
+- docs/plans/canvas-loop-layout-text-hits.subplan.md:9 (link) — A subplan of [canvas-brushes.md](canvas-brushes.md). It adds three things to
 
 References:
 - → docs/plans/README.md (mention)
+- → docs/plans/canvas-loop-layout-text-hits.subplan.md (link)
+- → docs/plans/canvas-loop-examples.subplan.md (link)
 
 #### docs/plans/canvas-loop-box-figures.subplan.md
 
@@ -9778,6 +9802,48 @@ References:
 - → docs/plans/canvas-loop-scene/stage5/figures-timing.md (mention)
 - → docs/mobile-contract.md (mention)
 - → docs/plans/canvas-loop-scene/stage4-plan.md (mention)
+
+#### docs/plans/canvas-loop-examples.review.md **[ORPHAN]**
+
+Title: "Plan review — canvas-loop examples" | 40 lines | plan review
+
+References:
+- → docs/plans/canvas-loop-examples.subplan.md (link)
+- → docs/plans/README.md (mention)
+
+#### docs/plans/canvas-loop-examples.subplan.md
+
+Title: "canvas-loop: one set of minimal, instructional examples" | 723 lines | proposal | active
+
+Referenced by:
+- docs/plans/canvas-brushes.md:415 (link) — - [canvas-loop-examples.subplan.md](canvas-loop-examples.subplan.md):
+- docs/plans/canvas-loop-examples.review.md:4 (link) — [canvas-loop-examples.subplan.md](canvas-loop-examples.subplan.md),
+
+References:
+- → ../issues/closed/code-quality/2026-11-16-canvas-loop-gallery-check-has-no-subset.md (frontmatter)
+- → docs/plans/canvas-brushes.md (link)
+- → AGENTS.md (mention)
+- → docs/plans/README.md (mention)
+
+#### docs/plans/canvas-loop-layout-text-hits.review.md **[ORPHAN]**
+
+Title: "Cross-model review — canvas-loop layout boxes, text runs and named hits" | 36 lines | plan review
+
+References:
+- → docs/plans/canvas-loop-layout-text-hits.subplan.md (link)
+
+#### docs/plans/canvas-loop-layout-text-hits.subplan.md
+
+Title: "canvas-loop: layout boxes, text runs and named hits" | 1198 lines | proposal | active
+
+Referenced by:
+- docs/plans/canvas-brushes.md:412 (link) — - [canvas-loop-layout-text-hits.subplan.md](canvas-loop-layout-text-hits.subplan.md):
+- docs/plans/canvas-loop-layout-text-hits.review.md:3 (link) — Plan: [canvas-loop-layout-text-hits.subplan.md](canvas-loop-layout-text-hits.subplan.md).
+
+References:
+- → docs/plans/canvas-brushes.md (link)
+- → docs/box-work.md (mention)
+- → AGENTS.md (mention)
 
 #### docs/plans/capture-fast-landing.md
 
@@ -10918,6 +10984,8 @@ Referenced by:
 - docs/plans/agent-docs.md:52 (mention) — (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
 - docs/plans/asset-annex.md:1082 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/canvas-brushes.md:311 (mention) — wire `makeLayer` in each runtime. Document in README.md, TEA.md, a new
+- docs/plans/canvas-loop-examples.review.md:19 (mention) — | 8 | The link-test scope differs between Track F and Failure modes | Accepted. TEA.md, BRUSHES.md and README.md in both
+- docs/plans/canvas-loop-examples.subplan.md:229 (mention) — - **Events file** (existing, README.md "Events file"): the script the
 - docs/plans/container-first.md:324 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:94 (mention) — `README.md` install table. Reshaped in place to guide-card form.
@@ -12037,6 +12105,7 @@ Referenced by:
 - docs/unimplemented-plans/origin-tls.md:29 (mention) — 3. Update the two nginx deploy tests for the new listeners and certificate paths, and restore the rollback notes in `dep
 - ../issues/closed/bugs/2026-10-22-deploy-failure-after-stop-leaves-services-down.md:18 (mention) — `beebox/docs/server/deploying.md` now matches. The per-box reinstall marker was
 - ../issues/features/2026-11-13-deploy-fast-manual-rollback-command.md:12 (link) — [releases](../../beebox/docs/server/deploying.md#releases)). A failure after
+- ../issues/features/2026-11-16-deploy-resumes-the-chats-it-cut-short.md:19 (link) — - The deploy closes admission and waits for accepted work to finish. The drain limit is ten minutes ([deploying](../../b
 
 References:
 - → docs/cards/migrations.md (link)
@@ -12869,6 +12938,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 23 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 
