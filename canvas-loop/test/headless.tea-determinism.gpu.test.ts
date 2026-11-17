@@ -68,8 +68,8 @@ test("param changes are logged and selection hit-tests land on moving planets", 
   await teaRun(teaRunOptions(module, { outDir: dir, frames: 120, events }));
   const transcript = readFileSync(`${dir}/transcript.md`, "utf8");
   assert.ok(transcript.includes("**[frame 70]** param: speed-scale → 2.5"), "param change auto-logged");
-  assert.ok(transcript.includes("**[frame 30]** log: selected Venus"), "click hit a moving planet");
-  assert.ok(transcript.includes("**[frame 100]** log: selected Mercury"), "click hit under a changed speed-scale");
+  assert.match(transcript, /\*\*\[frame 30\]\*\* mousedown \(\d+,\d+\) on planet-Venus → select Venus/u, "click hit a moving planet");
+  assert.match(transcript, /\*\*\[frame 100\]\*\* mousedown \(\d+,\d+\) on planet-Earth → select Earth/u, "click hit under a changed speed-scale");
 });
 
 test("a different seed changes the output", async () => {
