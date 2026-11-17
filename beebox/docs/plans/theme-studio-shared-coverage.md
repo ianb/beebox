@@ -135,3 +135,17 @@ selectors matched. The run includes the supplemental focused laptop check;
 its local log is `scratch/coverage/verified.log`. This is targeted coverage
 evidence, not a full `--all` landing pass. Final selected tests again passed
 eight files and 87 assertions, and the test command exited zero.
+
+## Authorized landing correction
+
+The boxholder requested a quick fix and landing for the remaining Tempest
+seed-list error contrast miss. Its existing ErrorText already reads the card
+material. Tempest card danger ink changes from `#ff9cab` to `#ffa3b1`, preserving
+the pink while increasing contrast against the previously measured phone
+backdrop `#324b73` from 4.43:1 to 4.66:1 by calculation. No other palette token
+or audit rule changes.
+
+Rendered verification run `5638-98e0449c` passed all 292 laptop and 279 phone
+text runs after the correction. Only the two expected layered-default catalog
+selectors remain in this targeted Tempest run; there are no measured contrast
+or backdrop misses. Local evidence: `scratch/seed-danger/verified.log`.
