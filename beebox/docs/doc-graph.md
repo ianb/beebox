@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-11-17T19:40:42Z
+Generated: 2026-11-17T19:44:44Z
 Total documents: 709
 
 ## Issues
