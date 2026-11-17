@@ -7,9 +7,8 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent, WebFetch, WebSearch
 # /bbx-plan
 
 A plan is a complete unit of work: designed end-to-end before implementation,
-shipped end-to-end when it finishes. Writing one and reviewing one are the same
-act — the template's blank sections are the failure modes you haven't thought
-about yet, and filling them honestly IS the review.
+shipped end-to-end when it finishes. Writing and reviewing use the same
+template: a blank section is a failure mode nobody has looked at yet.
 
 ## When to invoke
 
@@ -20,8 +19,6 @@ when the agent picks the wrong X" is a real question.
 
 Skip it for one-file changes obvious from the diff, bug fixes where the fix is
 the artifact, and exploratory spikes (spike first; plan if it survives).
-In a design discussion, a reaction such as "I like it" is input for the next
-round; write the plan when the boxholder agrees the direction or asks for it.
 
 ## Writing a plan
 
@@ -32,75 +29,64 @@ round; write the plan when the boxholder agrees the direction or asks for it.
    queue for related and duplicate items before you start.
 2. Work that changes what a person meets (card type, surface, proactive or
    chat behavior, notification, onboarding, a record a person reads) gets its
-   Design section from the bbx-design skill before the tracks: situations in
-   the "When …, I want to …, so I can …" form, then whether this is the right
-   place and time to act, show, or stay quiet. Other work writes "No design
-   section: <reason>" under that heading.
+   Design section from the bbx-design skill before the tracks. Other work
+   writes "No design section: <reason>" under that heading.
 3. Fill every section. Keep the headers verbatim. A section that genuinely
    doesn't apply says *why* ("no prior art: this is a new vocabulary surface"),
    never "N/A".
 4. Write for a reader six months from now with no context — Simplified
    Technical English in spirit: short sentences, active voice, one idea per
    sentence, consistent terms. Not a chat transcript.
-5. After the cross-model review, write a CODING_FEEDBACK entry: pipe your
-   answers to its four prompts (`bin/coding-feedback help` lists them) into
+5. Run the cross-model plan review and adjudicate it before the first
+   implementation chunk; code written while the review runs gets rewritten.
+   When a review round or the boxholder reverses a decision, or you revise the
+   plan after commits, search the plan for the old wording and rewrite every
+   place it appears: the next reviewer reads the plan as authority.
+6. Then write a CODING_FEEDBACK entry: pipe your answers to its four prompts
+   (`bin/coding-feedback help` lists them) into
    `bin/coding-feedback add --checkpoint plan-reviewed`.
 
 **Where the work happens.** Big plans run in a worktree; commit freely there.
-The plan completes, then it ships as one piece — and **only when the boxholder
-says so**. Committing chunks is normal; merging a partial plan because "the
-first part feels done" is the violation. Long multi-track plans are fine when
-their scope warrants it (see *Size and scope review*); execute them serially in
-dependency order, don't compress them.
+The plan ships as one piece, and **only when the boxholder says so**: merging a
+partial plan because "the first part feels done" is the violation. Execute a
+long multi-track plan serially in dependency order; don't compress it.
 
 ## The discipline
 
 These are what make a plan checkable rather than a story. They apply when
 writing and when reviewing.
 
-- **Cite, don't assert.** Any claim about existing code or behaviour quotes
-  `file:line` plus verbatim text — including claims of safety ("Y handles this"
-  cites where). "AGENTS.md says to parse and reserialize" is a paraphrase;
-  `beebox/AGENTS.md:31`: *"parse, change, and reserialize it"* is a citation.
-  "Probably" / "likely" / "I think" are guesses: verify or mark unverified.
-- **Explain actual tradeoffs against stated preferences.** Cite the relevant
-  human decision, engineering principle, repo rule, or shipped precedent when
-  it informs the choice. Ordinary implementation choices need no principle
-  mapping; do not invent a principle to justify them.
-- **Two sections are gates, not prose.** *Could this be simpler?* — name the
-  simplest version and what the fuller plan buys, per a principle; if you can't,
-  shrink. *NOT in scope* — a plan touching more than one module, a transition
-  state, or new vocabulary with an empty NOT-in-scope hasn't bounded itself.
-  Neither is a size limit; they replace one.
+- **Evidence matches the claim.** A `file:line` quote proves that the quoted
+  text exists. It does not prove "every", "none", "the same as", "reusable
+  as-is", what the code does when it runs, or that a value reaches its
+  consumer. Each claim a track would be wrong without is a row in the
+  template's *Code claims* table, with the evidence that claim needs. An
+  empty search is the evidence for "none": write the search down. A subagent
+  summary, handoff, issue, older plan, doc, or code comment is a lead: get the
+  evidence yourself or mark the row unverified.
 - **No numeric scoring.** No confidence levels, completeness scores, or 1–10
   ratings. A finding that needs a number needs better prose.
-- **Searches that came back empty are findings.** Prior art, the issue queue,
-  the code: "searched for X, found nothing" is information; write it down.
 - **Walk each user scenario before calling the plan ready.** Trace it hop by
   hop against the real code: who writes what, which process runs, what the
-  person sees, what is left behind. When the plan depends on an external model
-  or API, call it with realistic data.
-- **Open questions live outside the first chunk.** A question inside the first
-  implementation chunk is a missing decision — settle it in Direction.
+  person sees, what is left behind. Walk the way out as well as the way in
+  (the thing ends, is deleted, clears), and write the walk under the *Code
+  claims* table. When the plan depends on an external model or API, call it
+  with realistic data.
 
 ## Size and scope review
 
 Estimates create pressure to keep the design small. They are goals, not automatic
 cutoffs, and an agent's estimate is not a limit imposed by the boxholder.
 
-**Estimate while planning.** In *Smallest fix and budget*, name the smallest
-change that fixes the reported problem, the chosen tracks/subprojects, and
-estimated source and test lines. Explain what the fuller approach buys.
-Compare like-for-like during implementation: additions plus deletions, not net
-growth. Report documentation and generated output separately so the size is clear.
-The plan file and its review artifacts are not part of the change: leave them
-out of every line count, estimate, and size report.
+**Estimate while planning**, in *Smallest fix and budget*. During
+implementation compare like-for-like: additions plus deletions, not net growth.
+Give source and tests, authored documentation, and generated output as three
+figures. Leave the plan file and its review artifacts out of every figure.
 
-**Over 2,000 changed lines is a BIG CHANGE.** Label it **BIG CHANGE**, explain
-what drives the size, and obtain the boxholder's approval before proceeding at
-that scale. Count the full proposed change, including source, tests, and authored
-documentation other than the plan itself; identify generated output separately rather than concealing it.
-If that size and scope are already approved, continue without asking again.
+**Over 2,000 changed lines is a BIG CHANGE.** Source, tests, and authored
+documentation count; generated output does not. Label it **BIG CHANGE**,
+explain what drives the size, and obtain the boxholder's approval before
+proceeding at that scale, unless that size and scope are already approved.
 
 When work grows substantially, show the revised estimate and check whether the
 design still earns its size. Use cross-model scope review when it would help
@@ -111,12 +97,14 @@ a decision when the work becomes a BIG CHANGE without approval, introduces
 materially different scope, or a finding invalidates the chosen approach.
 
 Record the resulting decision in the plan. Honor an explicit human size limit;
-do not reinterpret it as aspirational. A separate limit applies during
-debugging: after three failed fixes, stop and re-plan.
+do not reinterpret it as aspirational.
 
 ## Reviewing an existing plan
 
-Read the plan; check every template section is present and every claim cited.
+Read the plan; check every template section is present. Re-derive *Code
+claims* rows instead of reading them: rerun a search, follow a flow one hop
+past where the plan stops, run the command. A track claim with no row, and an
+unverified row that a first chunk depends on, are findings.
 For external prior art, verify the premises the design relies on; do not repeat
 searches that have no bearing on a design decision.
 Write findings to a sibling `<plan>.review.md`:
@@ -125,6 +113,7 @@ Write findings to a sibling `<plan>.review.md`:
 # Plan Engineering Review — <topic>
 ## What already exists
 ## Ontology (verified against the code's own names)
+## Code claims (rows re-derived, and how)
 ## Prior art (external) — verified      ← verify external premises the design depends on
 ## Stated preferences this plan trades against
 ## Could this be simpler? (verified)
