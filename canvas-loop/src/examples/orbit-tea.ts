@@ -19,7 +19,8 @@ type Params = ParamValues<typeof params>;
 interface Planet {
   name: string;
   orbit: number;
-  angle0: number;
+  /** Where it is on its orbit, radians; each tick adds its speed times speed-scale. */
+  angle: number;
   /** Radians per frame at speed-scale 1. */
   speed: number;
   size: number;
@@ -30,7 +31,6 @@ type Mode = { type: "idle" } | { type: "selected"; name: string };
 
 export interface Model {
   planets: readonly Planet[];
-  frame: number;
   mode: Mode;
 }
 
@@ -41,18 +41,16 @@ const HUD: TextOptions = { size: 13, fill: "#cbd5e1" };
 export function init(): Model {
   return {
     planets: [
-      { name: "Mercury", orbit: 60, angle0: 0, speed: 0.03, size: 6, colour: "#d6a46a" },
-      { name: "Venus", orbit: 100, angle0: 2.1, speed: -0.018, size: 9, colour: "#e8d6a8" },
-      { name: "Earth", orbit: 150, angle0: 4.2, speed: 0.01, size: 10, colour: "#4f8fd8" },
+      { name: "Mercury", orbit: 60, angle: 0, speed: 0.03, size: 6, colour: "#d6a46a" },
+      { name: "Venus", orbit: 100, angle: 2.1, speed: -0.018, size: 9, colour: "#e8d6a8" },
+      { name: "Earth", orbit: 150, angle: 4.2, speed: 0.01, size: 10, colour: "#4f8fd8" },
     ],
-    frame: 0,
     mode: { type: "idle" },
   };
 }
 
-function position(planet: DeepReadonly<Planet>, at: { frame: number; scale: number }): [number, number] {
-  const angle = planet.angle0 + planet.speed * at.scale * at.frame;
-  return [SUN.x + planet.orbit * Math.cos(angle), SUN.y + planet.orbit * Math.sin(angle)];
+function position(planet: DeepReadonly<Planet>): [number, number] {
+  return [SUN.x + planet.orbit * Math.cos(planet.angle), SUN.y + planet.orbit * Math.sin(planet.angle)];
 }
 
 /** The selected planet's speed one step further from zero, or one step nearer. */
@@ -63,8 +61,12 @@ function nudge(model: DeepReadonly<Model>, at: { name: string; dir: 1 | -1 }): M
 
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
   switch (msg.type) {
-    case "tick":
-      return { ...model, frame: msg.frame };
+    case "tick": {
+      // Advancing the angle (not computing it from the frame) keeps a planet in
+      // place when speed-scale changes, and lets reset put it back.
+      const scale = u.params["speed-scale"];
+      return { ...model, planets: model.planets.map((p) => ({ ...p, angle: p.angle + p.speed * scale })) };
+    }
     case "mousedown": {
       const hit = model.planets.find((p) => msg.targets.includes(`planet-${p.name}`));
       if (hit !== undefined) {
@@ -112,7 +114,7 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawin
     v.background("#0b1020"),
     p["show-orbits"] && model.planets.map((pl) => v.circle(SUN.x, SUN.y, pl.orbit, { stroke: "#26324f", weight: 1 })),
     v.circle(SUN.x, SUN.y, 20, { fill: "#fcd34d", effects: { glow: { blur: 18, color: "#f59e0b", strength: 2 } } }),
-    model.planets.map((pl) => drawPlanet(v, { planet: pl, at: position(pl, { frame: model.frame, scale }), selected: pl.name === selected })),
+    model.planets.map((pl) => drawPlanet(v, { planet: pl, at: position(pl), selected: pl.name === selected })),
     v.column({ x: 12, y: 12, gap: 4 }, [
       v.text(`speed ×${scale.toFixed(1)}   selected: ${selected}`, { x: 0, y: 0 }, HUD),
       focus !== undefined && v.text(`${focus.name}: ${Math.abs(focus.speed).toFixed(3)} rad per frame`, { x: 0, y: 0 }, HUD),

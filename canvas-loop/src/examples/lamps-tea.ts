@@ -31,7 +31,7 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util): Model {
       const id = IDS.find((i) => msg.targets.includes(`lamp-${i}`));
       if (id === undefined || model.litAt[id] !== null) return model;
       u.handled(`light ${id}`);
-      // Events for frame N run before its tick, so the lamp starts on the next frame.
+      // Events for frame N run before its tick: the model still holds N - 1, so the lamp starts on frame N.
       return { ...model, litAt: { ...model.litAt, [id]: model.frame + 1 } };
     }
     case "mouseup":

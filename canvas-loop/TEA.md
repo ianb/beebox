@@ -851,7 +851,7 @@ return [
   v.background("#0b1020"),
   p["show-orbits"] && model.planets.map((pl) => v.circle(SUN.x, SUN.y, pl.orbit, { stroke: "#26324f", weight: 1 })),
   v.circle(SUN.x, SUN.y, 20, { fill: "#fcd34d", effects: { glow: { blur: 18, color: "#f59e0b", strength: 2 } } }),
-  model.planets.map((pl) => drawPlanet(v, { planet: pl, at: position(pl, { frame: model.frame, scale }), selected: pl.name === selected })),
+  model.planets.map((pl) => drawPlanet(v, { planet: pl, at: position(pl), selected: pl.name === selected })),
   v.column({ x: 12, y: 12, gap: 4 }, [ /* the readout */ ]),
 ];
 ```

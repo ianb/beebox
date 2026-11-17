@@ -152,7 +152,8 @@ test("examples check fails an example with no events file, or one that does not 
   mkdirSync(examples, { recursive: true });
   for (const name of ["none", "empty", "late", "unsorted"]) writeFileSync(join(examples, `${name}-tea.ts`), readFileSync(clean, "utf8"));
   writeFileSync(join(examples, "empty-tea-events.json"), "[]");
-  writeFileSync(join(examples, "late-tea-events.json"), '[{ "frame": 5, "type": "snapshot" }, { "frame": 7, "type": "keydown", "key": "r" }]');
+  // An input listed after the closing snapshot, on its frame, would change what the snapshot's label describes.
+  writeFileSync(join(examples, "late-tea-events.json"), '[{ "frame": 5, "type": "snapshot" }, { "frame": 5, "type": "keydown", "key": "r" }]');
   // The run length comes from the largest frame, not the last entry.
   writeFileSync(join(examples, "unsorted-tea-events.json"), '[{ "frame": 9, "type": "mousedown", "x": 1, "y": 1 }, { "frame": 2, "type": "snapshot" }]');
   const result = await checkExamples({ examplesDir: pathToFileURL(`${examples}/`) });
@@ -160,4 +161,11 @@ test("examples check fails an example with no events file, or one that does not 
   assert.deepEqual(result.entries.map((e) => e.ok), [false, false, false, false]);
   assert.equal(detail.get("none"), "canvas-loop: no events file: add none-tea-events.json beside the sketch");
   for (const name of ["empty", "late", "unsorted"]) assert.equal(detail.get(name), "canvas-loop: end the events file with a snapshot at its last frame", name);
+});
+
+test("examples check fails when it finds no examples", async () => {
+  const examples = join(dir, "examples-none");
+  mkdirSync(examples, { recursive: true });
+  const result = await checkExamples({ examplesDir: pathToFileURL(`${examples}/`) });
+  assert.deepEqual(result, { entries: [{ name: "(examples)", ok: false, detail: `no *-tea.ts files in ${examples}/` }], ok: false });
 });

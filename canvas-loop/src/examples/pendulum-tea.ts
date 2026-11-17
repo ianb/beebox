@@ -1,9 +1,10 @@
 // Physics stepped in `update`: each tick advances the swing by a fixed 1/60 s
 // (the check's fps), split into substeps so the integration stays stable.
 // The length slider sits on the canvas (`v.control`); a new length restarts
-// the swing from the release angle. Because the run is exact, frame
-// 60·T after a release shows the bob back where it started, with T the
-// small-angle period 2π√(L/g). Linked from TEA.md "Frame-N guarantee".
+// the swing from the release angle. Because every run gives the same frames,
+// a snapshot 60·T ticks after a release, with T the small-angle period
+// 2π√(L/g), checks the swing: the bob is back within a hair of where it
+// started. Linked from TEA.md "Frame-N guarantee".
 import type { DeepReadonly, Msg, ParamValues, ParamsDecl, RootDrawing, TextOptions, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {

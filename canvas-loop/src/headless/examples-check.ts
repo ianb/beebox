@@ -56,10 +56,10 @@ function sketchUrl(examplesDir: URL, name: string): URL {
   return new URL(`${name}${SKETCH_SUFFIX}`, examplesDir);
 }
 
-/** The run length the events file sets: frames 0 … its last frame, which must hold a snapshot. */
+/** The run length the events file sets: frames 0 … its last frame, whose last entry must be a snapshot (inputs or params on that frame come before it). */
 function runFrames(events: readonly TeaScriptEvent[]): number {
   const last = Math.max(...events.map((event) => event.frame));
-  if (!events.some((event) => event.frame === last && event.type === "snapshot")) {
+  if (events.findLast((event) => event.frame === last)?.type !== "snapshot") {
     throw new CliError({ detail: "end the events file with a snapshot at its last frame" });
   }
   return last + 1;
@@ -201,6 +201,7 @@ function typeErrorsByName(errors: readonly SketchTypeError[], at: { examplesDir:
 export async function checkExamples(options?: { examplesDir?: URL }): Promise<ExampleCheckResult> {
   const examplesDir = options?.examplesDir ?? EXAMPLES_DIR;
   const names = exampleNames(examplesDir);
+  if (names.length === 0) return { entries: [{ name: "(examples)", ok: false, detail: `no *${SKETCH_SUFFIX} files in ${fileURLToPath(examplesDir)}` }], ok: false };
   const sketches = names.map((name) => fileURLToPath(sketchUrl(examplesDir, name)));
   const typeErrors = typeErrorsByName(await checkSketchTypes(sketches), { examplesDir, names });
   const entries: ExampleCheckEntry[] = [];

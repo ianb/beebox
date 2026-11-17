@@ -1,9 +1,9 @@
 // Sounds chosen by meaning, and the rules of voices: a tapped bar plays a
 // marimba note from `u.scaleNote`, so any order is in tune; a ball dropped from
 // the sky lands with a `knock`, a different take each time; playing every bar
-// once earns a `chime`. Each sound gets a new id from a counter in the model,
-// and starts at `frame + 1`, the frame after the click. Linked from TEA.md
-// "Sound".
+// once earns a `chime`. Each sound gets a new id from a counter in the model.
+// It starts at `model.frame + 1`: the model holds the last tick's frame, so
+// that is the frame of the click. Linked from TEA.md "Sound".
 import type { DeepReadonly, Drawing, Msg, RootDrawing, Util, View, Voice } from "@ianbicking/canvas-loop";
 
 export const canvas = { width: 400, height: 260 };
@@ -41,7 +41,7 @@ export function init(_u: Util): Model {
   return { frame: 0, count: 0, heard: [], played: [], balls: [] };
 }
 
-/** The model with one more sound, starting on the next frame, under a new id. */
+/** The model with one more sound under a new id, starting this frame (the model holds the last tick's). */
 function hear(model: DeepReadonly<Model>, heardNow: Pick<Heard, "kind" | "bar" | "note">): Model {
   const heard = [...model.heard.filter((h) => model.frame - h.at < KEEP), { ...heardNow, n: model.count, at: model.frame + 1 }];
   return { ...model, count: model.count + 1, heard };

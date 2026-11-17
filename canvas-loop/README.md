@@ -182,7 +182,7 @@ after changing an example with `pnpm --dir canvas-loop run build:playground`.
 | [`orbit`](./src/examples/orbit-tea.ts) | every param kind; a trigger resets the model and leaves the params; clicking a moving body by name |
 | [`scale`](./src/examples/scale-tea.ts) | names on nested drawings, `targets`, `row` and `column` |
 | [`answer-box`](./src/examples/answer-box-tea.ts) | a typed answer over the canvas (`text` param, `v.control`); `activity` |
-| [`sound`](./src/examples/sound-tea.ts) | sounds chosen by meaning; a voice id per sound; `at` is the next frame |
+| [`sound`](./src/examples/sound-tea.ts) | sounds chosen by meaning; a voice id per sound; `at` is `model.frame + 1`, the click's frame |
 | [`lamps`](./src/examples/lamps-tea.ts) | event-time animation: a start frame per id, then tweens of `frame - start` |
 | [`pendulum`](./src/examples/pendulum-tea.ts) | physics stepped in `update` at a fixed time step; a slider on the canvas |
 | [`paint`](./src/examples/paint-tea.ts) | strokes from the pointer kept as data, drawn through a chain of pictures |
