@@ -545,8 +545,14 @@ wt_scratch_retain() {
   [ -e "$dest" ] && dest="$dest-$$"
   [ -e "$dest" ] && return 1
   mkdir -p "$dest" || return 1
-  # On failure, drop the keep dir if nothing reached it.
-  mv "${entries[@]}" "$dest/" || { rmdir "$dest" 2>/dev/null || true; return 1; }
+  if ! mv "${entries[@]}" "$dest/"; then
+    # Drop the keep dir if nothing reached it; otherwise name what did.
+    if ! rmdir "$dest" 2>/dev/null; then
+      wt_say "partly kept scratch/ at $dest; deleted after $WT_SCRATCH_KEEP_DAYS days"
+      wt_log "scratch partly kept wt=$worktree_path dest=$dest"
+    fi
+    return 1
+  fi
   size=$(du -sh "$dest" 2>/dev/null | cut -f1 | tr -d ' ')
   wt_say "kept scratch/ (${size:-?}) at $dest; deleted after $WT_SCRATCH_KEEP_DAYS days"
   wt_log "scratch kept wt=$worktree_path dest=$dest size=${size:-?}"
