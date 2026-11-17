@@ -85,7 +85,8 @@ export interface BuiltPage {
 export async function buildLivePage(args: { sketches: readonly string[]; name: string | undefined }): Promise<BuiltPage> {
   if (args.sketches.length === 0) throw new CliError({ detail: "usage: cli page <sketch.ts>… [--name page-name]" });
   const entries = pageEntries(args.sketches.map((s) => resolve(s)));
-  const errors = await checkSketchTypes(entries.map((e) => e.path));
+  // The page runs in a browser, so the sketches may use DOM globals (matchMedia).
+  const errors = await checkSketchTypes(entries.map((e) => e.path), { dom: true });
   if (errors.length > 0) {
     throw new CliError({ detail: `the sketches do not type-check; no page written:\n${errors.map((e) => formatSketchTypeError(e, process.cwd())).join("\n")}` });
   }

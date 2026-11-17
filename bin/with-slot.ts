@@ -22,7 +22,10 @@
  * the checkout, so every worktree and box shares it. A child sees
  * BBX_GPU_LOCK_HELD (the holder's pid) and runs a nested wrapped command
  * without queueing behind its own parent — only while that pid still holds the
- * lock, so a background child that outlives its holder queues like anyone.
+ * lock, so a child started after its holder exits queues like anyone. A GPU
+ * command sent to the background (`&`) inside a wrapped command is not
+ * covered: the lock goes when the wrapped command exits, while it may still
+ * run. Wrap such a command on its own instead.
  * A live holder is never expired by age (a long render keeps the GPU); a dead
  * or pre-boot one is. Unlike the slots it fails closed: an unusable lock
  * directory stops the command rather than letting it run unguarded.

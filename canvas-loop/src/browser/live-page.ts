@@ -74,15 +74,17 @@ export function livePage(entries: readonly LivePageEntry[]): void {
   setInterval(() => {
     if (figure === undefined || failed) return;
     const now = performance.now();
+    const seconds = (now - last.at) / 1000;
     const presents = figure.surface.presents;
-    fps.textContent = `${(((presents - last.presents) * 1000) / (now - last.at)).toFixed(1)} frames/s`;
+    fps.textContent = `${((presents - last.presents) / seconds).toFixed(1)} frames/s`;
     last = { at: now, presents };
+    // pictureCosts() is the cost since the last read; the timer can fire late, so divide by the time that passed.
     const list = figure.surface.pictureCosts().toSorted((a, b) => b.recordMs + b.rasterMs - (a.recordMs + a.rasterMs));
     const ms = list.reduce((n, c) => n + c.recordMs + c.rasterMs, 0);
     costs.textContent =
       list.length === 0
         ? "new pictures: none"
-        : `new pictures: ${ms.toFixed(0)} ms/s; ${list
+        : `new pictures: ${(ms / seconds).toFixed(0)} ms/s; ${list
             .slice(0, COST_KEYS)
             .map((c) => `${c.key} ×${String(c.versions)} ${(c.recordMs + c.rasterMs).toFixed(0)} ms`)
             .join(", ")}`;

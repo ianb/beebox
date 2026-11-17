@@ -228,7 +228,8 @@ none
 | Lock directory not writable | no | `mkdirSync` throws; with-gpu exits non-zero with the message | clear |
 | A waiter reads a just-created, still-empty lock file as debris and deletes a live claim | no (a timing race) | the record is linked into place complete | clear |
 | A long GPU job outlives `LOCK_STALE_MS` | no | the GPU lock passes `maxAgeMs: Infinity`; only a dead or pre-boot holder is reclaimed | clear |
-| A background child outlives its holder and keeps `BBX_GPU_LOCK_HELD` | with-gpu test | bypass only while that pid holds the lock | clear |
+| A child started after its holder exits keeps `BBX_GPU_LOCK_HELD` | with-gpu test | bypass only while that pid holds the lock | clear |
+| A wrapped command starts a nested GPU command in the background (`&`) and exits first | no | not handled: the lock goes with the wrapped command; documented in `bin/with-slot.ts` as unsupported (wrap that command on its own) | silent (accepted) |
 | Two waiters reclaim the same debris and one deletes the other's fresh claim | no | not handled: needs a crashed holder and two waiters in the same millisecond; accepted | silent (accepted) |
 | `cli page` on a sketch with a type error | page test | refuses to build, prints errors | clear |
 | Dev page URL wrong for a checkout the router does not know | page test | URL printed only for a known checkout; the file path always | clear |
@@ -334,3 +335,13 @@ boundaries. Not adopted as a gate: the pieces' home, which the brief left to
 this plan; it is reported as a reversible choice (Open design questions). The
 remark that wrapping all of `cli` also queues `diff`, `zoom` and `page` is
 accepted as a cost (Track A).
+
+## Implementation review
+
+Codex (gpt-6-sol), 2026-11-17, four findings. Fixed: the picture-cost line
+divided by one second rather than the time since its last read; `cli page`
+type-checked without DOM types, refusing a browser sketch that uses
+`matchMedia`. Accepted as documented risks (Failure modes): two waiters
+reclaiming the same debris (needs a crashed holder and two waiters within one
+poll; a fix needs a cleanup lock of its own), and a nested GPU command sent to
+the background that outlives the wrapped command.
