@@ -1,17 +1,9 @@
-// A typed answer and tiles sized to their labels:
-//
-//   - `answer` is a `text` param placed over the canvas with `v.control`: a real
-//     text box (paste, keyboard, screen readers). Each edit arrives as a
-//     `param` msg; `update` checks it.
-//   - the element tiles are as wide as their labels. `tiles(measure)` lays them
-//     out from a width function: `update` passes `u.textWidth` to hit-test a
-//     click, `draw` passes `v.textWidth` to paint, and the two agree exactly.
-//
-//   - `activity(model)` turns the state into data after each handled action,
-//     the way `draw` turns it into pixels; a host such as a figure may log it.
-//
-// Click a tile to show its atomic mass.
-import type { DeepReadonly, Drawing, Msg, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
+// A typed answer over the canvas: `answer` is a `text` param placed with
+// `v.control`, so a browser shows a real text box, and every edit arrives as a
+// `param` msg that `update` checks. `activity` reports what the state means
+// after each handled input. The tiles are as wide as their labels and hit by
+// name. Linked from TEA.md "Inputs over the canvas" and "Activity".
+import type { DeepReadonly, Drawing, Msg, ParamsDecl, RootDrawing, TextOptions, Util, View } from "@ianbicking/canvas-loop";
 
 export const canvas = { width: 420, height: 220 };
 
@@ -24,31 +16,12 @@ const ELEMENTS = [
   { symbol: "O", name: "Oxygen", mass: 16.0 },
 ] as const;
 const MOLAR_MASS = 2 * 1.008 + 16.0;
-const LABEL = { size: 15, style: "bold" } as const;
+const LABEL: TextOptions = { size: 15, style: "bold", valign: "middle", fill: "#1e293b" };
+const BODY: TextOptions = { size: 15, valign: "middle", fill: "#0f172a" };
 
 export interface Model {
   shown: readonly string[];
   verdict: "empty" | "unreadable" | "right" | "wrong";
-}
-
-interface Tile {
-  symbol: string;
-  label: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-/** Tiles in a row, each as wide as its label plus padding. */
-function tiles(measure: (text: string) => number, shown: readonly string[]): Tile[] {
-  let x = 20;
-  return ELEMENTS.map((e) => {
-    const label = shown.includes(e.symbol) ? `${e.name} ${e.mass.toFixed(3)}` : e.name;
-    const tile = { symbol: e.symbol, label, x, y: 70, w: measure(label) + 24, h: 34 };
-    x += tile.w + 12;
-    return tile;
-  });
 }
 
 function judge(text: string): Model["verdict"] {
@@ -67,7 +40,7 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
     case "param":
       return { ...model, verdict: judge(u.params.answer) };
     case "mousedown": {
-      const hit = tiles((s) => u.textWidth(s, LABEL), model.shown).find((t) => msg.x >= t.x && msg.x <= t.x + t.w && msg.y >= t.y && msg.y <= t.y + t.h);
+      const hit = ELEMENTS.find((e) => msg.targets.includes(`tile-${e.symbol}`));
       if (hit === undefined) return model;
       u.handled(`tile-${hit.symbol}`);
       const shown = model.shown.includes(hit.symbol) ? model.shown.filter((s) => s !== hit.symbol) : [...model.shown, hit.symbol];
@@ -95,18 +68,25 @@ const VERDICT: Record<Model["verdict"], { text: string; fill: string }> = {
   wrong: { text: "Not yet. Click the tiles for the atomic masses.", fill: "#b91c1c" },
 };
 
+/** One element tile, as wide as its label, named for its symbol. */
+function tile(v: View, e: (typeof ELEMENTS)[number], open: boolean): Drawing {
+  const label = open ? `${e.name} ${e.mass.toFixed(3)}` : e.name;
+  const w = v.textWidth(label, LABEL) + 24;
+  return v.at({ name: `tile-${e.symbol}` }, [
+    v.roundRect(0, 0, w, 34, 6, { fill: open ? "#dbeafe" : "#ffffff", stroke: "#94a3b8", weight: 1 }),
+    v.text(label, { x: 12, y: 17 }, LABEL),
+  ]);
+}
+
 export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
-  const out: Drawing[] = [];
-  out.push(v.background("#f8fafc"));
-  out.push(v.text("What is the molar mass of water (H2O)?", { x: 20, y: 22 }, { size: 17, fill: "#0f172a" }));
-  for (const t of tiles((s) => v.textWidth(s, LABEL), model.shown)) {
-    out.push(v.roundRect(t.x, t.y, t.w, t.h, 6, { fill: model.shown.includes(t.symbol) ? "#dbeafe" : "#ffffff", stroke: "#94a3b8", weight: 1 }));
-    out.push(v.text(t.label, { x: t.x + 12, y: t.y + t.h / 2 }, { ...LABEL, valign: "middle", fill: "#1e293b" }));
-  }
-  out.push(v.text("Answer:", { x: 20, y: 142 }, { size: 15, valign: "middle", fill: "#0f172a" }));
-  v.control("answer", { x: 90, y: 128, w: 120, h: 28, size: 15 });
-  out.push(v.text("g/mol", { x: 218, y: 142 }, { size: 15, valign: "middle", fill: "#475569" }));
   const verdict = VERDICT[model.verdict];
-  out.push(v.text(verdict.text, { x: 20, y: 186 }, { size: 15, fill: verdict.fill }));
-  return out;
+  v.control("answer", { x: 90, y: 128, w: 120, h: 28, size: 15 });
+  return [
+    v.background("#f8fafc"),
+    v.text(["What is the molar mass of water (H", { text: "2", sub: true }, "O)?"], { x: 20, y: 22 }, { size: 17, fill: "#0f172a" }),
+    v.row({ x: 20, y: 70, gap: 12 }, ELEMENTS.map((e) => tile(v, e, model.shown.includes(e.symbol)))),
+    v.text("Answer:", { x: 20, y: 142 }, BODY),
+    v.text("g/mol", { x: 218, y: 142 }, { ...BODY, fill: "#475569" }),
+    v.text(verdict.text, { x: 20, y: 186 }, { size: 15, fill: verdict.fill }),
+  ];
 }
