@@ -11,6 +11,7 @@ import * as answerBox from "../../examples/answer-box-tea.js";
 import * as sound from "../../examples/sound-tea.js";
 import * as lamps from "../../examples/lamps-tea.js";
 import * as pendulum from "../../examples/pendulum-tea.js";
+import * as paint from "../../examples/paint-tea.js";
 import * as brushes from "../../examples/brushes-tea.js";
 import * as paintMixing from "../../examples/paint-mixing-tea.js";
 import * as looks from "../../examples/looks-tea.js";
@@ -27,6 +28,7 @@ export const REGISTRY: readonly RegistryEntry[] = [
   { id: "sound", label: "Sound", module: asPlaygroundModule(sound) },
   { id: "lamps", label: "Lamps", module: asPlaygroundModule(lamps) },
   { id: "pendulum", label: "Pendulum", module: asPlaygroundModule(pendulum) },
+  { id: "paint", label: "Paint", module: asPlaygroundModule(paint) },
   { id: "brushes", label: "Brushes", module: asPlaygroundModule(brushes) },
   { id: "paint-mixing", label: "Paint mixing", module: asPlaygroundModule(paintMixing) },
   { id: "looks", label: "Looks", module: asPlaygroundModule(looks) },
