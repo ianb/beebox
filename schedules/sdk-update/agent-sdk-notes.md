@@ -74,23 +74,28 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.326 / Claude Code 2.1.326 — pending; changelog UNPUBLISHED at this turn (re-read next turn)
+### 0.3.326 / Claude Code 2.1.326 — pending (published 2026-11-16T18:44Z); re-read 2026-11-17
 
-Published 2026-11-16T18:44Z, minutes before this turn; neither changelog had a
-section. Bound from the `sdk.d.ts` diff against 0.3.325 (bundled CLI 2.1.326):
-- **New `mcpServersDelivery` option** (`'argv'` default, or `'initialize'`):
-  stdio/SSE/HTTP MCP servers can reach Claude Code over stdin instead of the
-  command line, where their `env` and `headers` are readable by other users.
-  Passing them on the command line is deprecated; an app that sets
-  `pathToClaudeCodeExecutable` and leaves the option unset gets a
-  `DeprecationWarning` (`CLAUDE_SDK_MCP_SERVERS_ARGV_DEPRECATED`) once per
-  process. beebox sets `pathToClaudeCodeExecutable`
-  (`resolveClaudeCodeBinary()`) and passes no MCP servers. **Check when
-  taken** whether the warning appears with no MCP servers; if so, set
-  `'initialize'` in the query options.
-- `BUILTIN_TOOL_NAMES` changed; per-tool MCP permission policy wording.
-- **Action:** Settled path; takeable 2026-11-18T18:44Z, after the changelog
-  re-read.
+- **SDK:** `mcpServersDelivery: 'initialize'` sends `mcpServers` over stdin
+  instead of the command line; the command-line default is deprecated, and an
+  app that sets `pathToClaudeCodeExecutable` without choosing gets a
+  `DeprecationWarning` once per process. beebox sets that path
+  (`resolveClaudeCodeBinary()`) and passes no MCP servers. **Check when taken**
+  whether the warning appears; if so, set `'initialize'`. Also: a hook request
+  that arrives during start-up is answered instead of refused; secrets are
+  masked in the `description` passed to `canUseTool`; SDK MCP request ids are
+  now strings.
+- **RUNTIME fixes:** resumed sessions no longer lose recent turns after a crash
+  when the previous turn ended with an empty reply, or earlier history when
+  memory ran low; a `max_tokens` over the model's limit is retried at the
+  API's maximum; parallel MCP calls no longer read each other's saved results;
+  a PreToolUse hook's `updatedInput` survives when several hooks answer.
+- **HARNESS:** startup warning for incomplete `--allowedTools` entries; rules
+  added in `/permissions` now warn when the settings file can't be written;
+  `grep` in the Bash tool no longer skips some text files; background service
+  no longer ends other users' processes on a reused PID.
+- **Action:** Settled path; takeable 2026-11-18T18:44Z.
+- **Sources:** [SDK 0.3.326](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03326), [Claude Code 2.1.326](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21326)
 
 ### 0.3.324 / 0.3.325 / Claude Code 2.1.324 / 2.1.325 — APPLIED 2026-11-14, act-now (published 2026-11-13T18:47Z and 20:05Z)
 
