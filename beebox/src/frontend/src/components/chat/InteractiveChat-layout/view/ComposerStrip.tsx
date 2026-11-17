@@ -4,10 +4,11 @@
  * that shows each item's token id.
  */
 
+import { MaterialContext } from "../../../ui/material";
 import type { ReactNode } from "react";
 
 export function ComposerStrip({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">{children}</div>;
+  return <MaterialContext.Provider value={false}><div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">{children}</div></MaterialContext.Provider>;
 }
 
 /** The item's token id. `corner` lays it over the top-left corner of an image tile. */

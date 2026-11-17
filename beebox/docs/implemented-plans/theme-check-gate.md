@@ -175,3 +175,58 @@ Claude verified the status stacking/fallback fix and the narrow Badge material b
 ## Landing evidence
 
 The final full run was `25502-c65f0559`; local evidence is in `scratch/theme-gate/full-complete.log` and `scratch/theme-gate/full/last-run.json`. It passed 25 catalog cases, 50 contrast jobs, and 150 backdrop and coverage jobs. The boxholder approved the “Theme contrast before and after” exhibit in chat on 2026-11-15, including the four theme color changes, Badge tones, and the now-visible Updating status. The Rose Trellis decision is resolved with the original gradient preserved.
+
+## Follow-up: conversation activity, 2026-11-17
+
+The composer painted a theme background without providing MaterialContext or
+material ink tokens. Ambient conversation activity therefore used app-colored
+Text, Hint and ghost Button labels. A real Tempest specimen measured the title
+at 1.11:1, the earlier-response hint at 2.34:1 and Dismiss at 2.45:1.
+
+`ComposerMaterial` now owns the shared production/studio boundary, and theme
+composer roots share the corresponding chat ink tokens. Accordion follows
+material borders, chevron and hover tint. Light notification/status/attachment
+panels preserve their app-palette context. Overprint's unstyled preview also
+inherits the composer's corrected ink.
+
+Theme Studio now mounts the real ambient reply with a fictional supplied
+transcript. The tour expands it before measurement; card-material accordions
+and nested light composer panels are also specimens. The earlier gate missed
+this because absent generic primitive markup cannot be inferred from theme
+CSS selector coverage. No audit threshold or exemption was weakened.
+
+Claude `claude-opus-5-5` reviewed the patch. The Overprint preview and persistent
+studio-dismissal findings were accepted. A fresh synthetic completion restores
+the specimen on reload. Fixed raw colors in saved-message recovery are a
+separate follow-up in the existing contrast inventory. The boxholder approved
+the conversation-activity before/after exhibit on 2026-11-17; this approval
+covers this follow-up, while the earlier 2026-11-15 approval above applies only
+to the original gate changes.
+
+The second review found that a fixed dark chevron would regress call summaries
+on colored user messages. Non-material accordions now inherit their surrounding
+text color, and the studio renders a real delivered-call message. The tour
+checks its activity accordion expanded successfully and names the case on
+failure. Claude verified these corrections in its final bounded pass.
+
+## Landing verification, 2026-11-17
+
+The boxholder approved the conversation-activity before/after exhibit. A real
+browser audit covered the activity panel in all 18 system themes and 42 theme
+states. Ambient activity passed in every theme; Spectrum's existing Chat
+navigation label measured 4.49:1. Five Tempest activity, hover, card and notice
+states passed after the chevron fix.
+
+The stable `bin/theme-check --system tempest --jobs 1` run measured 290 laptop
+and 277 phone text runs. The only contrast miss was the existing seed-list
+danger message at 4.45:1 on phone. Seven shared CSS rules had no Theme Studio
+match, including the focused-card controls recently merged to main; this
+coverage gap is filed separately. This was a targeted system run, not a full
+`bin/theme-check --all` catalog pass.
+
+`pnpm test:changed` passed 24 files and 191 assertions; ledger bookkeeping
+timed out afterward and is filed separately. The commit hooks passed document,
+layout, UI, typecheck, lint-staged and workstreams/bin typechecks. `bin/smoke`
+passed for the worktree's `test1` route. Claude `claude-opus-5-5` completed the
+cross-model review and verification follow-up without unresolved findings in
+the ambient material fix.

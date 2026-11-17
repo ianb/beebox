@@ -1,5 +1,9 @@
 /** States the ordinary card view reaches through authored content or transient workspace UI. */
 
+import { Accordion } from "../../../../components/ui/Accordion";
+import { Text } from "../../../../components/ui/Text";
+import { Hint } from "../../../../components/ui/Hint";
+import { Button } from "../../../../components/ui/Button";
 import { Markdown } from "../../../../components/Markdown/body";
 
 const QUOTES = `{% quote treatment="inset" %}
@@ -39,4 +43,14 @@ export function FigureErrorSpecimen() {
 /** Matches FileView/AgentViewRenderer.tsx's view host; mounting its owner would execute a box-authored module. */
 export function WorkspaceSpecimens() {
   return <div className="bbx-card-view" data-view-layout="inset">A small embedded card view.</div>;
+}
+
+/** Transparent accordion controls inherit the card material. */
+export function AccordionSpecimens() {
+  return <div id="bbx-theme-studio-accordions" className="space-y-3">
+    <Accordion id="bbx-studio-material-accordion" defaultOpen title={<Text size="sm">Details on the card</Text>}>
+      <Hint>A hint on the card material.</Hint>
+      <Button id="bbx-studio-material-ghost" intent="ghost" size="sm">Card action</Button>
+    </Accordion>
+  </div>;
 }

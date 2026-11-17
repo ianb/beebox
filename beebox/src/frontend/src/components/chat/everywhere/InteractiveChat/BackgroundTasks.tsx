@@ -11,7 +11,7 @@ import { trpcClient } from "../../../../lib/trpc/client";
 import { formatDuration } from "@shared/relative-time";
 import { applyTaskEvent, applyTaskLevel, type LiveTask, type LiveTaskEntry, type TaskEvent } from "./background-tasks";
 import { LiveDot } from "../../../ui/LiveDot";
-import { StatusPill } from "./StatusPill";
+import { StatusPill } from "../../StatusPill";
 
 /**
  * Hold the live-task list for one chat session. Returns the current tasks plus

@@ -18,6 +18,7 @@
 [data-chrome-theme="posy"] .bbx-chat-user-paper{color:#fff8ef;background:#c8125f;border:1px solid #b99eb1;border-radius:2px;box-shadow:2px 2px 0 #c8b9cf;}
 [data-chrome-theme="posy"] :is(.bbx-chat-reply-material,.bbx-chat-callout) .prose:not(.bbx-card-theme *){color:var(--posy-ink);--tw-prose-body:var(--posy-ink);--tw-prose-headings:var(--posy-ink);--tw-prose-bold:var(--posy-ink);--tw-prose-links:#ad1557;}
 [data-chrome-theme="posy"] .bbx-chat-callout>.bbx-chat-callout-context{color:#67467b;}
+[data-chrome-theme="posy"] .bbx-composer-material{--bbx-ink:#201525;--bbx-ink-soft:#624b63;--bbx-pen:#ad1557;--bbx-danger:#a82c49;}
 [data-chrome-theme="posy"] .bbx-composer-material>section{background:transparent;border:0;}
 [data-chrome-theme="posy"] .bbx-composer-material>div.bg-gradient-to-r{background:transparent;}
 [data-chrome-theme="posy"] .bbx-composer-material textarea{background:#fff7f0;color:var(--posy-ink);border:1px solid #b8a8c2;}

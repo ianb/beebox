@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
+import { useMaterial } from "./material";
 import { cn } from "../../lib/cn";
 
 export interface AccordionProps {
@@ -25,11 +26,11 @@ export interface AccordionProps {
   className?: string;
 }
 
-function Chevron({ open }: { open: boolean }) {
+function Chevron({ open, material }: { open: boolean; material: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`text-warm-400 text-xs transition-transform ${open ? "rotate-90" : ""}`}
+      className={cn(material ? "text-card-ink" : "text-current", "text-xs transition-transform", open ? "rotate-90" : "")}
     >
       &#9654;
     </span>
@@ -48,6 +49,8 @@ export function Accordion({
   keepMounted,
   className,
 }: AccordionProps) {
+  const material = useMaterial(undefined);
+  const rule = material ? "border-card-rule" : "border-warm-200";
   const defaultOpen = defaultOpenArg ?? false;
   const variant = variantArg ?? "bordered";
   const disabled = disabledArg ?? false;
@@ -63,14 +66,14 @@ export function Accordion({
   };
 
   const shellClass = cn(
-    variant === "bordered" ? "border border-warm-200 rounded-lg overflow-hidden" : "",
+    variant === "bordered" ? cn("border rounded-lg overflow-hidden", rule) : "",
     className,
   );
   const buttonClass =
     variant === "bordered"
-      ? "w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-warm-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed"
+      ? cn("w-full flex items-center gap-2 px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed", material ? "hover:bg-card-tint" : "hover:bg-warm-50")
       : "w-full flex items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed";
-  const bodyClass = variant === "bordered" ? "border-t border-warm-200 px-3 py-2" : "mt-2";
+  const bodyClass = variant === "bordered" ? cn("border-t px-3 py-2", rule) : "mt-2";
 
   return (
     <div className={shellClass}>
@@ -83,7 +86,7 @@ export function Accordion({
         aria-controls={bodyId}
         className={buttonClass}
       >
-        <Chevron open={open} />
+        <Chevron open={open} material={material} />
         {/* A span, so a title made of inline pieces stays valid inside the button. */}
         <span className="flex-1 min-w-0 flex flex-wrap items-center gap-2">{title}</span>
       </button>

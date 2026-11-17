@@ -7,6 +7,9 @@ import type { ViewTarget } from "../../../../lib/view-url";
 import { readActiveSessions, writeActiveSessions } from "./active-sessions";
 import { AmbientSessionReply } from "./AmbientSessionReply";
 
+// The studio mounts one real reply with a supplied transcript, without live subscriptions.
+export { AmbientSessionReply };
+
 export interface AmbientSession { sessionId: string; label: string }
 export interface AmbientRepliesProps {
   boxSlug: string;

@@ -23,6 +23,7 @@
  * builds (see router.tsx).
  */
 
+import { ComposerMaterial } from "../../../components/chat/ComposerMaterial";
 import { useRef } from "react";
 import { ChatInputArea, type TranscriptionHandle } from "../../../components/chat/InteractiveChat-composer/view";
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
@@ -131,6 +132,7 @@ type Spec = ReturnType<typeof specFor>;
 function noop() {}
 
 export function ComposerSpecimen({ spec, includeControlIds, showHeader, material, label }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean; label?: string }) {
+  const Surface = material === true ? ComposerMaterial : "div";
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Static store for the gallery: the value never changes (set is a no-op,
   // nothing ever subscribes), it just feeds the fabricated `input` text in.
@@ -198,7 +200,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
   );
   return (
     <InputStoreProvider value={inputStore}>
-    <div className={`w-full max-w-5xl mx-auto${material === true ? " bbx-composer-material" : ""}`}>
+    <Surface className="w-full max-w-5xl mx-auto">
       {/* Faux header strip so the voice chip face reads in context. */}
       {showHeader !== false && <header className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
@@ -227,7 +229,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
         mobileRow={mobileRow}
         includeControlIds={includeControlIds}
       />
-    </div>
+    </Surface>
     </InputStoreProvider>
   );
 }

@@ -66,3 +66,25 @@ text misses remain after the warm-700 move:
 
 Artifacts: `beebox/test/tours/.artifacts/nav-pages/2026-10-22T03-46-36-926Z/*.contrast.json`
 and `browse-walk/2026-10-22T03-22-23-925Z/`.
+
+## Re-encounter, 2026-11-17 — theme-check-gate
+
+The ambient conversation repair exposed additional existing misses outside its
+shared-component scope:
+
+- Spectrum's navigation label “Chat” measured 4.49:1 (`#ffffff` on
+  `#7a5a73`) at 1280×800 in Theme Studio. Repeated in two browser passes.
+- The composer error banner uses `text-danger-dark` on `bg-danger-50`
+  (4.44:1); its inline dismiss uses `text-danger` (2.92:1).
+  `ChatComposerSection.tsx` owns that banner. The failed upload retry in
+  `ChatAttachments.tsx` also uses the app danger color on a light chip.
+- Saved-message recovery text still uses `text-warm-700` directly on the dark
+  composer (`PendingSendStorageRecovery.tsx`), and its errors plus the
+  `use-bound-emission/hook.tsx` failed-send alert use `text-danger`.
+  These are source-traced misses from Claude's review, not browser-reproduced
+  storage failures. They should use the shared material-aware text primitives.
+
+Local diagnostic evidence: `scratch/ambient-theme/verify-final.log` and
+`scratch/cross-model/2026-11-17T14-03-50-732Z-claude.md`. The ambient title,
+hint, and Dismiss now have separate real-component studio coverage; that does
+not establish coverage of these recovery states.

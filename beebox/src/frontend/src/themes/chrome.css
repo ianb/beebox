@@ -182,6 +182,17 @@
 .bbx-box-presentation .bbx-conversation-desk {
   background: var(--bbx-desk-pattern, none), var(--bbx-desk-background);
 }
+/* The composer is a material boundary, including notices and ambient replies.
+   Reset inherited card ink here; each system theme supplies its own palette.
+   Transparent ink tints preserve the painted or textured surface on hover. */
+.bbx-composer-material {
+  --bbx-ink: #2e2720;
+  --bbx-ink-soft: #6b5d4b;
+  --bbx-pen: #7b4f8a;
+  --bbx-danger: #a05a6c;
+  --bbx-rule: color-mix(in srgb, var(--bbx-ink) 18%, transparent);
+  --bbx-tint: color-mix(in srgb, var(--bbx-ink) 7%, transparent);
+}
 .bbx-box-presentation[data-chrome-theme="paper"] .bbx-composer-material {
   background: #f7f1e6;
   border: 1px solid #dbcfb9;

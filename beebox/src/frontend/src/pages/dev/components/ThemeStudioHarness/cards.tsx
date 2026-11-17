@@ -37,7 +37,7 @@ import { Table, Td, Th } from "../../../../components/ui/Table";
 import { Badge, type BadgeTone } from "../../../../components/ui/Badge";
 import { WorkspaceUpdating } from "../../../../components/chat/WorkspaceUpdating";
 import { QUESTION_PATH, QuestionCard } from "./question";
-import { FigureErrorSpecimen, QuoteSpecimens, WorkspaceSpecimens } from "./specimens";
+import { AccordionSpecimens, FigureErrorSpecimen, QuoteSpecimens, WorkspaceSpecimens } from "./specimens";
 
 /**
  * Stands in for an embedded figure, which paints its own light panel whatever
@@ -160,6 +160,7 @@ function ReadingCard({ theme }: { theme: Theme }) {
       <CardStatusLines />
       <QuoteSpecimens />
       <WorkspaceSpecimens />
+      <AccordionSpecimens />
     </div>
     <div className="bbx-card-content flex flex-wrap items-center gap-3 mt-3">
       <CheckboxField id="bbx-studio-check" label="Bring spare envelopes" checked={checked} onChange={setChecked} />

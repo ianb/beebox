@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-17T07:41:40Z
-Total documents: 708
+Generated: 2026-11-17T14:43:15Z
+Total documents: 707
 
 ## Issues
 
@@ -122,7 +122,6 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -3120,7 +3119,7 @@ References:
 
 #### docs/box/whats-new.md
 
-Title: "What's new in Bee Box" | 20 lines | current reference
+Title: "What's new in Bee Box" | 22 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/whats-new.md:110 (mention) — `docs/box/whats-new.md` is in every install.
@@ -8834,7 +8833,7 @@ References:
 
 #### docs/implemented-plans/theme-check-gate.md
 
-Title: "Make theme-check a landing gate" | 178 lines | shipped history | implemented
+Title: "Make theme-check a landing gate" | 233 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/closed/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md:24 (link) — The contrast changes are committed in 5631c13ae; they are not landed. Review the “Theme contrast before and after” exhib
@@ -12938,14 +12937,6 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
-
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 23 lines
-
-No references in or out.
 
 ### src/frontend/public/earcons/
 

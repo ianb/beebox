@@ -163,7 +163,7 @@
 }
 /* Chat material ink, read by text in the reply, pending and meta materials.
    Raw tool details are light plates (chrome.css, .bbx-chat-plate). */
-.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
+.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material, .bbx-composer-material) {
   --bbx-ink: #e0f5e9;
   --bbx-danger: #fddadd;
   --bbx-ink-soft: #bfe2d8;
