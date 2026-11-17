@@ -37,7 +37,7 @@
  */
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { processImageBlob, unsupportedImageMessage } from "../../../lib/image-paste";
+import { processImageBlob, unsupportedImageMessage, type ImageFailure } from "../../../lib/image-paste";
 import { useComposerFileUploads } from "./composer-file-uploads";
 import { useEmissionStore } from "../input-store";
 import { toastError } from "../../ui/toast-store";
@@ -178,6 +178,7 @@ export function useChatAttachments(opts: {
     // one stalled encode must not hold every other original off the box. A
     // failure decrements its own pending slot immediately (nothing was
     // added); a success's slot is cleared by `addImage` itself.
+    const failures: ImageFailure[] = [];
     const results = await Promise.all(
       photos.map(async (source, i): Promise<ImageItem | null> => {
         const id = ids[i];
@@ -187,6 +188,7 @@ export function useChatAttachments(opts: {
           p = await processImageBlob(source);
         } catch (e) {
           console.error("[chat] Failed to process pasted image:", e);
+          failures.push({ file: source, error: e });
           editor.bumpPendingImages(-1);
           return null;
         }
@@ -206,12 +208,11 @@ export function useChatAttachments(opts: {
       })
     );
     const newItems = results.flatMap((item) => (item === null ? [] : [item]));
-    // Say so when an image didn't make it. The encoder rejects formats the
-    // browser can't decode (a HEIC straight off a phone, some SVGs), and this
-    // is the only path such a file has: a console-only log would let a picked
-    // file vanish with no signal at all (code-style.md defensiveness rule 5).
-    const failed = photos.filter((_f, i) => results[i] === null);
-    if (failed.length > 0) toastError(unsupportedImageMessage(failed));
+    // Say so when an image didn't make it. The encoder rejects formats it
+    // can't decode (a TIFF outside Safari, some SVGs), and this is the only
+    // path such a file has: a console-only log would let a picked file vanish
+    // with no signal at all (code-style.md defensiveness rule 5).
+    if (failures.length > 0) toastError(unsupportedImageMessage(failures));
     return newItems;
   }, [editor, uploadImageOriginal]);
 

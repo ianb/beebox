@@ -5,6 +5,7 @@ see or use), **Changed** (something that works differently), or **Agent**
 (something you see only through what the box's agent does). The list started
 on 2026-11-16, with the week before it filled in. Ask the box about any of
 them.
+- 2026-11-17 **Changed**: iPhone photos in HEIC format now attach to a chat in Chrome and Firefox, not only Safari. The box still keeps the original photo.
 
 - 2026-11-17 **Changed**: Focus card now gives the card the whole window: the top bar and tabs step aside, the message box stays, and a button at the right returns to the split.
 - 2026-11-16 **New**: This list. Open it from your profile menu or Settings, or ask the box what's new.

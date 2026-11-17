@@ -16,6 +16,8 @@
  */
 
 import { encodeCanvasBlob } from "./canvas-encode";
+import { isHeifBlob } from "./heif/sniff";
+import { decodeHeifToBitmap, HeifDecoderUnavailableError, HeifUnreadableError } from "./heif/decode";
 
 /** Max longest-side dimension after downscaling. */
 const MAX_DIMENSION = 1920;
@@ -70,7 +72,25 @@ export interface ProcessedImage {
  * reject the options bag, and its default is also from-image. The subsequent
  * canvas re-encode then emits pixels-upright output with no orientation tag.
  */
-async function decodeOriented(blob: Blob): Promise<{ source: CanvasImageSource; width: number; height: number }> {
+async function decodeOriented(blob: Blob): Promise<DecodedSource> {
+  try {
+    return await decodeNative(blob);
+  } catch (e) {
+    // The browser could not read it. A HEIC off an iPhone is the usual case
+    // outside Safari; libheif decodes that in a worker that loads only now.
+    if (!(await isHeifBlob(blob))) throw e;
+    const bitmap = await decodeHeifToBitmap(blob);
+    return { source: bitmap, width: bitmap.width, height: bitmap.height };
+  }
+}
+
+interface DecodedSource {
+  source: CanvasImageSource;
+  width: number;
+  height: number;
+}
+
+async function decodeNative(blob: Blob): Promise<DecodedSource> {
   if (typeof createImageBitmap === "function") {
     try {
       const bitmap = await createImageBitmap(blob, { imageOrientation: "from-image" });
@@ -145,6 +165,9 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   // decoded.source has orientation already baked into its pixels, and a canvas
   // re-encode never writes an EXIF tag — so the output is orientation-normalized.
   ctx.drawImage(decoded.source, 0, 0, width, height);
+  // A full-size phone photo's bitmap is tens of megabytes; release it now
+  // rather than at garbage collection.
+  if ("close" in decoded.source) decoded.source.close();
 
   // PNG sources stay lossless PNG — canvas WebP is always lossy, so a pasted
   // screenshot/line-art would degrade. Photos take the WebP → JPEG cascade
@@ -208,30 +231,47 @@ export function extractTransferFiles(
   return out;
 }
 
-/** The image formats the composer takes, as the message below lists them. */
-const ACCEPTED_IMAGE_TYPES: ReadonlySet<string> = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+/**
+ * The image formats the composer takes, as the message below lists them. HEIC
+ * and HEIF decode natively in Safari and through libheif elsewhere.
+ */
+const ACCEPTED_IMAGE_TYPES: ReadonlySet<string> = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"]);
+
+/** The same formats by extension, for a file whose `type` is empty. */
+const ACCEPTED_IMAGE_EXTENSIONS: ReadonlySet<string> = new Set(["JPG", "JPEG", "PNG", "GIF", "WEBP", "HEIC", "HEIF"]);
+
+/** A picked file that did not become an attachment, and what {@link processImageBlob} threw for it. */
+export interface ImageFailure {
+  file: File;
+  error: unknown;
+}
 
 /**
  * What to tell someone whose picked file did not make it into the message.
  *
- * The encoder can only take what the browser can decode, and the usual
- * casualty is a HEIC straight off an iPhone. The message this replaced named
- * neither the format nor the reason, so the only place the word "HEIC"
- * appeared was a developer console line — a first-time user guessed their way
- * to the answer and said their mother would not have.
+ * The encoder takes what the browser can decode, plus HEIF through libheif.
+ * Before libheif, the usual casualty was a HEIC straight off an iPhone, and the
+ * message then named neither the format nor the reason: the only place the word
+ * "HEIC" appeared was a developer console line. A first-time user guessed their
+ * way to the answer and said their mother would not have. So the message names
+ * the format, and the ones that work.
  */
-export function unsupportedImageMessage(files: File[]): string {
-  // A file of a format the app accepts that still failed to decode is
-  // damaged or unreadable. Blaming its format would contradict the list.
-  const damaged = files.filter((f) => ACCEPTED_IMAGE_TYPES.has(f.type));
-  const unsupported = files.filter((f) => !ACCEPTED_IMAGE_TYPES.has(f.type));
+export function unsupportedImageMessage(failures: ImageFailure[]): string {
+  const kinds = failures.map(({ file, error }) => ({ file, kind: failureKind(file, error) }));
+  const ofKind = (kind: FailureKind) => kinds.filter((k) => k.kind === kind).map((k) => k.file);
+  const unavailable = ofKind("reader-unavailable");
+  const damaged = ofKind("damaged");
+  const unsupported = ofKind("unsupported");
   const parts: string[] = [];
+  if (unavailable.length > 0) {
+    parts.push("HEIC files can't be added right now: the HEIC reader didn't load. Reload the page and try again.");
+  }
   if (unsupported.length > 0) {
     const named = [...new Set(unsupported.map(formatLabel))].filter((f) => f !== "").toSorted();
     const subject = named.length > 0
       ? `${named.join(" and ")} files`
       : unsupported.length === 1 ? "That file" : "Those files";
-    parts.push(`${subject} can't be added: this browser can't read that format. JPEG, PNG, GIF and WebP work.`);
+    parts.push(`${subject} can't be added: this browser can't read that format. JPEG, PNG, GIF, WebP and HEIC work.`);
   }
   if (damaged.length > 0) {
     parts.push(damaged.length === 1
@@ -239,6 +279,22 @@ export function unsupportedImageMessage(files: File[]): string {
       : "Those image files can't be read; they may be damaged.");
   }
   return parts.join(" ");
+}
+
+type FailureKind = "reader-unavailable" | "damaged" | "unsupported";
+
+/**
+ * Why one file failed. The HEIF errors are decided by the bytes, so they
+ * classify a HEIC whose `type` is empty (a paste) correctly. Otherwise a file
+ * of a format the app accepts that still failed to decode is damaged:
+ * blaming its format would contradict the list the message gives. With no
+ * `type`, the extension names the format, as it does in the message.
+ */
+function failureKind(file: File, error: unknown): FailureKind {
+  if (error instanceof HeifDecoderUnavailableError) return "reader-unavailable";
+  if (error instanceof HeifUnreadableError) return "damaged";
+  const listed = file.type === "" ? ACCEPTED_IMAGE_EXTENSIONS.has(formatLabel(file)) : ACCEPTED_IMAGE_TYPES.has(file.type);
+  return listed ? "damaged" : "unsupported";
 }
 
 /** "HEIC" from `image/heic`; falls back to the extension, else "". */

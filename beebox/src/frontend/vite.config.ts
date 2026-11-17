@@ -7,6 +7,7 @@ import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
 import { bootPreloadPlugin } from "./src/dev/boot-preload-plugin/plugin";
 import { buildIdentityPlugin } from "./src/dev/build-identity-plugin/plugin";
 import { precompressPlugin } from "./src/dev/precompress-plugin/plugin";
+import { libheifNodeBuiltinsStub } from "./src/dev/libheif-node-stub-plugin/plugin";
 
 // Vite reads these build controls while constructing its server/build config;
 // app runtime env parsing cannot configure this file.
@@ -88,6 +89,12 @@ export default defineConfig({
     precompressPlugin(),
     ...(ANALYZE_BUNDLE ? [bundleAnalysisPlugin()] : []),
   ],
+  // Workers bundle separately with their own plugin list; the HEIF decoder
+  // worker is the one that imports libheif-js.
+  worker: {
+    format: "es",
+    plugins: () => [libheifNodeBuiltinsStub()],
+  },
   resolve: {
     // Mirror ONLY the `@shared/*` path alias from tsconfig.json so Vite
     // resolves its value imports at runtime. The `@backend/*`, `@core/*`, and
@@ -121,6 +128,11 @@ export default defineConfig({
     // own chunk + extracted figure.css). Excluding it pins that source-serving
     // behavior explicitly so an optimizer change can't start pre-bundling it.
     exclude: ["@ianbicking/canvas-loop"],
+    // The HEIF decoder worker (src/lib/heif/decoder/worker.ts) is the only
+    // importer of this CommonJS glue, and the dep scan does not crawl worker
+    // entries. Unlisted, the first HEIC of a dev session made Vite optimize it
+    // then and reload the page, dropping whatever was in the composer.
+    include: ["libheif-js/libheif-wasm/libheif.js"],
   },
   build: {
     outDir: "dist",

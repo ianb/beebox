@@ -1,12 +1,15 @@
 ---
 title: "Accept HEIC images from an iPhone in the chat composer"
-workstream: unattached
+workstream: heic-upload
 area: beebox
 labels: [chat, images, upload]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — developer asked for HEIC upload, 2026-11-16
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-17):** Landed in cdac94bf2, fecc45414: libheif decode in the composer when the browser cannot; capture gallery still stores HEIC as JPG (separate issue).
 
 An iPhone saves photos as HEIC. The chat composer refuses them in a browser that cannot decode HEIC, for example Chrome on a desktop. It shows "HEIC files can't be added: this browser can't read that format" (`unsupportedImageMessage` in `beebox/src/frontend/src/lib/image-paste.ts`). Safari can decode HEIC, so the same photo can work on one device and fail on another.
 
