@@ -176,6 +176,11 @@
 @media (max-width: 640px) {
   .bbx-companion-desk[data-active-card] { --bbx-desk-gutter: 12px; }
 }
+/* A focused card has the window to itself: keep the frame around it thin. */
+.bbx-companion-desk[data-active-card][data-card-focused] { --bbx-desk-gutter: 8px; }
+.bbx-companion-desk[data-card-focused] .bbx-interface-card-desk[data-card-content="card"] {
+  --bbx-card-desk-padding: var(--bbx-desk-gutter, 8px);
+}
 
 /* Paint the selected tab with the sheet's actual stock texture (the shared
    ::before rules), rather than a separate approximation of that material. */

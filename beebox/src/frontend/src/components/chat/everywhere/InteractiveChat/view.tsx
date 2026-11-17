@@ -284,7 +284,8 @@ export function InteractiveChatBody(props: ChatBodyProps) {
   const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, nativeComposer } = props;
   const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
   const placeChat = usePlaceChat(props);
-  const cancelArrival = useWorkspace()?.cancelArrival;
+  const workspace = useWorkspace();
+  const cancelArrival = workspace?.cancelArrival;
   const transcriptionIsError = voice.transcription.errorLevel === "error";
   return (
     <ChatRenderProfiler id="chat-root">
@@ -328,6 +329,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
         </>
       }
       composerSection={nativeComposer ? null : <AgentGate><ComposerRegion {...props} /></AgentGate>}
+      composerHidden={workspace?.cardFocused === true}
         debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
       />
     </ChatRenderProfiler>

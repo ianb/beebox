@@ -1,6 +1,6 @@
 ---
 title: "Focus card does not fill the window height, and the card workspace wastes space"
-workstream: unattached
+workstream: card-focus-space
 area: beebox
 labels: [chat, workspace, layout]
 filed-by: agent
