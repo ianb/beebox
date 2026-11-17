@@ -88,3 +88,12 @@ Local diagnostic evidence: `scratch/ambient-theme/verify-final.log` and
 `scratch/cross-model/2026-11-17T14-03-50-732Z-claude.md`. The ambient title,
 hint, and Dismiss now have separate real-component studio coverage; that does
 not establish coverage of these recovery states.
+
+## Re-encounter, 2026-11-17 — shared-rule coverage repair
+
+The Tempest system / Paper cream card audit measured the theme swatch sample
+link “worth keeping” at 3.90:1 (`#bacdff` on `#56636d`) on laptop and 3.85:1 on phone. This run
+checks a different system/card combination from the earlier Tempest-only run.
+No palette or swatch code changed in the coverage repair; the miss is retained
+here rather than expanding that repair. Local evidence:
+`scratch/coverage/after-final.log` and its run screenshot directory.

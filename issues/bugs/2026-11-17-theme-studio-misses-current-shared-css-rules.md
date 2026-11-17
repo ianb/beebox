@@ -22,3 +22,21 @@ but this focused system run still cannot verify those other surfaces. Add
 faithful specimens for renderable states and route states that Theme Studio
 cannot represent to an appropriate test surface. Keep unmatched-rule reporting
 active so new shared CSS does not silently escape the gate.
+
+## Research (2026-11-17)
+
+The baseline reproduced all seven selectors. Two are catalog-dependent defaults,
+not absent content: `materials.css` requires layered quote and blockquote
+attributes, while Tempest uses inset defaults. The studio already renders an
+explicit layered quote. Paper is the real catalog case for the layered defaults.
+The remaining five selectors need a composition-editor frame and focused-card
+state. The repair uses the shared production frame and real PaneControls,
+and measures the ordinary studio before entering the focused laptop state.
+No selector exemptions or contrast thresholds change.
+
+Verification reduced the paired Tempest report from seven unmatched selectors
+to the two layered-default residuals. All five missing-state selectors match,
+including the focused laptop audit. Laptop contrast passed 292 text runs;
+phone's known seed-list danger text remained below AA. This targeted run does
+not establish a full `--all` catalog pass. Local log:
+`scratch/coverage/verified.log`.

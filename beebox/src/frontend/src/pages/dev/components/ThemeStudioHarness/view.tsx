@@ -14,6 +14,7 @@ import type { StudioCase } from "@shared/theme-studio-case";
 import { findScreen, type Screen } from "@shared/theme-screens";
 import { PresentationNotice, PresentationSnapshot, type PresentationData } from "../../../../components/themes/BoxPresentationProvider";
 import { useDoodlebitMotion } from "../../../../components/themes/useDoodlebitMotion";
+import { useMobileChatViewport } from "../../../../components/chat/everywhere/use-mobile-card-navigation";
 import { VisuallyHidden } from "../../../../components/ui/VisuallyHidden";
 import { ThemeStudioControls, type StudioState } from "./controls";
 import { StudioNav } from "./nav";
@@ -67,6 +68,9 @@ function usePresentation({ system, systemStock }: StudioCase): PresentationData 
  */
 function StudioPresentation(studioCase: StudioCase) {
   const { system, systemStock, card, cardStock } = studioCase;
+  const [focusRequested, setFocusRequested] = useState(false);
+  const mobile = useMobileChatViewport();
+  const focused = focusRequested && !mobile;
   const surface = useDoodlebitMotion(system === "doodlebit");
   const scroller = useRef<HTMLDivElement>(null);
   // The composer specimen takes focus as it mounts, which scrolls it into
@@ -77,16 +81,16 @@ function StudioPresentation(studioCase: StudioCase) {
     <div ref={surface} className="bbx-box-presentation h-full flex flex-col" data-chrome-theme={system} data-chrome-stock={systemStock}>
       <StudioNav />
       <PresentationNotice />
-      <div ref={scroller} id="bbx-theme-studio-scroll" className="flex-1 min-h-0 overflow-auto"><StudioDesks card={card} cardStock={cardStock} /></div>
+      <div ref={scroller} id="bbx-theme-studio-scroll" className="flex-1 min-h-0 overflow-auto"><StudioDesks card={card} cardStock={cardStock} focused={focused} onFocus={setFocusRequested} /></div>
     </div>
   </PresentationSnapshot>;
 }
 
 /** The conversation desk beside the card column, as the workspace splits them. */
-function StudioDesks({ card, cardStock }: Pick<StudioCase, "card" | "cardStock">) {
-  return <div className="grid lg:grid-cols-2 gap-4 p-3 sm:p-5 items-start">
-    <div className="bbx-conversation-desk flex flex-col min-w-0 relative"><StudioConversation card={card} cardStock={cardStock} /></div>
-    <StudioCards name={card} stock={cardStock} />
+function StudioDesks({ card, cardStock, focused, onFocus }: Pick<StudioCase, "card" | "cardStock"> & { focused: boolean; onFocus: (focused: boolean) => void }) {
+  return <div className={focused ? "p-2" : "grid lg:grid-cols-2 gap-4 p-3 sm:p-5 items-start"}>
+    <div hidden={focused} className={focused ? "hidden" : "bbx-conversation-desk flex flex-col min-w-0 relative"}><StudioConversation card={card} cardStock={cardStock} /></div>
+    <StudioCards name={card} stock={cardStock} focused={focused} onFocus={onFocus} />
   </div>;
 }
 
