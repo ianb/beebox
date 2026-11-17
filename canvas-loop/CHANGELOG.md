@@ -5,6 +5,12 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Breaking: `mouseleave`.** `Msg` gains `{ type: "mouseleave" }`: the
+  pointer left the canvas (the browser's `pointerleave` of the primary
+  pointer, after the `mouseup` of a press that slid off; a lifted finger).
+  An events file sends `{ "frame": N, "type": "mouseleave" }`. A switch on
+  `msg.type` needs the case. In a browser, a figure written before it that
+  returns nothing for it keeps its model; a headless run stays strict.
 - **Headless runs of picture-heavy scenes are about 9× faster.** Testing
   mode compared every kept picture version in every frame, and kept a stack
   for each node it drew again. Now a kept version is compared in the frame

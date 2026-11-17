@@ -154,6 +154,8 @@ export type Msg =
   | ({ type: "mousedown" } & Pointer)
   | ({ type: "mouseup" } & Pointer)
   | ({ type: "mousemove" } & Pointer)
+  /** The pointer left the canvas (a mouse moved off it, a finger lifted); a press that slides off keeps sending moves until `mouseup`, then this. */
+  | { type: "mouseleave" }
   | { type: "keydown"; key: string }
   | { type: "keyup"; key: string }
   | { type: "param"; name: string; value: number | boolean | string }

@@ -264,7 +264,8 @@ before frame N's draw (canvas coordinates, 60 frames a second):
 ]
 \`\`\`
 
-Input types are \`mousedown\`, \`mouseup\`, \`mousemove\`, \`keydown\`, \`keyup\`;
+Input types are \`mousedown\`, \`mouseup\`, \`mousemove\`, \`mouseleave\` (no
+position), \`keydown\`, \`keyup\`;
 \`param\` and \`trigger\` names must be declared in the module's \`params\`;
 \`snapshot\` captures that frame.
 

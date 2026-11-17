@@ -29,10 +29,11 @@ test("mouse and key events reach update as msgs in script order, with their coor
         { frame: 0, type: "mousemove", x: 1, y: 2 },
         { frame: 0, type: "keydown", key: "a" },
         { frame: 0, type: "keyup", key: "a" },
+        { frame: 0, type: "mouseleave" },
       ],
     }),
   );
-  assert.deepEqual(logged, ["mousedown(5,5)", "mousemove(8,9)", "mouseup(8,9)", "mousemove(1,2)", "keydown(a)", "keyup(a)"]);
+  assert.deepEqual(logged, ["mousedown(5,5)", "mousemove(8,9)", "mouseup(8,9)", "mousemove(1,2)", "keydown(a)", "keyup(a)", "mouseleave(,)"]);
 });
 
 test("events within one frame are logged in file order", async () => {

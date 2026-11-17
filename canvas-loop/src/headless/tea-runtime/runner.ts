@@ -231,6 +231,7 @@ class TeaRunner {
       case "mousedown":
       case "mouseup":
       case "mousemove":
+      case "mouseleave":
       case "keydown":
       case "keyup":
       case "trigger":
@@ -286,6 +287,8 @@ class TeaRunner {
         const { target, targets } = scene === undefined ? { target: undefined, targets: [] } : hitTest(scene, [this.#mouseX, this.#mouseY]);
         return { type: event.type, x: this.#mouseX, y: this.#mouseY, target, targets };
       }
+      case "mouseleave":
+        return { type: "mouseleave" };
       case "keydown":
       case "keyup":
         return { type: event.type, key: event.key ?? "" };

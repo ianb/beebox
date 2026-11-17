@@ -71,3 +71,8 @@ test("a mouse entry aims by target, and target with x or y, or an empty target, 
   bad({ frame: 3, type: "mousemove", target: "" }, '"target" must be a non-empty string');
   bad({ frame: 3, type: "mousedown", target: 7 }, '"target" must be a non-empty string');
 });
+
+test("a mouseleave has only a frame and a type", () => {
+  assert.deepEqual(parseTeaEvents([{ frame: 9, type: "mouseleave" }], decl), [{ frame: 9, type: "mouseleave" }]);
+  assert.throws(() => parseTeaEvents([{ frame: 9, type: "mouseleave", x: -20 }], decl), (e: unknown) => e instanceof EventScriptError && e.message.includes('event[0]: a mouseleave has no position or target, only "frame" and "type"; got "x"'));
+});

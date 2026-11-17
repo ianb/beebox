@@ -72,6 +72,7 @@ type Msg =
   | { type: "mousedown"; x: number; y: number; target: string | undefined; targets: readonly string[] }
   | { type: "mouseup"; x: number; y: number; target: string | undefined; targets: readonly string[] }
   | { type: "mousemove"; x: number; y: number; target: string | undefined; targets: readonly string[] }
+  | { type: "mouseleave" }
   | { type: "keydown"; key: string }
   | { type: "keyup"; key: string }
   | { type: "param"; name: string; value: number | boolean | string }
@@ -84,6 +85,12 @@ the page, and a press always ends with `mouseup`, even when the finger leaves
 the canvas or the browser cancels the touch. A finger has no hover: a touch
 sketch gets `mousemove` only while pressed. Hit areas a fingertip must land
 on want to be about 40 pixels across.
+
+`mouseleave` says the pointer is gone: the mouse moved off the canvas, or a
+finger lifted (after its `mouseup`). Clear hover state on it. A press that
+slides off the canvas keeps sending `mousemove` until its `mouseup`; the
+`mouseleave` comes after. An events file sends it as
+`{ "frame": 90, "type": "mouseleave" }`, with no position.
 
 Example: [`bounce`](./src/examples/bounce-tea.ts) — a drag as a mode on the model, from `mousedown` to `mouseup`.
 

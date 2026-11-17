@@ -5,6 +5,7 @@ import type { ParamDecl, ParamsDecl } from "../core/tea.js";
 /** One entry in a TEA events script: scripted input, a param edit, a trigger, or a snapshot. */
 export type TeaScriptEvent =
   | { frame: number; type: "mousedown" | "mouseup" | "mousemove"; x?: number; y?: number; target?: string }
+  | { frame: number; type: "mouseleave" }
   | { frame: number; type: "keydown" | "keyup"; key?: string }
   | { frame: number; type: "param"; name: string; value: number | boolean | string }
   | { frame: number; type: "trigger"; name: string }
@@ -140,6 +141,13 @@ function parseMouseEvent(params: { record: Record<string, unknown>; frame: numbe
   return { frame, type, target };
 }
 
+function parseLeaveEvent(params: { record: Record<string, unknown>; frame: number; where: string }): TeaScriptEvent {
+  const { record, frame, where } = params;
+  const extra = Object.keys(record).filter((key) => key !== "frame" && key !== "type");
+  if (extra.length > 0) throw new EventScriptError({ detail: `${where}: a mouseleave has no position or target, only "frame" and "type"; got ${extra.map((k) => `"${k}"`).join(", ")}` });
+  return { frame, type: "mouseleave" };
+}
+
 function parseSnapshotEvent(params: { record: Record<string, unknown>; frame: number; where: string }): TeaScriptEvent {
   const { record, frame, where } = params;
   const label = record["label"];
@@ -165,10 +173,11 @@ function parseOne(params: { raw: unknown; index: number; decl: ParamsDecl }): Te
   if (type === "param") return parseParamEvent({ record: raw, frame, decl, where });
   if (type === "trigger") return parseTriggerEvent({ record: raw, frame, decl, where });
   if (type === "snapshot") return parseSnapshotEvent({ record: raw, frame, where });
+  if (type === "mouseleave") return parseLeaveEvent({ record: raw, frame, where });
   if (isMouseType(type)) return parseMouseEvent({ record: raw, frame, type, where });
   if (isKeyType(type)) return parseKeyEvent({ record: raw, frame, type, where });
   throw new EventScriptError({
-    detail: `${where}: "type" must be one of mousedown|mouseup|mousemove|keydown|keyup|param|trigger|snapshot`,
+    detail: `${where}: "type" must be one of mousedown|mouseup|mousemove|mouseleave|keydown|keyup|param|trigger|snapshot`,
   });
 }
 

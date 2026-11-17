@@ -80,6 +80,7 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util): Model {
     case "keydown":
     case "keyup":
     case "param":
+    case "mouseleave":
     case "trigger":
       return model;
   }

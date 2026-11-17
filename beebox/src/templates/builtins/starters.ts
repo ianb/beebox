@@ -185,6 +185,7 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
     case "mousedown":
     case "mouseup":
     case "mousemove":
+    case "mouseleave":
     case "keydown":
     case "keyup":
       return model;

@@ -111,8 +111,9 @@ events see the folds before them), and hit-testing a moving target is a calculat
 ]
 ```
 
-- Input types are `mousedown`, `mouseup`, `mousemove`, `keydown` and `keyup`.
-  Each becomes a `Msg` of the same type.
+- Input types are `mousedown`, `mouseup`, `mousemove`, `mouseleave` (no
+  position: the pointer left the canvas), `keydown` and `keyup`. Each becomes
+  a `Msg` of the same type.
 - A mouse entry can aim by name instead of by position: `"target": "pan-left"`
   clicks the centre (in whole pixels) of the topmost drawing with that `name`
   in the frame drawn before the event, at any depth and inside placed

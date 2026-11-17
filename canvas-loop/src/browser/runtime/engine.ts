@@ -215,8 +215,8 @@ export class Runtime {
     this.#pending.push({ type: "trigger", name });
   }
 
-  pointer(ev: { type: "mousedown" | "mouseup" | "mousemove"; x: number; y: number }): void {
-    this.#pending.push({ type: ev.type, x: ev.x, y: ev.y });
+  pointer(ev: { type: "mousedown" | "mouseup" | "mousemove"; x: number; y: number } | { type: "mouseleave" }): void {
+    this.#pending.push(ev.type === "mouseleave" ? { type: "mouseleave" } : { type: ev.type, x: ev.x, y: ev.y });
   }
 
   key(ev: { type: "keydown" | "keyup"; key: string }): void {
@@ -346,6 +346,8 @@ export class Runtime {
         const { target, targets } = this.#hits.at([this.#mouseX, this.#mouseY]);
         return { type: intent.type, x: this.#mouseX, y: this.#mouseY, target, targets };
       }
+      case "mouseleave":
+        return { type: "mouseleave" };
       case "keydown":
       case "keyup":
         return { type: intent.type, key: intent.key ?? "" };
@@ -364,6 +366,8 @@ export class Runtime {
     // undefined here; without this guard the model silently becomes undefined
     // and draw crashes downstream with a confusing error. Fail loud, naming the
     // unhandled msg.type so the author knows which case to add.
+    // A figure written before `mouseleave` existed has no case for it: it keeps its model (headless runs, which send it only from an events file, stay strict).
+    if (next === undefined && msg.type === "mouseleave") return false;
     if (next === undefined) throw new UnhandledMsgError({ msgType: msg.type });
     // Reference-change is the free engagement signal — compute before freezing
     // (frozen() returns the same reference it froze, so it must run first).
