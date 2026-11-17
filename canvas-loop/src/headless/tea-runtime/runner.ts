@@ -172,7 +172,8 @@ class TeaRunner {
     this.#recorder.beginFrame(frame);
     this.#step = { frame, name: "update" };
     const events = this.#eventsByFrame.get(frame) ?? [];
-    this.#recorder.markEvents(events.length > 0);
+    // A quiet move (inside a mousepath) does not make the frame a captured one.
+    this.#recorder.markEvents(events.some((e) => !(e.type === "mousemove" && e.quiet === true)));
     for (const event of events) this.#dispatchEvent(event);
     const tick = (): void => void this.#fold({ type: "tick", frame });
     if (this.#timer === undefined) tick();

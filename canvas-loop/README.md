@@ -120,7 +120,9 @@ events see the folds before them), and hit-testing a moving target is a calculat
   is one `mousemove` a frame from frame 100 to 160, walking the line through
   `points` at an even speed, first at its first point and last at its last.
   Each move is an ordinary `mousemove` in the entry's place in file order.
-  Put a `mousedown` before it and a `mouseup` after it for a drag.
+  Put a `mousedown` before it and a `mouseup` after it for a drag. The moves
+  between its first and last do not make their frames captured ones (see
+  [Capture policy](#capture-policy)).
 - A mouse entry can aim by name instead of by position: `"target": "pan-left"`
   clicks the centre (in whole pixels) of the topmost drawing with that `name`
   in the frame drawn before the event, at any depth and inside placed
@@ -143,8 +145,8 @@ Each input line in the transcript gets an engagement verdict
 ## Capture policy
 
 To keep image counts sane, a frame's PNG is captured when it is frame 0, the
-final frame, an `--every N` multiple, or a frame that logged, ran an event, or
-called `snapshot()`. Consecutive identical frames are hashed and deduped: the
+final frame, an `--every N` multiple, or a frame that logged, ran an event
+(other than a move inside a `mousepath`), or called `snapshot()`. Consecutive identical frames are hashed and deduped: the
 transcript references the earlier PNG and notes `(unchanged)` instead of writing
 a duplicate.
 

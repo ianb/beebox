@@ -77,7 +77,7 @@ test("a mouseleave has only a frame and a type", () => {
   assert.throws(() => parseTeaEvents([{ frame: 9, type: "mouseleave", x: -20 }], decl), (e: unknown) => e instanceof EventScriptError && e.message.includes('event[0]: a mouseleave has no position or target, only "frame" and "type"; got "x"'));
 });
 
-test("a mousepath becomes one mousemove a frame along its points at an even speed, in its place in file order", () => {
+test("a mousepath becomes one mousemove a frame along its points at an even speed, in its place in file order; the moves between its ends are quiet", () => {
   const events = parseTeaEvents([
     { frame: 4, type: "mousedown", x: 0, y: 0 },
     { frame: 4, type: "mousepath", points: [[0, 0], [30, 0], [30, 10]], frames: 4 },
@@ -87,9 +87,9 @@ test("a mousepath becomes one mousemove a frame along its points at an even spee
   assert.deepEqual(events, [
     { frame: 4, type: "mousedown", x: 0, y: 0 },
     { frame: 4, type: "mousemove", x: 0, y: 0 },
-    { frame: 5, type: "mousemove", x: 10, y: 0 },
-    { frame: 6, type: "mousemove", x: 20, y: 0 },
-    { frame: 7, type: "mousemove", x: 30, y: 0 },
+    { frame: 5, type: "mousemove", x: 10, y: 0, quiet: true },
+    { frame: 6, type: "mousemove", x: 20, y: 0, quiet: true },
+    { frame: 7, type: "mousemove", x: 30, y: 0, quiet: true },
     { frame: 8, type: "mousemove", x: 30, y: 10 },
     { frame: 6, type: "keydown", key: "a" },
     { frame: 8, type: "mouseup", x: 30, y: 10 },

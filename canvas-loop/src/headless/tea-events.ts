@@ -4,7 +4,7 @@ import type { ParamDecl, ParamsDecl } from "../core/tea.js";
 
 /** One entry in a TEA events script: scripted input, a param edit, a trigger, or a snapshot. */
 export type TeaScriptEvent =
-  | { frame: number; type: "mousedown" | "mouseup" | "mousemove"; x?: number; y?: number; target?: string }
+  | { frame: number; type: "mousedown" | "mouseup" | "mousemove"; x?: number; y?: number; target?: string; quiet?: true }
   | { frame: number; type: "mouseleave" }
   | { frame: number; type: "keydown" | "keyup"; key?: string }
   | { frame: number; type: "param"; name: string; value: number | boolean | string }
@@ -172,7 +172,8 @@ function readPoints(record: Record<string, unknown>, where: string): (readonly [
 /**
  * `{ frame, type: "mousepath", points, frames }`: one `mousemove` a frame
  * from `frame` to `frame + frames`, walking the polyline through `points` at
- * an even speed, first at its first point and last at its last.
+ * an even speed, first at its first point and last at its last. The moves
+ * between are `quiet`: they do not make their frame a captured one.
  */
 function parsePathEvent(params: { record: Record<string, unknown>; frame: number; where: string }): TeaScriptEvent[] {
   const { record, frame, where } = params;
@@ -200,7 +201,7 @@ function parsePathEvent(params: { record: Record<string, unknown>; frame: number
   };
   return Array.from({ length: frames + 1 }, (_, k) => {
     const [x, y] = at((total * k) / frames);
-    return { frame: frame + k, type: "mousemove", x, y };
+    return k === 0 || k === frames ? { frame: frame + k, type: "mousemove", x, y } : { frame: frame + k, type: "mousemove", x, y, quiet: true };
   });
 }
 
