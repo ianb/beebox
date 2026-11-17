@@ -11996,6 +11996,14 @@ test1:
       peak: 40960
       added: 5876
       turns: 5
+  figure-canvas-loop-examples:
+    - date: 2026-11-17T00:39:30.313Z
+      boxCommit: 121cc2ff4f7195722d3f6d95e9d1bc8dc38bdf55
+      repoCommit: edde8d0a1df4da5d99d07f1fe2c4d5d66906472f
+      initial: 35104
+      peak: 40196
+      added: 5092
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

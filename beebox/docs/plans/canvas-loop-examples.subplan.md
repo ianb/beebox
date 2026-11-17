@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop: one set of minimal, instructional examples"
-status: draft
+status: active
 workstream: canvas-brushes
 issues:
   - ../../../issues/code-quality/2026-11-16-canvas-loop-gallery-check-has-no-subset.md
@@ -25,6 +25,40 @@ interesting brushwork, some input, etc."* *"definitely intermediate things
 like model comparisons don't make any sense."* *"You might use them as a way
 to mine for the examples worth showing. If something is obvious to you when
 reading, then it might not need explanation!"*
+
+## Decisions and implementation notes
+
+**Boxholder decisions (2026-11-16,** *"okay, sure, go for it"***):**
+
+- Build the full plan at its size (BIG CHANGE approved); the gallery
+  deletion and the fixture moves are separate and also approved.
+- Open design question 1: commit the built example page as
+  `dev/canvas-loop-examples.html` (precedent: `dev/canvas-loop.html`).
+- Open design question 2: archived gallery entries live in git history only.
+- Open design question 3: no fourteenth `v.pixels` example.
+- Keep each example small and on one teaching point; prefer deleting to
+  explaining (*"If something is obvious to you when reading, then it might
+  not need explanation!"*).
+
+**What implementation changed (2026-11-16):**
+
+- **Fixture location.** The layout check places test support beside its
+  importers, so the three fixtures moved to `test/gpu/<name>/`, not
+  `test/fixtures/scenes/<name>/`. The lint globs follow (`test/gpu/*/*-tea.ts`).
+- **Order.** Track D (the gallery deletion) landed before C1: doc-check
+  failed C1 because gallery `task.md` files named the retired examples.
+  AGENTS.md's Examples section and TEA.md's two gallery mentions moved into
+  D for the same reason.
+- **Closing snapshot.** The last frame must hold *a* snapshot; a `param` on
+  that frame is allowed (set a look, then snapshot it). A later stray input
+  still fails.
+- **The check** also fails on framed `error:` log lines, and lints every
+  example in one eslint run. It runs the thirteen in about 9 seconds, so the
+  subset issue stays on this plan's list.
+- **The playground page.** `build:playground` writes the tracked page
+  instead of the ignored `src/browser/dist/`.
+- **The knowledge audit entry** needs `expected_level` (`knows_about`); it
+  passed on its first run.
 
 **Issues addressed:**
 `issues/code-quality/2026-11-16-canvas-loop-gallery-check-has-no-subset.md`

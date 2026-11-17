@@ -1421,6 +1421,17 @@ tests:
       factory's `cl` argument. A pass names the box-can't-resolve-the-package
       reason, not just the syntax.
 
+  # Status (2026-11-16): figure-canvas-loop-examples passes (knows_about; the
+  # agent found canvas-loop-examples.md from the box-docs listing after
+  # card-figure.md, 3 files read, ~35k ctx) and picked bounce for the drag and
+  # sound for the landing knock.
+  - id: figure-canvas-loop-examples
+    prompt: "You are writing a canvas-loop figure where the learner drags a weight and hears a sound when it lands. Where do you look for a whole working figure to start from?"
+    expected_level: knows_about
+    watch_for: "Names canvas-loop-examples.md (bounce for the drag, sound for the voice)"
+    correct_contains: ["canvas-loop-examples.md"]
+    tags: [cards, figure]
+
   # Status (2026-11-12): figure-canvas-loop-check, -api-docs, figure-shared-code
   # and figure-activity added with `bbx figure run`, the canvas-loop box docs
   # and figure activity; `--filter figure` passes 12/12 on the worktree's test1.
