@@ -212,7 +212,19 @@ A brush preset kept in a variable needs its type, or TypeScript widens
 `preset` to `string`: `const SHADE: BrushPreset = { preset: "bristle", load: 0.4 }`.
 [BRUSHES.md](./BRUSHES.md) lists the presets, their fields and gestures.
 
-Colors are CSS strings only (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`).
+Colors are CSS strings: hex (`"#38bdf8"`), names (`"tomato"`), `rgb()`,
+`rgba()`, `hsl()`, and the perceptual `oklch()`, `oklab()` and
+`color-mix()`. Build a palette in OKLCH: lightness 0..1, chroma 0..about
+0.37, hue in degrees, so equal steps look equal and a hue keeps its
+lightness. Mix two colours with `color-mix(in oklab, a, b 30%)` (also `in
+oklch`, the short way round the hue circle, and `in srgb`). Every colour
+draws in sRGB: one outside it keeps its lightness and hue and loses chroma
+until it fits.
+
+```ts
+const LEAF = (light: number, hue: number): string => `oklch(${light} 0.14 ${hue})`;
+const mist = (c: string, t: number): string => `color-mix(in oklab, ${c}, oklch(0.9 0.03 230) ${Math.round(t * 100)}%)`;
+```
 
 The style is checked at each call. An unknown key, a negative `weight`, an
 unknown brush name or a color that does not parse throws an error that names

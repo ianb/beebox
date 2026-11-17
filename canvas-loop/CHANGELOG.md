@@ -5,6 +5,12 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Perceptual colours.** Every colour reads `oklch()`, `oklab()` and
+  `color-mix(in oklab | oklch | srgb, …)`, parsed by canvas-loop itself so
+  both runtimes agree (a 2D context refused them headless and would read
+  them back unparsed in a browser). A colour outside sRGB keeps its
+  lightness and hue and loses chroma. A bad colour's error gives an
+  `oklch()` example.
 - **What new picture versions cost.** BRUSHES.md ("Animation and pictures")
   says a new version is recorded and drawn again at every scale it is placed
   at. `--timing` adds a line per captured frame listing new versions and
