@@ -9,10 +9,9 @@ issues: []   # ../../../issues/<category>/<file>.md, one per line; see below
 <!-- 1–2 sentences: what this plan is and why, for a reader with no context.
      Don't recap the conversation. -->
 
-**Issues addressed:** <!-- every issues/ item this resolves, PLUS related or
-duplicate ones you found by grepping the queue (slug, keyword, symptom). The finish skill
-reads the frontmatter `issues:` list to close them; one left off is forgotten.
-"none" if not tied to a filed issue. -->
+**Issues addressed:** <!-- every issues/ item this resolves, plus related or
+duplicate ones found by grepping the queue (slug, keyword, symptom); the same
+list as the frontmatter. If none, "none" and the terms you searched. -->
 
 ## Design
 
@@ -22,18 +21,16 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Smallest fix and budget
 
-<!-- Name the smallest fix and the chosen design's tracks/subprojects and
-     estimated changed source/test lines (additions plus deletions). Estimates
-     are goals, not automatic cutoffs or human-imposed limits. Explain what the
-     fuller design buys. Report authored docs/generated output separately.
-     This plan file is not counted.
-     Over 2,000 total changed lines is a BIG CHANGE: label it, explain the size,
-     and obtain approval unless that size and scope are already approved.
-     Substantial growth prompts visible reassessment, not an automatic halt. -->
+<!-- Name the smallest fix, the chosen design's tracks/subprojects, and
+     estimated changed lines (additions plus deletions): source and tests,
+     authored docs, generated output, as three figures; this plan not counted.
+     Explain what the fuller design buys. Over 2,000 lines without generated
+     output is a BIG CHANGE; the skill's *Size and scope review* has the rules. -->
 
 ## Stated preferences this plan trades against
 
 <!-- Which of these apply, and the specific principles findings will trace to:
+     - the boxholder's decisions about this work, quoted
      - beebox/docs/engineering-principles.md — the principles, by number
      - beebox/AGENTS.md — conventions, validation contract, "no features
        beyond the task"
@@ -44,20 +41,19 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## What already exists
 
-<!-- Code, conventions, or infrastructure that already solves part of this.
-     For each: file:line, and reuse or rebuild (rebuild needs a reason). This
-     is the grep that stops "I'll write a new utility" when one lives at
-     src/lib/foo.ts. -->
+<!-- Code, conventions, or infrastructure that already solves part of this,
+     and the contract new code must satisfy (for an adapter, engine, or
+     renderer: the interface type and every existing implementer). For each:
+     file:line, and reuse or rebuild (rebuild needs a reason). -->
 
 ## Prior art (external)
 
-<!-- Research external premises that a design decision depends on. Examples:
-     library/framework limitations
-     ("<tool> <thing you want>" — issues, discussions), bugs/surprising
-     behaviour you may hit, and named patterns that cover a mechanism you're
-     inventing. One line + URL per finding. "No prior art found for X" is a
-     finding when it bears on the decision; write it. If no decision depends
-     on an external premise, state that briefly and skip the search.
+<!-- Research external premises that a design decision depends on: library
+     or framework limitations, bugs or surprising behaviour you may hit, named
+     patterns that cover a mechanism you're inventing. One line + URL per
+     finding. "No prior art found for X" is a finding when it bears on the
+     decision; write it. If no decision depends on an external premise, state
+     that briefly and skip the search.
      Mark each item evaluated-only or adopted. An adopted item (used as a
      direct model, adapted, or copied) gets an entry in ACKNOWLEDGEMENTS.md
      in the same commit that lands it; the Implementation order names that
@@ -70,11 +66,8 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      codebase already has, with file:line, and use THOSE names. Write the
      tracks below in these terms only.
      Two names for one thing, one field doing two jobs, and a state that
-     cannot be represented are ontology mistakes; they are cheap here and
-     expensive at implementation, where they surface as a migration.
-     Worth most when the plan introduces a card type or a shared-vocabulary
-     tag — there the ontology IS the design. A plan that adds no nouns says
-     so in a line. -->
+     cannot be represented are ontology mistakes; at implementation they
+     surface as a migration. A plan that adds no nouns says so in a line. -->
 
 ## Tracks / scope
 
@@ -85,8 +78,18 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      - Direction — the proposed change, with actual shapes (signatures,
        schema fields, tag attributes) where known
      - Vocabulary lock-ins — names/shapes committed across the codebase
+     - Depends on — each fact about existing code or an external service that
+       this track would be wrong without, with evidence that proves all of it:
+       - this text exists: file:line and the quote, read by you
+       - all / none / only / same as / reusable as-is: the search, where you
+         ran it, and each hit (callers, implementers, importers, write sites)
+       - what it does when it runs (returns, delivers, retries, rejects,
+         costs): the command or test you ran, and its output
+       - a value reaches X: every hop from producer to consumer, file:line each
+       A fact from a subagent, handoff, issue, older plan, doc, or code
+       comment is UNVERIFIED until you hold that evidence; mark it so.
      - First implementation chunk — commit-sized, with NO open questions
-       inside it (an open question there means design isn't done) -->
+       and no UNVERIFIED fact inside it (either means design isn't done) -->
 
 ## Could this be simpler?
 
@@ -108,9 +111,8 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Failure modes
 
-<!-- The load-bearing section. One realistic, specific failure per new
-     codepath — "the ref= points at a card archived between write and read",
-     not "the network might fail". -->
+<!-- One realistic, specific failure per new codepath — "the ref= points at a
+     card archived between write and read", not "the network might fail". -->
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
@@ -122,8 +124,9 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Agent-flow / user-flow edge cases
 
-<!-- Mark each ADDRESSED (cite where), DEFERRED (cite the open question), or
-     GAP:
+<!-- First, each scenario walk as numbered hops, file:line per existing hop,
+     the way in and the way out. Then mark each of these ADDRESSED (cite where),
+     DEFERRED (cite the open question), or GAP:
      - Wrong tag / wrong field — the agent picks the wrong one of two similar things
      - Stale ref — the target moved or was archived between write and read
      - Two agents touching the same card — chat agent and reactor concurrently
@@ -131,7 +134,8 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      - Fabricated free-form value — does the design make honesty easy or hard?
      - Validation error UX — does the message read well in the agent's context?
      - Partial migration / transition state — what does code see mid-rollout?
-     GAPs are the second place, after Failure modes, where unsurfaced risk lives. -->
+     - Stored state that never clears — for each flag, marker, or diagnosis
+       the plan stores: every event that clears it, and every one that must not -->
 
 ## NOT in scope
 
@@ -142,9 +146,8 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Open design questions
 
-<!-- Genuinely unsettled, with your lean. A question inside the first
-     implementation chunk is a missing decision, not a question — move it into
-     Direction. -->
+<!-- Genuinely unsettled, with your lean. None may sit inside a first
+     implementation chunk; settle those in Direction. -->
 
 ## Knowledge audits
 
@@ -168,9 +171,8 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 
 ## Implementation order
 
-<!-- Chunks in order, dependencies explicit. Each chunk is a commit or a few.
-     Commit boundaries, not ship boundaries: the plan ships in one piece when
-     every chunk is done, and only when the boxholder says so. -->
+<!-- Chunks in order, dependencies explicit. Each chunk is a commit or a few:
+     commit boundaries, not ship boundaries. -->
 
 ## Rollout shape
 

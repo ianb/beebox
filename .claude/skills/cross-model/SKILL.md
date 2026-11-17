@@ -103,9 +103,9 @@ reviewer from a different model family. Read docs/plans/<name>.md, then the
 source it cites. Review in priority: (1) wrong problem or over-engineering:
 the minimal version, what to cut; (2) architecture flaws; (3) silent failure
 modes (no test, no handling, invisible); (4) things treated as settled that
-will bite in implementation; (5) incorrect or unverifiable citations. Cite plan
-section and file:line. Rank by impact. End with the single most important
-change."
+will bite in implementation; (5) claims whose evidence is wrong or does not
+prove the whole claim when you re-derive it. Cite plan section and file:line.
+Rank by impact. End with the single most important change."
 
 **Challenge mode:** add "Your job is to find ways this will fail in production.
 Think like an attacker and a chaos engineer: edge cases, races, resource leaks,
