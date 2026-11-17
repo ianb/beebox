@@ -1,6 +1,6 @@
 ---
 title: "Accept HEIC images from an iPhone in the chat composer"
-workstream: unattached
+workstream: heic-upload
 area: beebox
 labels: [chat, images, upload]
 filed-by: agent

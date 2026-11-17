@@ -24,7 +24,7 @@ import "@ianbicking/tap-check/tap";
 import { anything } from "@ianbicking/tap-check/check";
 import { INLINE_PHOTO_LIMIT, routeAddedFiles } from "../../../../src/components/chat/InteractiveChat-attachments/file-routing.js";
 
-/** Stand-ins for `File`s — routing reads nothing but the MIME type. */
+/** Stand-ins for `File`s — routing reads the MIME type, and the name when the type is empty. */
 const photo = (name: string) => ({ type: "image/jpeg", name });
 const pdf = (name: string) => ({ type: "application/pdf", name });
 const photos = (n: number) => Array.from({ length: n }, (_v, i) => photo(`p${String(i)}`));
@@ -224,5 +224,17 @@ void test("Paste and drop both route through here, and both can fire with nothin
   t.check(split([], 0), {
     inline: [],
     upload: [],
+  });
+});
+
+// ## An untyped HEIC is a photo
+//
+// Some browsers have no MIME entry for HEIC and give an iPhone photo an empty
+// `type`. Its name still marks it as a photo, so it takes the photo path, where
+// the HEIF decoder checks the bytes. Other untyped files stay uploads.
+void test("An untyped HEIC is a photo", async (t) => {
+  t.check(split([{ type: "", name: "IMG_4521.HEIC" }, { type: "", name: "scan.heif" }, { type: "", name: "notes" }], 0), {
+    inline: ["IMG_4521.HEIC", "scan.heif"],
+    upload: ["notes"],
   });
 });
