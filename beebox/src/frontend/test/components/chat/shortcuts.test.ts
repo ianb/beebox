@@ -1,7 +1,8 @@
 /**
  * The chat's page-wide keys (shortcuts.ts): Ctrl+L adds a page
  * selection and focuses the composer; Enter with the mic on sends the spoken
- * message and keeps the mic on, without taking Enter from other controls.
+ * message and keeps the mic on, without taking Enter from other controls or
+ * from an open menu or dialog.
  */
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, useRef } from "react";
@@ -12,16 +13,17 @@ import { useChatShortcuts } from "../../../src/components/chat/shortcuts.js";
 import type { TranscriptionState } from "../../../src/hooks/useRealtimeTranscription/hook.js";
 
 interface Voice { isTranscribing: boolean; state: TranscriptionState; transcript: string; input: string; sendDisabledReason?: string }
+/** What else is on the page: an open menu or dialog, and the phone typing row. */
+interface Page { overlay?: "menu" | "dialog"; phoneRow?: boolean }
 
-function setup(voice: Voice) {
+function setup(voice: Voice, page: Page) {
   const captured: string[] = [];
   const submits: boolean[] = [];
   const log = { captured, submits, ensured: 0 };
   function Harness() {
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const ensureComposerVisibleRef = useRef(() => { log.ensured += 1; });
     useChatShortcuts({
-      enabled: true, textareaRef, ensureComposerVisibleRef, isTranscribing: voice.isTranscribing,
+      enabled: true, ensureComposerVisibleRef, isTranscribing: voice.isTranscribing,
       transcription: { state: voice.state, transcript: voice.transcript, submitSegment: ({ closeMic }) => { log.submits.push(closeMic); return true; } },
       readInput: () => voice.input, sendDisabledReason: voice.sendDisabledReason,
     });
@@ -29,12 +31,17 @@ function setup(voice: Voice) {
       h(SelectionCapture, { onCapture: ({ text }: { text: string }) => { log.captured.push(text); }, children: h("p", { id: "page-text" }, "Quoted words") }),
       h("input", { id: "other-field" }),
       h("button", { id: "other-button", type: "button" }, "Other"),
-      h("div", { role: "dialog" }, h("button", { id: "dialog-button", type: "button" }, "In dialog")),
-      h("textarea", { id: "bbx-composer-input", ref: textareaRef, readOnly: voice.isTranscribing }),
+      page.overlay === "menu" ? h("div", { role: "menu", tabIndex: -1 }, h("button", { id: "menu-item", role: "menuitem", type: "button" }, "Item")) : null,
+      page.overlay === "dialog" ? h("dialog", { open: true }, h("button", { id: "dialog-button", type: "button" }, "In dialog")) : null,
+      h("textarea", { id: "bbx-composer-input", readOnly: voice.isTranscribing }),
+      page.phoneRow === true ? h("textarea", { id: "bbx-composer-input-mobile" }) : null,
     );
   }
   return { log, Harness };
 }
+
+const IDLE: Voice = { isTranscribing: false, state: "idle", transcript: "", input: "" };
+const DICTATING: Voice = { isTranscribing: true, state: "recording", transcript: "hello there", input: "" };
 
 function key(target: Element, init: KeyboardEventInit): KeyboardEvent {
   const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init });
@@ -48,9 +55,9 @@ function el(id: string): HTMLElement {
   return found;
 }
 
-/** happy-dom does no layout; the composer's offsetParent says whether it shows (null under `display: none`). */
-function showComposer(shown: boolean): void {
-  Object.defineProperty(el("bbx-composer-input"), "offsetParent", { configurable: true, get: () => (shown ? document.body : null) });
+/** happy-dom does no layout; offsetParent says whether a textarea shows (null under `display: none`). */
+function setShown(id: string, shown: boolean): void {
+  Object.defineProperty(el(id), "offsetParent", { configurable: true, get: () => (shown ? document.body : null) });
 }
 
 function selectText(node: Node): void {
@@ -63,43 +70,59 @@ function selectText(node: Node): void {
 }
 
 void test("Ctrl+L adds the page selection to the message and focuses the composer", async (t) => {
-  const { log, Harness } = setup({ isTranscribing: false, state: "idle", transcript: "", input: "" });
+  const { log, Harness } = setup(IDLE, {});
   const view = await mount(h(Harness));
   t.teardown(() => view.unmount());
-  showComposer(true);
+  setShown("bbx-composer-input", true);
   selectText(el("page-text"));
   const event = key(document.body, { key: "l", ctrlKey: true });
   t.check({ prevented: event.defaultPrevented, captured: log.captured, focused: document.activeElement?.id }, { prevented: true, captured: ["Quoted words"], focused: "bbx-composer-input" });
 });
 
 void test("Ctrl+L with no selection only focuses; Cmd+L and Ctrl+Shift+L pass through", async (t) => {
-  const { log, Harness } = setup({ isTranscribing: false, state: "idle", transcript: "", input: "" });
+  const { log, Harness } = setup(IDLE, {});
   const view = await mount(h(Harness));
   t.teardown(() => view.unmount());
-  showComposer(true);
+  setShown("bbx-composer-input", true);
   window.getSelection()?.removeAllRanges();
-  el("other-button").focus();
-  const meta = key(el("other-button"), { key: "l", metaKey: true });
-  const shifted = key(el("other-button"), { key: "L", ctrlKey: true, shiftKey: true });
-  t.check({ meta: meta.defaultPrevented, shifted: shifted.defaultPrevented, focused: document.activeElement?.id }, { meta: false, shifted: false, focused: "other-button" });
-  key(el("other-button"), { key: "l", ctrlKey: true });
+  el("other-field").focus();
+  const meta = key(el("other-field"), { key: "l", metaKey: true });
+  const shifted = key(el("other-field"), { key: "L", ctrlKey: true, shiftKey: true });
+  t.check({ meta: meta.defaultPrevented, shifted: shifted.defaultPrevented, focused: document.activeElement?.id }, { meta: false, shifted: false, focused: "other-field" });
+  key(el("other-field"), { key: "l", ctrlKey: true });
   t.check({ captured: log.captured, focused: document.activeElement?.id }, { captured: [], focused: "bbx-composer-input" });
 });
 
-void test("Ctrl+L leaves a dialog's focus alone and opens the phone typing row when the composer is hidden", async (t) => {
-  const { log, Harness } = setup({ isTranscribing: false, state: "idle", transcript: "", input: "" });
+void test("Ctrl+L leaves an open dialog alone", async (t) => {
+  const { log, Harness } = setup(IDLE, { overlay: "dialog" });
   const view = await mount(h(Harness));
   t.teardown(() => view.unmount());
-  showComposer(false);
+  setShown("bbx-composer-input", true);
   el("dialog-button").focus();
-  const inDialog = key(el("dialog-button"), { key: "l", ctrlKey: true });
-  t.check({ prevented: inDialog.defaultPrevented, focused: document.activeElement?.id, ensured: log.ensured }, { prevented: false, focused: "dialog-button", ensured: 0 });
+  const event = key(el("dialog-button"), { key: "l", ctrlKey: true });
+  t.check({ prevented: event.defaultPrevented, focused: document.activeElement?.id, ensured: log.ensured }, { prevented: false, focused: "dialog-button", ensured: 0 });
+});
+
+// On a phone the desktop row is `hidden sm:flex`: an open typing row takes
+// the focus itself; a closed one is opened (useEnsureComposerVisible).
+void test("Ctrl+L on a phone focuses an open typing row, else opens it", async (t) => {
+  const open = setup(IDLE, { phoneRow: true });
+  const view = await mount(h(open.Harness));
+  setShown("bbx-composer-input", false);
+  setShown("bbx-composer-input-mobile", true);
   key(document.body, { key: "l", ctrlKey: true });
-  t.check(log.ensured, 1);
+  t.check({ focused: document.activeElement?.id, ensured: open.log.ensured }, { focused: "bbx-composer-input-mobile", ensured: 0 });
+  await view.unmount();
+  const closed = setup(IDLE, {});
+  const closedView = await mount(h(closed.Harness));
+  t.teardown(() => closedView.unmount());
+  setShown("bbx-composer-input", false);
+  key(document.body, { key: "l", ctrlKey: true });
+  t.check(closed.log.ensured, 1);
 });
 
 void test("Enter with the mic on sends from the composer or the page and keeps the mic on", async (t) => {
-  const { log, Harness } = setup({ isTranscribing: true, state: "recording", transcript: "hello there", input: "" });
+  const { log, Harness } = setup(DICTATING, {});
   const view = await mount(h(Harness));
   t.teardown(() => view.unmount());
   const fromComposer = key(el("bbx-composer-input"), { key: "Enter" });
@@ -108,26 +131,40 @@ void test("Enter with the mic on sends from the composer or the page and keeps t
 });
 
 void test("Enter with the mic on leaves other controls, IME composition and Shift+Enter alone", async (t) => {
-  const { log, Harness } = setup({ isTranscribing: true, state: "recording", transcript: "hello there", input: "" });
+  const { log, Harness } = setup(DICTATING, {});
   const view = await mount(h(Harness));
   t.teardown(() => view.unmount());
   const field = key(el("other-field"), { key: "Enter" });
   const button = key(el("other-button"), { key: "Enter" });
-  const dialog = key(el("dialog-button"), { key: "Enter" });
   key(el("bbx-composer-input"), { key: "Enter", isComposing: true });
   key(el("bbx-composer-input"), { key: "Enter", shiftKey: true });
-  t.check({ prevented: [field, button, dialog].map((e) => e.defaultPrevented), submits: log.submits }, { prevented: [false, false, false], submits: [] });
+  t.check({ prevented: [field, button].map((e) => e.defaultPrevented), submits: log.submits }, { prevented: [false, false], submits: [] });
+});
+
+// A mouse-opened menu can leave focus on the composer (or, in Safari, the
+// body); Enter then belongs to the menu, not the mic.
+void test("Enter with the mic on sends nothing while a menu or dialog is open, wherever focus is", async (t) => {
+  const submitted: boolean[][] = [];
+  for (const overlay of ["menu", "dialog"] as const) {
+    const { log, Harness } = setup(DICTATING, { overlay });
+    const view = await mount(h(Harness));
+    key(el("bbx-composer-input"), { key: "Enter" });
+    key(document.body, { key: "Enter" });
+    submitted.push(log.submits);
+    await view.unmount();
+  }
+  t.check(submitted, [[], []]);
 });
 
 void test("Enter sends nothing when nothing was said, when sending is blocked, or when the mic is off", async (t) => {
   const cases: Voice[] = [
-    { isTranscribing: true, state: "recording", transcript: "  ", input: "" },
-    { isTranscribing: true, state: "recording", transcript: "hello", input: "", sendDisabledReason: "Choose a conversation" },
-    { isTranscribing: false, state: "idle", transcript: "", input: "typed" },
+    { ...DICTATING, transcript: "  " },
+    { ...DICTATING, sendDisabledReason: "Choose a conversation" },
+    { ...IDLE, input: "typed" },
   ];
   const submitted: boolean[][] = [];
   for (const voice of cases) {
-    const { log, Harness } = setup(voice);
+    const { log, Harness } = setup(voice, {});
     const view = await mount(h(Harness));
     key(document.body, { key: "Enter" });
     submitted.push(log.submits);
@@ -139,10 +176,10 @@ void test("Enter sends nothing when nothing was said, when sending is blocked, o
 void test("Enter sends a segment recorded with live text paused, and prior composer text alone", async (t) => {
   const submitted: boolean[][] = [];
   for (const voice of [
-    { isTranscribing: true, state: "recordingLocal" as const, transcript: "", input: "" },
-    { isTranscribing: true, state: "recording" as const, transcript: "", input: "earlier words" },
+    { ...DICTATING, state: "recordingLocal" as const, transcript: "" },
+    { ...DICTATING, transcript: "", input: "earlier words" },
   ]) {
-    const { log, Harness } = setup(voice);
+    const { log, Harness } = setup(voice, {});
     const view = await mount(h(Harness));
     key(document.body, { key: "Enter" });
     submitted.push(log.submits);

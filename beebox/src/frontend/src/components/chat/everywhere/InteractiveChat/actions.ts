@@ -250,7 +250,7 @@ export function useChatActions(opts: ChatActionsOpts) {
   );
 
   useTextareaFocus({ isTranscribing, typingMode, textareaRef, transcriptTick });
-  useChatShortcuts({ enabled: shortcutsEnabled, textareaRef, ensureComposerVisibleRef, isTranscribing, transcription, readInput: inputStore.get, sendDisabledReason });
+  useChatShortcuts({ enabled: shortcutsEnabled, ensureComposerVisibleRef, isTranscribing, transcription, readInput: inputStore.get, sendDisabledReason });
   const undeliveredVerbs = useUndeliveredVerbs({ captureEmissionDispatch, send, sessionId });
 
   return {

@@ -25,30 +25,29 @@ export function isComposerFocusKey(event: KeyboardEvent): boolean {
   return event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "l";
 }
 
-function isEditable(element: Element): boolean {
-  if (element instanceof HTMLElement && element.isContentEditable) return true;
-  return element.matches("input, textarea, select");
-}
+const OVERLAY = "dialog, [role='dialog'], [role='alertdialog'], [aria-modal='true'], [role='menu'], [role='listbox']";
 
-/** A modal or open menu owns the keyboard; page keys stay out of it. */
-function inOverlay(element: Element): boolean {
-  return element.closest("dialog, [role='dialog'], [role='alertdialog'], [aria-modal='true'], [role='menu'], [role='listbox']") !== null;
+/**
+ * A modal, popover or menu is open somewhere and owns the keyboard. `Menu`,
+ * `Popover` and `ModalDialog` mount their panels only while open, and a
+ * pointer-opened menu can leave focus on the body or the composer, so the
+ * check is on the document, not on the key's target.
+ */
+function overlayOpen(doc: Document): boolean {
+  return doc.querySelector(OVERLAY) !== null;
 }
 
 export function isComposerInput(element: Element): boolean {
   return element instanceof HTMLTextAreaElement && COMPOSER_INPUT_IDS.has(element.id);
 }
 
-/**
- * Where Ctrl+L acts: anywhere outside an overlay. A selection is captured only
- * when focus is outside other text fields — their own selections are not
- * page content.
- */
-export function composerFocusAction(target: EventTarget | null): "none" | "focus" | "capture-and-focus" {
-  if (!(target instanceof Element)) return "capture-and-focus";
-  if (inOverlay(target)) return "none";
-  if (isEditable(target)) return "focus";
-  return "capture-and-focus";
+/** The composer textarea showing now: the desktop row's, else the phone row's. */
+function visibleComposer(doc: Document): HTMLTextAreaElement | null {
+  for (const id of COMPOSER_INPUT_IDS) {
+    const element = doc.getElementById(id);
+    if (element instanceof HTMLTextAreaElement && element.offsetParent !== null) return element;
+  }
+  return null;
 }
 
 /**
@@ -60,7 +59,7 @@ export function isVoiceSendEnter(event: KeyboardEvent): boolean {
   if (event.key !== "Enter" || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false;
   if (event.repeat || event.defaultPrevented || isComposing(event)) return false;
   const target = event.target;
-  if (!(target instanceof Element)) return false;
+  if (!(target instanceof Element) || overlayOpen(target.ownerDocument)) return false;
   if (target === target.ownerDocument.body || target === target.ownerDocument.documentElement) return true;
   return isComposerInput(target);
 }
@@ -78,7 +77,6 @@ export function voiceEnterHasMessage(opts: { input: string; transcript: string; 
 export function useChatShortcuts(opts: {
   /** Off under the native composer: the app owns its own input. */
   enabled: boolean;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   ensureComposerVisibleRef: React.MutableRefObject<() => void>;
   isTranscribing: boolean;
   transcription: { state: TranscriptionState; transcript: string; submitSegment: (opts: { closeMic: boolean }) => boolean };
@@ -95,14 +93,14 @@ export function useChatShortcuts(opts: {
     const onKeyDown = (event: KeyboardEvent) => {
       const current = latest.current;
       if (isComposerFocusKey(event)) {
-        if (event.defaultPrevented || isComposing(event)) return;
-        const action = composerFocusAction(event.target);
-        if (action === "none") return;
+        if (event.defaultPrevented || isComposing(event) || overlayOpen(document)) return;
         event.preventDefault();
-        if (action === "capture-and-focus") captureSelectedText();
-        const textarea = current.textareaRef.current;
-        // The phone opens its typing row, which focuses itself.
-        if (textarea !== null && textarea.offsetParent !== null) textarea.focus();
+        // Captures only a selection inside a capture root; a text field's own
+        // selection, or none, leaves the message as it was.
+        captureSelectedText();
+        const textarea = visibleComposer(document);
+        // A closed phone typing row opens and focuses itself.
+        if (textarea !== null) textarea.focus();
         else current.ensureComposerVisibleRef.current();
         return;
       }
