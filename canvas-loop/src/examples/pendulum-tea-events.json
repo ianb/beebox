@@ -1,0 +1,8 @@
+[
+  { "frame": 65, "type": "snapshot", "label": "half a period: the far side" },
+  { "frame": 131, "type": "snapshot", "label": "one period (132 ticks): back at the start" },
+  { "frame": 140, "type": "param", "name": "length", "value": 0.5 },
+  { "frame": 140, "type": "snapshot", "label": "shorter: the swing restarts" },
+  { "frame": 182, "type": "snapshot", "label": "half a period" },
+  { "frame": 224, "type": "snapshot", "label": "one period (85 ticks): back at the start" }
+]
