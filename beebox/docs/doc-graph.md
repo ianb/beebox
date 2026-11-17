@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-11-17T19:44:44Z
+Generated: 2026-11-17T19:53:22Z
 Total documents: 709
 
 ## Issues
@@ -848,8 +848,6 @@ Referenced by:
 - docs/user-stories/catalog/2026-08-21.md:2640 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
 - src/core/agent-guide/guide.md:130 (mention) — `node_modules/beebox/box-docs/`; its `README.md` has one line per doc saying
 - ../.claude/skills/security-report/SKILL.md:274 (mention) — `beebox/README.md` keeps a short "What leaves your machine" section
-- ../dev/canvas-loop-pieces/mochi-must-not-fall/task.md:13 (mention) — **Read first:** `canvas-loop/AGENTS.md`, `TEA.md`, `BRUSHES.md`, `README.md`, the gallery README; the busy-town-showcase
-- ../dev/canvas-loop-pieces/thimble-quay/task.md:14 (mention) — **Read first:** `canvas-loop/AGENTS.md`, then `TEA.md` (the sketch contract; `draw` returns its drawing — the returned s
 - ../dev/devprocess-talk/slides/index.md:3 (link) — Draft deck for the development-practice talk; one file per slide. Main slides are numbered, supporting slides carry a le
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:17 (mention) — **Place chats are skipped.** A place chat writes to a different transcript directory (for example `…--content-inventory`
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:125 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
@@ -3123,7 +3121,7 @@ References:
 
 #### docs/box/whats-new.md
 
-Title: "What's new in Bee Box" | 22 lines | current reference
+Title: "What's new in Bee Box" | 23 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/whats-new.md:110 (mention) — `docs/box/whats-new.md` is in every install.
