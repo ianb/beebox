@@ -5,6 +5,27 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Breaking: one set of examples; the gallery is gone.** `src/gallery/`
+  (agent-exercise records, model comparisons, run histories) is deleted;
+  `git show 6fff6140c:canvas-loop/src/gallery/<entry>/sketch-tea.ts` finds an
+  entry. Its three renderer fixtures (the walker, the Hallway, the
+  chemistry page) moved unchanged to `test/gpu/<name>/`. `src/examples/`
+  holds thirteen small examples, each one sketch and one events file, each
+  showing one thing the docs link to: `bounce`, `orbit`, `scale`,
+  `answer-box`, `sound`, `lamps`, `pendulum`, `paint`, `brushes`,
+  `paint-mixing`, `looks`, `effects`, `night-room` (README "Examples").
+  New: `lamps`, `pendulum`, `paint`, and `looks` (replacing `still-life`
+  and `washed-shapes`). Retired: `alien-reference`, `brushes-sampler`,
+  `fjord`. The dev demo's controlled figure is now `brushes`.
+- **Breaking: `examples:check` replaces `gallery:check`** (`cli examples
+  check`, `checkExamples`). It runs every example from its events file,
+  whose last frame must hold a snapshot, twice, and fails on a type or lint
+  error, a `warn:` or `error:` transcript line, a scripted input that reads
+  `(unhandled)`, or bytes that differ. The whole set runs in about 9
+  seconds (the gallery check took 10–11 minutes).
+- **The playground page is tracked.** `build:playground` writes
+  `dev/canvas-loop-examples.html`, every example in one page.
+
 - **Text runs.** `v.text`, `textBounds` and `textWidth` (on `v` and `u`)
   take a list of runs, `string | { text, sub?, sup?, style? }`, for
   formulas and exponents: `["H", { text: "2", sub: true }, "O"]`. Sub and

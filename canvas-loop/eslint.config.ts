@@ -12,7 +12,7 @@ import teaPlugin from "@ianbicking/canvas-loop/eslint";
 const base = vibeCheck({
   react: true,
   roots: ["src", "test"],
-  ignores: ["**/*.mjs", "out/**", "src/browser/dist/**"],
+  ignores: ["**/*.mjs", "out/**"],
 });
 
 // The TEA discipline (see TEA.md) applies to TEA sketches only: it keys off

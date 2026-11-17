@@ -7,7 +7,7 @@ browser. Real DOM or CSS app UI stays with the browse skill.
 Reference, read before writing: [TEA.md](TEA.md) (sketch contract; `draw`
 returns its drawing; name files `*-tea.ts`), [README.md](README.md) (run,
 events, capture, `<SketchFigure>`), [BRUSHES.md](BRUSHES.md) (brushes,
-effects, lighting). The examples in `src/examples/` show how the pieces
+effects, lighting). The [examples](README.md#examples) show how the pieces
 fit. For work on the renderer: [RENDERER.md](RENDERER.md).
 
 ## The loop

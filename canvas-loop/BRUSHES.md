@@ -121,6 +121,8 @@ variable needs the `BrushPreset` type:
 | `strength` | smear | how far the picked-up paint is carried, 0..1; higher drags it further |
 | `color` | smear | how much of the stroke colour goes into the brush at each dab, 0..1; 0 is a pure smudge |
 
+Example: [`brushes`](./src/examples/brushes-tea.ts) — every preset under every pressure, chosen with params.
+
 ### Colour variation
 
 Real paint is never one flat colour. `hueJitter` and `lightJitter` give each
@@ -132,6 +134,8 @@ They need a solid stroke colour, not a gradient.
 ```ts
 v.curve(STEM, false, { stroke: "#4f7a3a", weight: 24, brush: { preset: "bristle", hueJitter: 12, lightJitter: 0.1 } })
 ```
+
+Example: [`paint-mixing`](./src/examples/paint-mixing-tea.ts) — jittered bristle hills and pencil grass.
 
 ### Smudge and wet paint
 
@@ -155,6 +159,8 @@ what they should mix with.
 v.curve(ZIGZAG_ALONG_EDGE, false, { stroke: "#000", weight: 14, brush: "smudge" }), // blend two areas
 v.curve(SKY_STREAK, false, { stroke: "#f1c40f", weight: 18, brush: "wet" }),       // a glaze that mixes in
 ```
+
+Example: [`paint-mixing`](./src/examples/paint-mixing-tea.ts) — a zigzag smudge softens a seam; a wet glaze mixes into the sky.
 
 ## Gestures
 
@@ -182,6 +188,8 @@ its brushed marks. Without a brush it does nothing.
 
 `--seed` on the command line does not change brush marks.
 
+Example: [`paint`](./src/examples/paint-tea.ts) — pointer strokes on the default taper, each with its own `seed`.
+
 ## Paper
 
 Grainy brushes (pencil most of all) show the paper's tooth. The grain is fixed
@@ -197,6 +205,8 @@ the picture.
 `effects: { paper: amount }` on a group shows the paper's tooth in what the
 group drew, only where it drew, so flat fills and gradients look printed on
 paper. 0.3–0.6 is a typical range.
+
+Example: [`paint-mixing`](./src/examples/paint-mixing-tea.ts) — one `v.paper` around the whole drawing.
 
 ## Groups, blend, erase
 
@@ -264,6 +274,8 @@ hold its blur, glow and shadow, and a picture keeps what spills past its box.
 Effects work under scales along the axes and under rotation with a uniform
 scale; under `skew`, or a rotated non-uniform scale, an effect is an error.
 
+Examples: [`looks`](./src/examples/looks-tea.ts) — wash and hatching on one still life; [`effects`](./src/examples/effects-tea.ts) — blur, glow, shadow, mask fade and colour adjustment.
+
 ### Making something glow
 
 Three tools, often used together:
@@ -313,6 +325,8 @@ it. A shape's glow inside a washed group is part of the group's drawing, so
 the wash paints over it. To keep a flame's glow clean, draw the flame after
 the washed group, outside it.
 
+Examples: [`effects`](./src/examples/effects-tea.ts) — a lamp glow composited with `screen`; [`night-room`](./src/examples/night-room-tea.ts) — an emissive lamp shade with a light at it.
+
 ## Lighting
 
 A group with `lighting` is lit by the lights inside it:
@@ -360,6 +374,8 @@ v.group({ lighting: { ambient: "#2e3448", shadows: "soft" } }, [
   result. To light several parts that each have their own wash with one
   light, put them in one lit group, give each part its wash as an inner group,
   and put the lights in the outer group.
+
+Example: [`night-room`](./src/examples/night-room-tea.ts) — a lit room: lights, materials, caster heights, tone curve, a flickering lamp.
 
 ## Gradients
 
@@ -438,6 +454,8 @@ return v.place(boat, x - 60, y - 40 + Math.round(Math.sin(model.frame / 30) * 3)
 - A mark's randomness comes from its points, so a mark whose points move
   re-rolls its wobble every frame: the line "boils", as in hand-drawn
   animation. To keep it still, give its style `gesture: { seed }`.
+
+Examples: [`paint`](./src/examples/paint-tea.ts) — a chain of pictures, one stroke each; [`lamps`](./src/examples/lamps-tea.ts) — tweens of the frames since a click.
 
 ### Recipes
 

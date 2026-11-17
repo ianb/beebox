@@ -85,6 +85,8 @@ the canvas or the browser cancels the touch. A finger has no hover: a touch
 sketch gets `mousemove` only while pressed. Hit areas a fingertip must land
 on want to be about 40 pixels across.
 
+Example: [`bounce`](./src/examples/bounce-tea.ts) — a drag as a mode on the model, from `mousedown` to `mouseup`.
+
 ## Frame-N guarantee
 
 For each frame N, the runtime:
@@ -105,6 +107,8 @@ So `draw` must read only `model` and `p`: a value from anywhere else (a module
 `let`, the clock) would go stale. To animate, change the model on `tick`. A
 figure scrolled off screen sleeps: its frames stop until it is back, as when
 paused, and a sound playing when it left is cut off.
+
+Example: [`pendulum`](./src/examples/pendulum-tea.ts) — physics stepped in `update` at a fixed time step.
 
 ## Drawing
 
@@ -143,10 +147,9 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   that returns one. `draw` returns a **`RootDrawing`**: the same without
   `undefined`. An empty frame returns `null` or `[]`.
 - A loop that carries state (a running total, the previous point) can push
-  into a local `const out: Drawing[] = []` and return it. The gallery's
-  sketches were converted to this form by a script and use `out.push`
-  everywhere; write `.map`, `&&` and components instead. For pieces placed
-  one after another, use [`v.row` and `v.column`](#layout), not a cursor.
+  into a local `const out: Drawing[] = []` and return it. Otherwise write
+  `.map`, `&&` and components. For pieces placed one after another, use
+  [`v.row` and `v.column`](#layout), not a cursor.
 - A scope copies its children when it is called: changing the array later
   changes nothing.
 - A node belongs to the frame that made it. Make the drawing again in each
@@ -342,6 +345,8 @@ Each scope takes its children as its last argument and returns one node.
 - `v.paper(settings, children)` sets the paper grain for the brushes and
   effects in its children (see [BRUSHES.md](./BRUSHES.md#paper)).
 
+Example: [`effects`](./src/examples/effects-tea.ts) — `mask` fades a reflection out with a gradient.
+
 ### Layout
 
 `v.bounds(drawing)` returns the layout box of any drawing of this frame:
@@ -390,6 +395,8 @@ v.column({ x: 300, y: 330, gap: 6, align: "center" }, [
 - The positions are fixed when the call returns. Text with `keepInside` that
   later slides back inside the canvas moves alone; the flow keeps the box
   from the call, so the text can then overlap its neighbour.
+
+Example: [`scale`](./src/examples/scale-tea.ts) — a caption laid out as a column holding a row.
 
 ### Pictures
 
@@ -447,6 +454,8 @@ image: `fill({ data, width, height })` writes straight RGBA bytes (alpha is
 every fourth byte; 255 is opaque) into a zeroed array when the version is
 new. Place it like a picture; scaled up, it blurs as an image does.
 
+Example: [`paint`](./src/examples/paint-tea.ts) — finished strokes drawn through a chain of pictures.
+
 ### Names and hits
 
 Give a drawing a `name`, and a mouse message says when the pointer is on it.
@@ -497,6 +506,8 @@ case "mousedown": {
   newest recorded frame, which can be one display frame ahead of the image
   on screen.
 
+Example: [`scale`](./src/examples/scale-tea.ts) — clicks on named pans and on the weights inside them.
+
 ### Other `View` members
 
 - `v.width`, `v.height`: the canvas size, or the picture's size inside a
@@ -533,6 +544,8 @@ case "mousedown": {
 call throws `RemovedCallError` naming what replaces it. Use pictures for
 `cache`, `sprite` and `image`, `effects: { paper }` for `paperTexture`, and the
 `View`'s calls, `at({ matrix })` or `v.pixels` for `ctx`.
+
+Example: [`lamps`](./src/examples/lamps-tea.ts) — animation as tweens of the frames since a recorded click.
 
 ## Sound
 
@@ -699,6 +712,8 @@ union. Read values via `u.params.name` (in `update`) and the `p` argument (in
 Every declaration also takes `label`, `hint` and `panel`. `panel: false`
 keeps the param out of the side panel.
 
+Example: [`orbit`](./src/examples/orbit-tea.ts) — every param kind; a trigger resets the model and leaves the params.
+
 ### Inputs over the canvas
 
 `v.control(name, { x, y, w, h?, size?, align?, bold? })` in `draw` puts the
@@ -713,6 +728,8 @@ edit (empty included) as a `param` msg, so `update` sees the answer as it is
 typed; keys typed into it are not `keydown` msgs. Use `u.handled` and a check
 button, or check on each edit, as the exercise needs. Only `mountSketch` figures
 place inputs so far; the React figure and the playground keep the panel.
+
+Example: [`answer-box`](./src/examples/answer-box-tea.ts) — a typed answer checked on each edit.
 
 ## Activity
 
@@ -733,6 +750,8 @@ the whole model. If it throws or returns a non-object, the event goes without
 it and the console warns once; the sketch keeps running. What the host does
 with it is the host's business: a beebox figure logs it as the person's
 activity for the chat agent.
+
+Example: [`answer-box`](./src/examples/answer-box-tea.ts) — `activity` after each handled input.
 
 ## Events file
 
@@ -816,30 +835,36 @@ Lint enforces most of it on `*-tea.ts` (`tea/no-module-state`,
 ## Worked example
 
 [`src/examples/orbit-tea.ts`](./src/examples/orbit-tea.ts) +
-[`src/examples/orbit-tea-events.json`](./src/examples/orbit-tea-events.json) — a sun with
-three orbiting planets. It exercises every param type (`speed-scale` number,
-`show-orbits` boolean, `focus` select, `reset` trigger), a mode union
-(`{ type: "idle" } | { type: "selected"; index }`), and direct pointer
-manipulation (click a *moving* planet to select it; ArrowUp/Down nudge its
-speed). It predates names and computes its hits from position math; a new
-sketch names the planets and reads `msg.target`
-([Names and hits](#names-and-hits)), as
-[`src/examples/scale-tea.ts`](./src/examples/scale-tea.ts) does with
-[its events file](./src/examples/scale-tea-events.json).
+[`src/examples/orbit-tea-events.json`](./src/examples/orbit-tea-events.json): a sun with
+three orbiting planets. It declares every param type (`speed-scale` number,
+`show-orbits` boolean, `focus` select, `reset` trigger), keeps a mode union
+(`{ type: "idle" } | { type: "selected"; name }`), and names each planet, so
+a click on a *moving* planet selects it by name with no position math in
+`update`; ArrowUp and ArrowDown change the selected planet's speed. The
+events file aims its clicks with `"target": "planet-Venus"`.
 
 `draw` returns one list: a `.map` over the planets, `&&` for what a param or
-the mode turns on, and small components (`drawPlanet`, `drawHud`):
+the mode turns on, and a small component per planet:
 
 ```ts
 return [
   v.background("#0b1020"),
-  p["show-orbits"] && model.planets.map((planet) => v.circle(CENTER_X, CENTER_Y, planet.orbitRadius, ORBIT_RING)),
-  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" }),
-  model.planets.map((planet, i) =>
-    drawPlanet({ v, planet, pos: planetPos({ planet, frame: model.frame, scale }), selected: mode.type === "selected" && mode.index === i }),
-  ),
-  drawHud({ v, model, p }),
+  p["show-orbits"] && model.planets.map((pl) => v.circle(SUN.x, SUN.y, pl.orbit, { stroke: "#26324f", weight: 1 })),
+  v.circle(SUN.x, SUN.y, 20, { fill: "#fcd34d", effects: { glow: { blur: 18, color: "#f59e0b", strength: 2 } } }),
+  model.planets.map((pl) => drawPlanet(v, { planet: pl, at: position(pl, { frame: model.frame, scale }), selected: pl.name === selected })),
+  v.column({ x: 12, y: 12, gap: 4 }, [ /* the readout */ ]),
 ];
+```
+
+```ts
+case "mousedown": {
+  const hit = model.planets.find((p) => msg.targets.includes(`planet-${p.name}`));
+  if (hit !== undefined) {
+    u.handled(`select ${hit.name}`);
+    return { ...model, mode: { type: "selected", name: hit.name } };
+  }
+  …
+}
 ```
 
 Note the boundary: `reset` restores the *model* (planets, selection) but leaves

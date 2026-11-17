@@ -1,8 +1,10 @@
 // Bundles the browser playground into ONE self-contained HTML file — every
 // module inlined, zero runtime imports, no external requests (it is published
-// behind a strict CSP). esbuild bundles src/browser/app/playground.ts (runtime + the five
-// sketches) to an ES module; this script wraps it in a dark, minimal HTML shell with
-// inline CSS. Regenerate with `pnpm --dir canvas-loop run build:playground`.
+// behind a strict CSP). esbuild bundles src/browser/app/playground.ts (runtime +
+// every example) to an ES module; this script wraps it in a dark, minimal HTML
+// shell with inline CSS. The output is the TRACKED dev/canvas-loop-examples.html,
+// served at /<worktree>/dev/canvas-loop-examples.html. Regenerate after
+// changing an example with `pnpm --dir canvas-loop run build:playground`.
 import { build } from "esbuild";
 import type { OnResolveArgs, Plugin } from "esbuild";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -10,8 +12,8 @@ import { resolve } from "node:path";
 
 const HERE = import.meta.dirname;
 const ENTRY = resolve(HERE, "app/playground.ts");
-const OUT_DIR = resolve(HERE, "dist");
-const OUT_FILE = resolve(OUT_DIR, "playground.html");
+const OUT_DIR = resolve(HERE, "../../../dev");
+const OUT_FILE = resolve(OUT_DIR, "canvas-loop-examples.html");
 
 // The repo writes NodeNext `.js` import specifiers that point at `.ts` sources;
 // esbuild resolves real files, so remap each relative `.js` to its `.ts`.
@@ -34,7 +36,7 @@ function renderHtml(js: string): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>canvas-loop playground</title>
+<title>canvas-loop examples</title>
 <style>${CSS}</style>
 </head>
 <body>
