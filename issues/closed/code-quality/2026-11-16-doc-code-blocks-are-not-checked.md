@@ -1,10 +1,13 @@
 ---
 title: "Fenced TypeScript in canvas-loop docs is not type-checked or run"
-workstream: unattached
+workstream: canvas-brushes
 area: canvas-loop
 filed-by: agent
 discovered-in: worktree-retrospective — retrospective 20261116-005159
+resolution: wontfix
 ---
+
+**Closed (wontfix, 2026-11-17):** Checked against main on 2026-11-17 (plan:canvas-loop-harness-and-doc-check.subplan). README.md, TEA.md and BRUSHES.md hold 33 ts/tsx blocks, none a whole sketch (the examples are, and examples:check renders them). A throwaway check with v typed as View and u as Util found no stale call: every block that calls the API type-checks, and the failures were wrapper artifacts. The cited README fix (ec34ca70b) changed prose only, which a block check would not catch; a box agent copying a stale fragment gets a type error at bbx figure run. Reopen if a stale block turns up.
 
 canvas-loop docs (README.md, TEA.md, BRUSHES.md, and RENDERER.md on the
 canvas-brushes branch) hold fenced `ts` and `tsx` examples

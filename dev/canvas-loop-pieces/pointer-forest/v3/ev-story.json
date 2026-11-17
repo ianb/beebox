@@ -1,0 +1,17 @@
+[
+  { "frame": 0, "type": "param", "name": "marker", "value": true },
+  { "frame": 0, "type": "param", "name": "pace", "value": 3 },
+  { "frame": 15, "type": "mousemove", "x": 330, "y": 330 },
+  { "frame": 20, "type": "mousemove", "x": 345, "y": 335 },
+  { "frame": 40, "type": "snapshot", "label": "pointer arrives: leaves fall" },
+  { "frame": 95, "type": "snapshot", "label": "resting: a clearing of grass and flowers" },
+  { "frame": 100, "type": "mousemove", "x": 450, "y": 340 },
+  { "frame": 104, "type": "mousemove", "x": 560, "y": 345 },
+  { "frame": 108, "type": "mousemove", "x": 660, "y": 360 },
+  { "frame": 140, "type": "snapshot", "label": "pointer moved right; the old clearing starts to sprout" },
+  { "frame": 175, "type": "mousemove", "x": 820, "y": 380 },
+  { "frame": 178, "type": "mousemove", "x": 990, "y": 380 },
+  { "frame": 200, "type": "snapshot", "label": "pointer gone" },
+  { "frame": 260, "type": "snapshot", "label": "regrowing" },
+  { "frame": 330, "type": "snapshot", "label": "regrown" }
+]
