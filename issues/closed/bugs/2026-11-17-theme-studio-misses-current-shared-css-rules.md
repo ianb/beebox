@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-theme-check-gate — verifying conversation activity across themes
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-17):** Commit 22aa29a1d adds real composition and focused-card coverage; commit 2d1ce6545 fixes Tempest error text contrast; full bin/theme-check --all --jobs 6 passed all catalog, contrast, backdrop and rule coverage jobs.
 
 `bin/theme-check --system tempest` reports seven shared CSS rules that match
 nothing in Theme Studio at any screen. The list includes rules for layered

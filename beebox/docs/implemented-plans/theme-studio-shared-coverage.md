@@ -1,9 +1,9 @@
 ---
 title: "Restore shared theme rule coverage"
-status: active
+status: implemented
 workstream: theme-check-gate
 issues:
-  - ../../../issues/bugs/2026-11-17-theme-studio-misses-current-shared-css-rules.md
+  - ../../../issues/closed/bugs/2026-11-17-theme-studio-misses-current-shared-css-rules.md
 ---
 # Restore shared theme rule coverage
 
@@ -111,10 +111,15 @@ phone has no focus controls or focused attribute. Returning restores the nav.
 `pnpm test:changed` passed eight files and 87 assertions. Typecheck,
 layout-check, lint:changed and ui-check passed. Browser probes checked normal
 navigation, desktop focus/return and the absence of phone focus controls.
-The Tempest/Paper run matched the five repaired shared selectors and layered
-defaults, while reporting other catalog-role/stock residuals and a swatch-link
-contrast miss retained in the existing contrast inventory. This combination
-run is not a full catalog landing pass.
+The full `bin/theme-check --all --jobs 6` run completed all 25 catalog cases,
+50 contrast jobs and 150 backdrop/rule jobs. It measured all 25 phone and all
+25 laptop cases with no contrast misses; backdrop checks had no misses and
+shared rule coverage passed. The completed run record has no failed jobs and
+no pending coverage. Its local log is in
+`scratch/theme-gate/finish-all-jobs6-retry/`.
+
+The separate earlier audit found a swatch-link contrast miss at 3.90:1; that
+finding remains in the contrast inventory for its own scope.
 
 Claude `claude-opus-5-5` reviewed the implementation. Its diagnostic findings
 were accepted: backdrop misses now name normal/focused state, and focus/nav

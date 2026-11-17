@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-17T14:43:15Z
-Total documents: 707
+Generated: 2026-11-17T19:40:05Z
+Total documents: 708
 
 ## Issues
 
@@ -88,6 +88,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
+- **docs/implemented-plans/theme-studio-shared-coverage.md** — "Restore shared theme rule coverage" (157 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
@@ -359,8 +360,7 @@ Referenced by:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions →
 - ../.claude/skills/bbx-context/SKILL.md:3 (mention) — description: Design or troubleshoot durable guidance loaded by box agents, including box AGENTS.md files, path rules, sc
 - ../.claude/skills/bbx-issue-actions/SKILL.md:106 (mention) — `AGENTS.md`), so query that first; the `-S` guess is the fallback for
-- ../.claude/skills/bbx-plan/SKILL.md:64 (mention) — `beebox/AGENTS.md:31`: *"parse, change, and reserialize it"* is a citation.
-- ../.claude/skills/bbx-plan/TEMPLATE.md:38 (mention) — - beebox/AGENTS.md — conventions, validation contract, "no features
+- ../.claude/skills/bbx-plan/TEMPLATE.md:35 (mention) — - beebox/AGENTS.md — conventions, validation contract, "no features
 - ../.claude/skills/browse/references/authentication.md:54 (mention) — live sessions (`beebox/AGENTS.md`). If you cannot get one, say which findings
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real agent learned from its guidance. Box audits cover box-loaded guidance (box AGENTS.md, gene
 - ../.claude/skills/launch-worktree-session/SKILL.md:66 (mention) — `/finish` or `$finish` in prose. Both agents read `AGENTS.md`. Pass handoff
@@ -696,7 +696,7 @@ Referenced by:
 - docs/unimplemented-plans/query-cards.md:40 (mention) — - `beebox/code-style.md` — strict types, no `any`, custom errors,
 - docs/unimplemented-plans/temporal-everywhere.md:121 (mention) — - **`beebox/code-style.md:80`:** *"Line-level only — a single
 - frontend.md:3 (mention) — UI palette, primitives, data wiring, addressable ids, and the `className` rule. Backend code never needs to load this; c
-- ../.claude/skills/bbx-plan/TEMPLATE.md:40 (mention) — - beebox/code-style.md — the mechanical rules
+- ../.claude/skills/bbx-plan/TEMPLATE.md:37 (mention) — - beebox/code-style.md — the mechanical rules
 - ../dev/devprocess-talk/inventory.md:217 (mention) — - **Where:** `beebox/AGENTS.md` (71 lines; named CLAUDE.md until 2026-10-09) plus an `@`-import of `beebox/code-style.md
 - ../dev/devprocess-talk/reports/sweep-instructions.md:18 (mention) — - It still `@`-imports `code-style.md` (118 lines), so the loaded total is ~189 lines (`wc -l beebox/code-style.md`).
 - ../dev/devprocess-talk/reports/sweep-instructions.md:63 (at-include) — - **One line:** `beebox/CLAUDE.md` ends with `@code-style.md`, so the coding contract loads with the package file but is
@@ -1612,7 +1612,7 @@ Referenced by:
 - docs/unimplemented-plans/publish-pages-superseded.md:22 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/unimplemented-plans/temporal-everywhere.md:110 (mention) — (`beebox/docs/engineering-principles.md:95`): one clock helper per clock,
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions →
-- ../.claude/skills/bbx-plan/TEMPLATE.md:37 (mention) — - beebox/docs/engineering-principles.md — the principles, by number
+- ../.claude/skills/bbx-plan/TEMPLATE.md:34 (mention) — - beebox/docs/engineering-principles.md — the principles, by number
 - ../dev/devprocess-talk/chapters.md:164 (mention) — file: beebox/docs/engineering-principles.md
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:112 (mention) — - **Written up as a principle.** `beebox/docs/engineering-principles.md`
 - ../issues/closed/bugs/2026-08-08-worktree-remove-now-silent-mv-failure.md:36 (mention) — removal. Violates `docs/engineering-principles.md` §4 (resilient AND never
@@ -2592,7 +2592,7 @@ Referenced by:
 - docs/plans/tts-backend-selection.md:562 (mention) — Tests named while designing, per `docs/testing.md`:
 - docs/plans/workspace-pane-controls.md:478 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
 - docs/unimplemented-plans/publish-pages-superseded.md:277 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
-- ../.claude/skills/bbx-plan/TEMPLATE.md:177 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the test for each
+- ../.claude/skills/bbx-plan/TEMPLATE.md:179 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the test for each
 - ../.claude/skills/cross-model/SKILL.md:31 (mention) — branches, parsing, money, or security gets none (`docs/testing.md`). A new
 - ../.claude/skills/field-probe/SKILL.md:3 (mention) — description: Diagnose bugs confined to an inaccessible environment, such as a phone, production, or real-device gestures
 - ../.claude/skills/field-probe/SKILL.md:13 (link) — end. It is the field arm of [reproducing a bug](../../../beebox/docs/testing.md#reproducing-a-bug):
@@ -8858,6 +8858,13 @@ References:
 - → ../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md (frontmatter)
 - → docs/theme-authoring.md (mention)
 
+#### docs/implemented-plans/theme-studio-shared-coverage.md **[ORPHAN]**
+
+Title: "Restore shared theme rule coverage" | 157 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/bugs/2026-11-17-theme-studio-misses-current-shared-css-rules.md (frontmatter)
+
 #### docs/implemented-plans/theme-studio.md
 
 Title: "Theme studio: show what the app shows, at screen scale" | 389 lines | shipped history | implemented
@@ -10990,7 +10997,7 @@ Referenced by:
 - docs/plans/scan-guide-card.md:94 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:78 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - docs/reports/plan-directory-migration-history-2026-09-13.md:5 (link) — locations. Use the [current plan conventions](../plans/README.md) when working
-- ../.claude/skills/bbx-plan/SKILL.md:29 (mention) — Subplans: `<topic>.subplan.md`. Frontmatter per `docs/plans/README.md`:
+- ../.claude/skills/bbx-plan/SKILL.md:26 (mention) — Subplans: `<topic>.subplan.md`. Frontmatter per `docs/plans/README.md`:
 - ../dev/devprocess-talk/reports/sweep-queue-planning.md:304 (mention) — - **Lives in:** `beebox/docs/plans/README.md`, `beebox/docs/implemented-plans/`, `beebox/docs/unimplemented-plans/`, `.c
 - ../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md:23 (mention) — `docs/plans/README.md` (`**Status:** implemented YYYY-MM …`), which can't be
 
@@ -12388,7 +12395,7 @@ Referenced by:
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:53 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
 - frontend.md:178 (link) — Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `dupl
-- ../.claude/skills/bbx-plan/TEMPLATE.md:166 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
+- ../.claude/skills/bbx-plan/TEMPLATE.md:169 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:231 (mention) — - **Lives in:** `beebox/docs/testing/tours.md`, `beebox/docs/testing/smoke.md`, `schedules/smoke-review/`, `schedules/to
 - ../dev/devprocess-talk/reports/sweep-quality.md:107 (mention) — - **Lives in:** `beebox/test/tours/` (10 `.tour.` files: `git ls-files beebox | grep -c '\.tour\.'`), `beebox/docs/testi
 - ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:219 (mention) — - **Lives in:** `schedules/tour-check/`, `beebox/docs/testing/tours.md`.
