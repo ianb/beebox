@@ -208,3 +208,25 @@ on colored user messages. Non-material accordions now inherit their surrounding
 text color, and the studio renders a real delivered-call message. The tour
 checks its activity accordion expanded successfully and names the case on
 failure. Claude verified these corrections in its final bounded pass.
+
+## Landing verification, 2026-11-17
+
+The boxholder approved the conversation-activity before/after exhibit. A real
+browser audit covered the activity panel in all 18 system themes and 42 theme
+states. Ambient activity passed in every theme; Spectrum's existing Chat
+navigation label measured 4.49:1. Five Tempest activity, hover, card and notice
+states passed after the chevron fix.
+
+The stable `bin/theme-check --system tempest --jobs 1` run measured 290 laptop
+and 277 phone text runs. The only contrast miss was the existing seed-list
+danger message at 4.45:1 on phone. Seven shared CSS rules had no Theme Studio
+match, including the focused-card controls recently merged to main; this
+coverage gap is filed separately. This was a targeted system run, not a full
+`bin/theme-check --all` catalog pass.
+
+`pnpm test:changed` passed 24 files and 191 assertions; ledger bookkeeping
+timed out afterward and is filed separately. The commit hooks passed document,
+layout, UI, typecheck, lint-staged and workstreams/bin typechecks. `bin/smoke`
+passed for the worktree's `test1` route. Claude `claude-opus-5-5` completed the
+cross-model review and verification follow-up without unresolved findings in
+the ambient material fix.
