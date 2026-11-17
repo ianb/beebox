@@ -435,7 +435,9 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   blend?, erase?, material? }?)` puts its top-left at (x, y), under the scopes
   around it.
 - A **version** is the key, the size, the `paper` and the values of `deps`. `body` runs
-  only when the version is new. Put in `deps` everything the body reads that
+  only when the version is new, and a new version is drawn again at every
+  scale it is placed at: changing `deps` costs a full draw (see
+  [BRUSHES.md](./BRUSHES.md#animation-and-pictures)). Put in `deps` everything the body reads that
   can change: a colour, a pose name, a param. `deps` are plain data (numbers,
   strings, booleans, `null`, and arrays and objects of these) compared by
   value. Leave `deps` out for a drawing that never changes.

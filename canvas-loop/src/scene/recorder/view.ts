@@ -78,7 +78,7 @@ export class SceneRecorder extends PureHelpers implements View {
   /** The picture whose body is recording, for messages; undefined at the top level. */
   #picture: string | undefined;
   /** The frame's outputs that are not drawing (section 8). */
-  #out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [] };
+  #out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [], pictures: [] };
 
   /**
    * `seed` is the run's seed, which `noise` uses (draft 2.3 section 15); default 0. `params` resolve `control` calls.
@@ -119,7 +119,7 @@ export class SceneRecorder extends PureHelpers implements View {
 
   /** Run `draw`, resolve the drawing it returns, and return the frame. A `draw` that returns `undefined` is the retired statement form. */
   record(draw: (v: View) => unknown): FrameRecord {
-    const out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [] };
+    const out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [], pictures: [] };
     ({ size: this.#size, picture: this.#picture, out: this.#out } = { size: this.#canvas, picture: undefined, out });
     this.#sites = this.#audit === undefined ? undefined : new WeakMap();
     this.#made = this.#audit === undefined ? undefined : new Map();
@@ -316,7 +316,7 @@ export class SceneRecorder extends PureHelpers implements View {
   /** What a picture call needs from the recorder; `call` must be made while `draw` runs. */
   #scope(call: string): PictureScope {
     this.#notes.live(call);
-    return { table: this.#table, audit: this.#audit !== undefined, frame: this.#notes.frame, recordBody: (name, a) => this.#recordBody(name, a), warn: (once, message) => this.#notes.warn(once, message) };
+    return { table: this.#table, audit: this.#audit !== undefined, frame: this.#notes.frame, recordBody: (name, a) => this.#recordBody(name, a), warn: (once, message) => this.#notes.warn(once, message), recorded: (key, ms) => this.#out.pictures.push({ key, ms }) };
   }
   picture(options: PictureOptions, body: () => unknown): Picture {
     return recordPicture(this.#scope("picture"), { options, body });

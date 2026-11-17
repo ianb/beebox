@@ -5,6 +5,14 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **What new picture versions cost.** BRUSHES.md ("Animation and pictures")
+  says a new version is recorded and drawn again at every scale it is placed
+  at. `--timing` adds a line per captured frame listing new versions and
+  picture tiles by key, with milliseconds; in a browser, the figure's
+  `surface.pictureCosts()` gives the same since its last call. The hint
+  for a picture drawn again every frame names new versions when they are
+  the cause (a growing picture placed at two depths), instead of blaming
+  its scale.
 - **Breaking: `mouseleave`.** `Msg` gains `{ type: "mouseleave" }`: the
   pointer left the canvas (the browser's `pointerleave` of the primary
   pointer, after the `mouseup` of a press that slid off; a lifted finger).

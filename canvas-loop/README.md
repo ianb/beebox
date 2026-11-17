@@ -53,8 +53,9 @@ renderer.
 `--ratio` sets the pixel density (default 1). `--scene` writes each captured
 frame's drawing as an outline into the transcript (`--scene first`: only the
 first). `--outline` draws picture, clip and `debugBox` outlines over each
-captured frame; `--timing` adds render counts and draw times to the
-transcript (see [BRUSHES.md](./BRUSHES.md#seeing-what-you-made)).
+captured frame; `--timing` adds render counts, draw times and the new
+picture versions by key, with their cost, to the transcript (see
+[BRUSHES.md](./BRUSHES.md#seeing-what-you-made)).
 
 `--zoom` (repeatable) also writes an enlarged crop of that region beside every
 captured frame (`frame-0000-zoom1.png`, nearest-pixel, scale 3 by default) and

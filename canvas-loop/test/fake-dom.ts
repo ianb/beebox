@@ -191,8 +191,8 @@ const stubRenderer = (present?: () => Promise<void>) => (): SurfaceRenderer => (
   release: () => {},
   destroy: () => {},
   held: { textures: 0, bytes: 0, inUse: 0, images: 0, imageBytes: 0, strokes: 0, geometry: 0, tiles: 0, tileBytes: 0 },
-  // eslint-disable-next-line no-restricted-syntax -- test stand-in: the surface never reads the stats it passes through
-  stats: {} as SurfaceRenderer["stats"],
+  // eslint-disable-next-line no-restricted-syntax -- test stand-in: the surface reads only the new-picture costs of the stats it passes through
+  stats: { pictures: [] } as unknown as SurfaceRenderer["stats"],
 });
 
 const text = await openTextMeasurer();

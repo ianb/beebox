@@ -21,9 +21,14 @@ export interface PictureScope {
   /** Record a body in the picture's own coordinates, box and paper; `again` for a testing-mode re-record of a kept version. */
   readonly recordBody: (name: string, a: { size: { width: number; height: number }; paper: PaperSettings; body: () => unknown; again: boolean }) => readonly SceneNode[];
   readonly warn: (once: string, message: string) => void;
+  /** A new version was recorded, taking `ms`. */
+  readonly recorded: (key: string, ms: number) => void;
 }
 
 type Version = PictureVersion | PixelsVersion;
+
+/** The clock, kept at load: a headless run's determinism guard refuses `performance.now` while the sketch runs, and timing a body is the runtime's business. */
+const clock = performance.now.bind(performance);
 type Fill = (image: { data: Uint8ClampedArray; width: number; height: number }) => void;
 
 const depsText = (v: Version): string => (v.deps === undefined ? "no deps" : `deps ${JSON.stringify(v.deps)}`);
@@ -52,12 +57,14 @@ export function recordPicture(s: PictureScope, a: { options: PictureOptions; bod
   const found = s.table.find({ kind: "picture", key, width, height, deps, paper });
   if (found !== undefined && !(s.audit && s.table.auditDue(found))) return new PictureHandle(found, s.frame);
   const name = versionName({ kind: "picture", key, deps });
+  const t0 = clock();
   const children = s.recordBody(name, { size: { width, height }, paper, body: a.body, again: found !== undefined });
   if (found?.kind === "picture") {
     const diff = firstDifference({ a: found.children, b: children }, name);
     if (diff !== undefined) warnStale(s, { name, version: found, diff });
     return new PictureHandle(found, s.frame);
   }
+  s.recorded(key, clock() - t0);
   return added(s, { kind: "picture", key, width, height, deps, paper, children });
 }
 
@@ -66,6 +73,7 @@ export function recordPixels(s: PictureScope, a: { options: PictureOptions; fill
   const deps = copyDeps(a.options.deps, key);
   const found = s.table.find({ kind: "pixels", key, width, height, deps });
   if (found !== undefined && !(s.audit && s.table.auditDue(found))) return new PictureHandle(found, s.frame);
+  const t0 = clock();
   const given = new Uint8ClampedArray(width * height * 4);
   const image = { data: given, width, height };
   a.fill(image);
@@ -77,5 +85,6 @@ export function recordPixels(s: PictureScope, a: { options: PictureOptions; fill
     return new PictureHandle(found, s.frame);
   }
   if (s.audit && data.every((v, i) => i % 4 !== 3 || v === 0)) s.warn(`clear ${key}`, `${name}: the fill left every pixel transparent (alpha is every 4th byte, data[i + 3]; 255 is opaque)`);
+  s.recorded(key, clock() - t0);
   return added(s, { kind: "pixels", key, width, height, deps, data });
 }

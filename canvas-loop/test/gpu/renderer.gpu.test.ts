@@ -305,6 +305,23 @@ for (const c of CASES) {
   });
 }
 
+onGpu("section 10: a key with a new version each frame, placed at two fixed scales, gets a hint naming new versions, not scale", async () => {
+  const out = await runCase({
+    id: "growing-picture",
+    mistake: "a growing picture with a new version every frame, placed at two depths",
+    channel: "none",
+    names: [],
+    frames: 6,
+    draw: (v, m) => {
+      const grow = v.picture({ key: "sapling", width: 20, height: 20, deps: [m.t] }, () => v.rect(0, 20 - m.t, 4, m.t, { fill: "#2a9d8f" }));
+      return [0.5, 1].map((s) => v.at({ scale: s }, v.place(grow, 2, 2)));
+    },
+  });
+  const hints = out.transcript.split("\n").filter((l) => l.includes("hint:"));
+  assert.equal(hints.length, 1, hints.join("\n"));
+  assert.match(hints[0] ?? "", /hint: picture "sapling" got new versions in each of the last 3 frames \(now deps \[\d+]\), each placed at more than one scale or rotation \(now \[1, 0, 0, 1]\)/);
+});
+
 onGpu("section 10: a picture placed at a new rotation every frame gets one performance hint; fixed scales get none", async () => {
   const out = await runCase({
     id: "turning-picture",

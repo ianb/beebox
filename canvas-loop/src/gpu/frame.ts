@@ -45,6 +45,8 @@ export interface FrameStats {
    * in `encode`.
    */
   cpu: { lower: number; atlas: number; encode: number; submit: number; brush: number };
+  /** Per picture key: tiles lowered afresh (a new version, or a new scale or rotation) and their CPU milliseconds, part of `cpu.lower`. */
+  pictures: { key: string; tiles: number; ms: number }[];
 }
 
 export interface Frame {
@@ -71,7 +73,7 @@ export interface Frame {
 }
 
 export function emptyStats(): FrameStats {
-  return { jobs: 0, pieces: 0, atlasPages: 0, passes: 0, effectPasses: 0, copies: 0, draws: 0, strokes: 0, expanded: 0, cacheHits: 0, markPages: 0, brushBatches: 0, brushScratch: 0, smears: 0, glyphs: 0, keptHits: 0, keptMisses: 0, tileHits: 0, tilesDrawn: 0, cpu: { lower: 0, atlas: 0, encode: 0, submit: 0, brush: 0 } };
+  return { jobs: 0, pieces: 0, atlasPages: 0, passes: 0, effectPasses: 0, copies: 0, draws: 0, strokes: 0, expanded: 0, cacheHits: 0, markPages: 0, brushBatches: 0, brushScratch: 0, smears: 0, glyphs: 0, keptHits: 0, keptMisses: 0, tileHits: 0, tilesDrawn: 0, cpu: { lower: 0, atlas: 0, encode: 0, submit: 0, brush: 0 }, pictures: [] };
 }
 
 /** A read-only storage buffer holding `data`, freed after the frame. */

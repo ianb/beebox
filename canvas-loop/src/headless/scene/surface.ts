@@ -20,6 +20,7 @@ import type { UtilText } from "../tea-util.js";
 import { outlinesOf } from "./outlines.js";
 import { faintState, faintWarnings } from "./faint.js";
 import type { Outline } from "./outlines.js";
+import { PictureCosts, costLine } from "../../scene/picture-costs.js";
 
 /** What one `draw` recorded. */
 type FrameRecord = ReturnType<SceneRecorder["record"]>;
@@ -94,6 +95,7 @@ export class SceneSurface implements FrameSurface {
   readonly #overlay: SceneRecorder;
   readonly #renderer: GpuRenderer;
   readonly #faint = faintState();
+  readonly #costs = new PictureCosts();
   #last: FrameRecord | undefined;
   #captures = 0;
   readonly text: UtilText;
@@ -122,6 +124,7 @@ export class SceneSurface implements FrameSurface {
     this.#last = undefined;
     const rec = this.#recorder.record((v) => paint(v));
     this.#last = rec;
+    this.#costs.recorded(rec.pictures);
     for (const label of rec.snapshots) this.#o.host.requestSnapshot(label);
   }
 
@@ -179,6 +182,8 @@ export class SceneSurface implements FrameSurface {
   #timingLines(): string[] {
     const s = this.#renderer.stats;
     const held = this.#renderer.held;
+    this.#costs.lowered(s.pictures);
+    const pictures = costLine(this.#costs.take());
     const lines = [
       `render: passes ${s.passes}, effect passes ${s.effectPasses}, copies ${s.copies}, draws ${s.draws}; brushed strokes ${s.strokes} (expanded ${s.expanded}, cache hits ${s.cacheHits}); kept rasters ${held.tiles} (${held.tileBytes} bytes); cpu lower ${round(s.cpu.lower)} ms (brush ${round(s.cpu.brush)} ms), encode ${round(s.cpu.encode)} ms`,
     ];
@@ -187,6 +192,7 @@ export class SceneSurface implements FrameSurface {
       const kinds = Object.entries(times.kinds).map(([kind, t]) => `${kind} ${round(t.ms)} ms (${t.passes})`);
       lines.push(`gpu: ${round(times.spanMs)} ms; ${kinds.join(", ")}${times.untimed > 0 ? `; ${times.untimed} passes untimed` : ""}`);
     }
+    if (pictures !== undefined) lines.push(`new pictures since the last captured frame (record, and tiles lowered for this frame): ${pictures}`);
     return lines;
   }
 }

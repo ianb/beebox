@@ -75,6 +75,8 @@ export class Lowering {
   readonly #path = new NodePath();
   /** Picture tiles lowered this frame, shared by every placement that needs them. */
   readonly #drawing = new Map<PictureVersion, Map<string, Job>>();
+  /** Per picture key: tiles lowered this frame and their CPU milliseconds (`FrameStats.pictures`). */
+  readonly #tileCost = new Map<string, { key: string; tiles: number; ms: number }>();
 
   constructor(options: { colors: ColorParser; width: number; height: number; ratio: number; expander: BrushExpander; glyphs: GlyphCache; kept: KeptValues; rasters: RasterCache; brushLimit: number }) {
     this.#geo = new ShapeGeometry(options.kept);
@@ -90,6 +92,11 @@ export class Lowering {
   /** CPU milliseconds this lowering spent on brushed strokes: expansion, preparation and placement (`FrameStats.cpu.brush`). */
   get brushMs(): number {
     return this.#brushMs;
+  }
+
+  /** Per picture key, the tiles this lowering drew afresh and the CPU milliseconds they took (nested pictures count in each). */
+  get pictureTiles(): { key: string; tiles: number; ms: number }[] {
+    return [...this.#tileCost.values()];
   }
 
   lower(scene: Scene): Job {
@@ -318,7 +325,10 @@ export class Lowering {
     if (kept !== undefined) return { name: `kept tile ${key} of "${v.key}"`, rect: kept.rect, items: [], clips: [], fx: undefined, tex: kept.tex, keptPeaks: kept.peaks };
     const drawing = this.#drawing.get(v)?.get(key);
     if (drawing !== undefined) return drawing;
+    const t0 = performance.now();
     const job = this.#job(`place picture "${v.key}" tile ${key}`, { effects: undefined, here: { ...a.here, matrix: rm, visible: tile, seen: tile, ground: a.ground, groundMatrix: rm }, body: (inner) => this.#nodes(v.children, inner) });
+    const cost = this.#tileCost.get(v.key) ?? { key: v.key, tiles: 0, ms: 0 };
+    this.#tileCost.set(v.key, { key: v.key, tiles: cost.tiles + 1, ms: cost.ms + performance.now() - t0 });
     if (isEmpty(job.rect)) this.#rasters.store(v, { key, rect: EMPTY, tex: undefined });
     else job.keep = { version: v, key };
     const map = this.#drawing.get(v) ?? new Map<string, Job>();

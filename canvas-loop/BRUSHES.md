@@ -445,6 +445,17 @@ each frame:
   `scale: [-1, 1]`. A picture that turns or scales by a new amount in every
   frame (rocking, breathing) is drawn again each time, and headless runs give
   a hint: draw that part as a group, or as a few poses.
+- A new version costs what the first draw did: its body runs, and its marks
+  are drawn again at every scale it is placed at. A tree of a few hundred
+  brushed marks takes about 5–20 ms to record and as much again to draw. A
+  picture that grows, wilts or changes shape through `deps` pays this at
+  every step, and a frame that meets several new versions drops. Grow in a
+  few steps (8 levels, not 100), let things share levels, and fade from one
+  kept level to the next with `place(…, { opacity })`.
+- To see which pictures cost: `--timing` lists, per captured frame, the new
+  versions by key with their milliseconds; in a browser,
+  `figure.surface.pictureCosts()` (the figure from `mountSketch`'s `inspect`
+  option) gives the same since its last call.
 
 ```ts
 const boat = v.picture({ key: "boat", width: 120, height: 60 }, () => paintBoat(v));
