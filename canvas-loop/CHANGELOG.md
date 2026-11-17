@@ -5,6 +5,11 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Steady 60 Hz frames.** A browser figure's frame interval within 2 ms of
+  a whole number of 1/60 s steps now counts as exactly that many. Chrome's
+  frame timestamps wander (15.2 ms, then 18.2 ms), and depending on where
+  the step clock stood, a short frame ran no step and drew nothing and the
+  next ran two: up to a fifth of frames skipped on a 60 Hz display.
 - **`mousepath` in events files.** `{ "frame", "type": "mousepath",
   "points": [[x, y], …], "frames" }` is one `mousemove` a frame along the
   points at an even speed, so a hover or a drag is one line instead of

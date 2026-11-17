@@ -26,6 +26,20 @@ export type { DrawSurface, Drawn, EmittedEvent, ParamOverrides, RuntimeDeps, Run
 const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
 const MAX_DT_MS = 250;
+/** A frame interval this close to a whole number of steps is that number: a 60 Hz display's timestamps wander by a millisecond or two. */
+const SNAP_MS = 2;
+
+/**
+ * The time a frame advances. Within `SNAP_MS` of a whole number of steps it
+ * is exactly that many: otherwise a 15.2 ms frame after a short remainder runs
+ * no step (no draw) and the 18.2 ms frame after it runs two, a visible stutter
+ * on a 60 Hz display. Other rates (120 Hz, 144 Hz) are not near a whole step
+ * and keep their exact time.
+ */
+export function frameTime(dt: number): number {
+  const whole = Math.round(dt / STEP_MS);
+  return whole >= 1 && Math.abs(dt - whole * STEP_MS) <= SNAP_MS ? whole * STEP_MS : dt;
+}
 
 // A queued input before it is stamped with the frame it dispatches on. `snapshot`
 // is a scripted-only directive (a forced capture, never live UI input), so it is
@@ -259,7 +273,7 @@ export class Runtime {
       if (this.#dirty) this.#draw();
       return;
     }
-    let dt = now - last;
+    let dt = frameTime(now - last);
     if (dt > MAX_DT_MS) dt = STEP_MS;
     this.#acc += dt;
     let steps = 0;
