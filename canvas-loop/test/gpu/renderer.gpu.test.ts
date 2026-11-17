@@ -37,9 +37,9 @@ import { keptPictureFaint, peakVariantSameBytes, peaksMeasured } from "./peak-ca
 import { CASES } from "./dev-loop/cases.js";
 import { runCase } from "./dev-loop/run-case.js";
 import * as sceneSketchModule from "./scene-sketch.js";
-import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
-import * as hallwayPort from "../../src/gallery/intra-rooms/sketch-tea.js";
-import * as chemistryPort from "../../src/gallery/balance-reaction-2/sketch-tea.js";
+import * as walkerSheet from "./intra-walk-styles/sketch-tea.js";
+import * as hallwayPort from "./intra-rooms/sketch-tea.js";
+import * as chemistryPort from "./balance-reaction-2/sketch-tea.js";
 
 let gpu: GpuHandle | undefined;
 let text: TextMeasurer | undefined;

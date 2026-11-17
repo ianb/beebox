@@ -27,7 +27,7 @@ const teaSketches = teaPlugin.configs.recommended;
 // Kept out of `configs.recommended` because it needs tsconfig project membership
 // (gallery/ added to tsconfig include); wired in here on the same file glob.
 const teaExhaustiveness = {
-  files: ["src/examples/**/*-tea.ts", "src/gallery/**/*-tea.ts"],
+  files: ["src/examples/**/*-tea.ts", "src/gallery/**/*-tea.ts", "test/gpu/*/*-tea.ts"],
   languageOptions: { parserOptions: { projectService: true } },
   rules: {
     "@typescript-eslint/switch-exhaustiveness-check": [
@@ -41,7 +41,8 @@ const teaExhaustiveness = {
   },
 };
 
-// Boxholder-authorized loosening for sketches only (src/examples, src/gallery).
+// Boxholder-authorized loosening for sketches only (src/examples, src/gallery,
+// and the renderer fixture sketches in test/gpu/<name>/).
 // 2026-07-14: sketches carry declarative scene data (palettes, layer configs,
 // creature geometry) that the preset's library-code cap of 300 punishes.
 // 2026-11-11: a sketch is a drawing iterated in short render cycles, not
@@ -51,7 +52,7 @@ const teaExhaustiveness = {
 // literals, plain `Error`, and in-place `reverse()`. Unused-variable and type
 // rules stay.
 const sketchLineBudget = {
-  files: ["src/examples/**/*.ts", "src/gallery/**/*.ts"],
+  files: ["src/examples/**/*.ts", "src/gallery/**/*.ts", "test/gpu/*/*-tea.ts"],
   rules: {
     "max-lines": "off",
     "max-params": "off",

@@ -36,7 +36,7 @@ import type { Mat } from "../../src/scene/nodes.js";
 import type { Drawing } from "../../src/core/tea.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { GpuRenderError } from "../../src/scene/errors.js";
-import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
+import * as walkerSheet from "./intra-walk-styles/sketch-tea.js";
 import { FOCUSED_SIZE, drawFocused } from "../brushes/focused.js";
 import { brushRequests } from "../brushes/requests.js";
 import type { GoldenSample } from "../brushes/golden.js";
