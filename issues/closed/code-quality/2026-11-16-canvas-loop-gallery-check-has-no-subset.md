@@ -1,10 +1,13 @@
 ---
 title: "canvas-loop gallery:check has no way to check a subset"
-workstream: unattached
+workstream: canvas-brushes
 area: canvas-loop
 filed-by: agent
 discovered-in: worktree-retrospective — retrospective 20261116-005159
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-16):** Gallery deleted in the canvas-loop examples plan; examples:check runs 13 examples in about 9 s.
 
 `pnpm --dir canvas-loop run gallery:check` renders every exercise and takes
 10–11 minutes. That is longer than one foreground tool call (10 minutes), and

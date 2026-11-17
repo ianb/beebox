@@ -3,7 +3,7 @@ title: "canvas-loop: one set of minimal, instructional examples"
 status: active
 workstream: canvas-brushes
 issues:
-  - ../../../issues/code-quality/2026-11-16-canvas-loop-gallery-check-has-no-subset.md
+  - ../../../issues/closed/code-quality/2026-11-16-canvas-loop-gallery-check-has-no-subset.md
 ---
 # canvas-loop: one set of minimal, instructional examples
 
@@ -61,7 +61,7 @@ reading, then it might not need explanation!"*
   passed on its first run.
 
 **Issues addressed:**
-`issues/code-quality/2026-11-16-canvas-loop-gallery-check-has-no-subset.md`
+`issues/closed/code-quality/2026-11-16-canvas-loop-gallery-check-has-no-subset.md`
 (*"`gallery:check` renders every exercise and takes 10–11 minutes"*). The
 check over thirteen small examples should be short enough to run whole; this
 plan adds no subset filter (see NOT in scope). Done-when gates that claim: if
