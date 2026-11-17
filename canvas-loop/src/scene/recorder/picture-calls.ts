@@ -1,6 +1,7 @@
 // `v.picture` and `v.pixels` (draft section 5): find or record the version
-// for the current values. In testing mode every asked-for version is recorded
-// again and compared, and a difference warns, telling a stale capture (the
+// for the current values. In testing mode an asked-for version is recorded
+// again and compared when its audit is due (`PictureTable.auditDue`), and a
+// difference warns, telling a stale capture (the
 // body reads a value not in deps) from two drawings sharing a key. A key that
 // records a new version in every frame for over half a second, whose versions
 // are not asked for again, warns.
@@ -49,7 +50,7 @@ export function recordPicture(s: PictureScope, a: { options: PictureOptions; bod
   const deps = copyDeps(a.options.deps, key);
   const paper = a.options.paper === undefined ? DEFAULT_PAPER : resolvePaper(a.options.paper);
   const found = s.table.find({ kind: "picture", key, width, height, deps, paper });
-  if (found !== undefined && !s.audit) return new PictureHandle(found, s.frame);
+  if (found !== undefined && !(s.audit && s.table.auditDue(found))) return new PictureHandle(found, s.frame);
   const name = versionName({ kind: "picture", key, deps });
   const children = s.recordBody(name, { size: { width, height }, paper, body: a.body, again: found !== undefined });
   if (found?.kind === "picture") {
@@ -64,7 +65,7 @@ export function recordPixels(s: PictureScope, a: { options: PictureOptions; fill
   const { key, width, height } = checkPictureOptions(a.options, "pixels");
   const deps = copyDeps(a.options.deps, key);
   const found = s.table.find({ kind: "pixels", key, width, height, deps });
-  if (found !== undefined && !s.audit) return new PictureHandle(found, s.frame);
+  if (found !== undefined && !(s.audit && s.table.auditDue(found))) return new PictureHandle(found, s.frame);
   const given = new Uint8ClampedArray(width * height * 4);
   const image = { data: given, width, height };
   a.fill(image);

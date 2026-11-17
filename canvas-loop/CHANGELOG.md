@@ -5,6 +5,13 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Headless runs of picture-heavy scenes are about 9× faster.** Testing
+  mode compared every kept picture version in every frame, and kept a stack
+  for each node it drew again. Now a kept version is compared in the frame
+  that made it, the next two frames, and every 30th frame after; a re-record
+  keeps no call sites. A 60-frame run of a 55-tree scene went from 90 s to
+  10 s with the same pixels. A run that takes longer than 3 seconds prints
+  `frame N/M, S s` to stderr every 3 seconds.
 - **Breaking: one set of examples; the gallery is gone.** `src/gallery/`
   (agent-exercise records, model comparisons, run histories) is deleted;
   `git show 6fff6140c:canvas-loop/src/gallery/<entry>/sketch-tea.ts` finds an

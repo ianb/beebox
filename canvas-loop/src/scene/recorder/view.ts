@@ -160,7 +160,7 @@ export class SceneRecorder extends PureHelpers implements View {
     }
   }
 
-  /** `node`, stamped with this frame, its colours checked, and in testing mode its call site kept and it counted as made. */
+  /** `node`, stamped with this frame, its colours checked, and in testing mode its call site kept (not in a re-record) and it counted as made. */
   #stamp<N extends SceneNode>(node: N, call: string): N & DrawingNode {
     if (this.#colors !== undefined) checkColours(node, this.#colors);
     const made = Object.assign(node, { [MADE_IN]: this.#notes.frame });
@@ -299,14 +299,15 @@ export class SceneRecorder extends PureHelpers implements View {
   // ── pictures (section 5, R7) ──
   /** Record `body` as a picture's nodes, then resolve them: its own coordinates, box and paper. A re-record (testing mode) counts no node as made. */
   #recordBody(name: string, a: { size: { width: number; height: number }; paper: PaperSettings; body: () => unknown; again: boolean }): readonly SceneNode[] {
-    const saved = { size: this.#size, picture: this.#picture };
+    const saved = { size: this.#size, picture: this.#picture, sites: this.#sites };
     let recorded: readonly SceneNode[];
-    ({ size: this.#size, picture: this.#picture } = { size: a.size, picture: name });
+    // A re-record is compared and dropped: its nodes keep no stack (one per node was most of a picture-heavy run's time).
+    ({ size: this.#size, picture: this.#picture, sites: this.#sites } = { size: a.size, picture: name, sites: a.again ? undefined : this.#sites });
     if (a.again) this.#again++;
     try {
       recorded = this.#children.list(`the body of ${name}`, a.body());
     } finally {
-      ({ size: this.#size, picture: this.#picture } = saved);
+      ({ size: this.#size, picture: this.#picture, sites: this.#sites } = saved);
       if (a.again) this.#again--;
     }
     const ctx: ResolveContext = { matrix: IDENTITY, size: a.size, picture: name, lit: 0, inMask: false, paper: a.paper };

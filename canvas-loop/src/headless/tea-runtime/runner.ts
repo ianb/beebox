@@ -59,7 +59,12 @@ export interface TeaRunOptions {
   scene?: boolean | "first";
   /** Scene renderer, tests: open the GPU device another way. Default: the process's one device. */
   openGpu?: () => Promise<GpuHandle | undefined>;
+  /** A slow run's progress (`frame 120/700, 30 s`), given every `PROGRESS_EVERY_MS` once the run has taken that long; the CLI writes it to stderr. */
+  progress?: (line: string) => void;
 }
+
+/** A run reports progress once it has taken this long, and again each time this much longer has passed. */
+const PROGRESS_EVERY_MS = 3000;
 
 /** A run is in progress in this process (its guards and console capture are process-wide). */
 let running = false;
@@ -130,8 +135,15 @@ class TeaRunner {
   async #execute(): Promise<void> {
     try {
       this.#model = this.#sketch("init", () => this.#options.module.init(this.#util));
-      for (let frame = 0; frame < this.#options.frames; frame++) {
+      const start = performance.now();
+      let reported = start;
+      const { frames, progress } = this.#options;
+      for (let frame = 0; frame < frames; frame++) {
         await this.#runFrame(frame);
+        const now = performance.now();
+        if (progress === undefined || now - reported < PROGRESS_EVERY_MS || frame + 1 === frames) continue;
+        reported = now;
+        progress(`frame ${frame + 1}/${frames}, ${((now - start) / 1000).toFixed(0)} s`);
       }
       this.#surface.finish();
       for (const [file, bytes] of soundFiles(this.#score.voices(), { frames: this.#options.frames, fps: this.#options.fps })) {

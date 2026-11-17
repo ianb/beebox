@@ -121,6 +121,20 @@ test("a picture body has its own coordinates and box; it may not log, snapshot o
   }
 });
 
+test("testing mode compares a kept version in its first frames, then every 30th frame; a stale capture that lasts is found then", () => {
+  const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  let runs = 0;
+  const draw = (color: string) => (v: View): Drawing => v.place(v.picture({ key: "card", width: 20, height: 10, deps: [1] }, () => {
+    runs++;
+    return v.rect(0, 0, 5, 5, { fill: color });
+  }), 0, 0);
+  const warnings: (readonly string[])[] = [];
+  for (let frame = 0; frame <= 60; frame++) warnings.push(rec.record(draw(frame < 10 ? "#000" : "#fff")).warnings);
+  assert.equal(runs, 5, "recorded at frame 0, compared at frames 1, 2, 30 and 60");
+  assert.deepEqual(warnings.slice(0, 30).flat(), [], "the change at frame 10 falls between audits");
+  assert.match(warnings[30]?.[0] ?? "", /picture "card" \[1] drew differently from its kept version/);
+});
+
 test("pixels fill once per version; a fully transparent fill warns in testing mode", () => {
   const rec = new SceneRecorder({ width: 10, height: 10 }, { audit: true });
   let fills = 0;

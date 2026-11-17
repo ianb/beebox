@@ -198,7 +198,9 @@ async function main(): Promise<void> {
 
   const module = toTeaModule(imported);
   const events = eventsPath === undefined ? [] : parseTeaEvents(readEventsJson(resolve(eventsPath)), module.params);
-  finishRun(await teaRun({ module, events, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
+  // The run captures the console for its transcript; progress goes straight to stderr.
+  const progress = (line: string): void => void process.stderr.write(`${line}\n`);
+  finishRun(await teaRun({ module, events, progress, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
 }
 
 /** Report the run, and save a checkpoint when CANVAS_LOOP_CHECKPOINTS names a directory. */

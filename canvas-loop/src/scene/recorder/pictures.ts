@@ -4,7 +4,9 @@
 // frames stay while their recordings fit in about 16 MB, least recently asked
 // for dropped first, so a pose a walk cycle shows again is not recorded again;
 // a dropped version is recorded again when asked for. In testing mode the
-// recorder re-records each asked-for version and compares (`firstDifference`).
+// recorder re-records an asked-for version and compares (`firstDifference`)
+// when an audit is due (`auditDue`): in the frame that made it, in the next
+// `AUDIT_FIRST` frames, and then every `AUDIT_EVERY`th frame.
 import { SketchUsageError } from "../../core/errors.js";
 import type { PaperSettings, PictureVersion, PixelsVersion } from "../nodes.js";
 import { weightOf } from "../weight.js";
@@ -104,6 +106,12 @@ const IDLE_BUDGET = 16 * 1024 * 1024;
 /** Frames a new version has to be asked for again before the churn check counts it as used once: half a second, longer than a walk cycle's poses take to come back. */
 export const REUSE_WINDOW = 30;
 
+/** Testing mode compares a kept version in each of the frames after the one that made it, up to this many. */
+export const AUDIT_FIRST = 2;
+
+/** Then every this many frames (half a second): a stale capture that lasts that long is still found, and a picture-heavy run does not record every body every frame. */
+export const AUDIT_EVERY = 30;
+
 /** The versions a sketch's pictures have recorded, across frames. */
 export class PictureTable {
   readonly #entries = new Map<string, Entry[]>();
@@ -164,6 +172,19 @@ export class PictureTable {
     if (run < REUSE_WINDOW + 3) return undefined;
     const judged = uses.filter((u) => u.made <= this.#frame - REUSE_WINDOW);
     return judged.filter((u) => !u.again).length * 2 > judged.length ? run : undefined;
+  }
+
+  /**
+   * Whether testing mode should record `version` again and compare: a second
+   * ask in the frame that made it, its next `AUDIT_FIRST` frames, then every
+   * `AUDIT_EVERY`th frame. Every ask in a due frame is compared, so two
+   * drawings sharing a key are found whichever asks first.
+   */
+  auditDue(version: Version): boolean {
+    const entry = this.#entries.get(version.key)?.find((e) => e.version === version);
+    if (entry === undefined) return true;
+    const age = this.#frame - entry.made;
+    return age <= AUDIT_FIRST || age % AUDIT_EVERY === 0;
   }
 
   /** Whether `version` was added this frame (so asking for it again this frame was a second call). */

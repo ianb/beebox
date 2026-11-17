@@ -442,10 +442,12 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
 - `log`, `snapshot`, `cursor` and `control` are errors inside `body`.
 - A placed picture draws as if its drawing were drawn there: brush widths,
   effect lengths and text follow the scale of the scopes around it.
-- Headless runs record every picture again each frame and compare it with
-  the kept version. A body that reads a value not in `deps` warns, naming the
-  picture and the first difference. A picture whose `deps` change in every
-  frame warns too: it gains nothing.
+- Headless runs record a kept version again and compare: in the frame that
+  made it, in the next two frames, and then every 30th frame. A body that
+  reads a value not in `deps` warns, naming the picture and the first
+  difference; a value that changes and comes back within half a second can
+  go unseen. A picture whose `deps` change in every frame warns too: it gains
+  nothing.
 - `paper` sets the paper the picture's brushes use. A picture never takes
   the paper of the scope it is placed in.
 

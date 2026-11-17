@@ -82,7 +82,8 @@ change crops to judge them.
 Writes `<out>/transcript.md` plus `<out>/frame-NNNN.png`. The out directory is
 emptied first. On success it prints only the transcript path and frame
 count; each sketch error prints one line and exits nonzero (the transcript is
-still written, with the error frame-tagged).
+still written, with the error frame-tagged). A run that takes longer than 3
+seconds prints `frame 120/700, 9 s` to stderr every 3 seconds.
 
 Read `transcript.md` — the inline `![frame N](frame-NNNN.png)` images render
 directly in tools that display markdown images (including Claude Code's `Read`).
