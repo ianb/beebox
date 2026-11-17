@@ -335,6 +335,21 @@ onGpu("section 10: a key with a new version each frame, placed at two fixed scal
   const said = scaled.transcript.split("\n").filter((l) => l.includes("hint:"));
   assert.equal(said.length, 1, said.join("\n"));
   assert.match(said[0] ?? "", /hint: picture "stone" was placed at a scale or rotation it has no kept image for/);
+  // An old version at a new scale each frame, beside a new version of the same key placed once each frame: still the scale.
+  const beside = await runCase({
+    id: "old-version-new-scales",
+    mistake: "an old version at new scales while the key adds versions",
+    channel: "none",
+    names: [],
+    frames: 6,
+    draw: (v, m) => {
+      const pic = (n: number): Picture => v.picture({ key: "moss", width: 20, height: 20, deps: [n] }, () => v.rect(0, 0, 2 + n, 4, { fill: "#2a9d8f" }));
+      return [v.place(pic(m.t), 30, 2), v.at({ scale: 1 + m.t * 0.25 }, v.place(pic(0), 2, 2))];
+    },
+  });
+  const besideSaid = beside.transcript.split("\n").filter((l) => l.includes("hint:"));
+  assert.equal(besideSaid.length, 1, besideSaid.join("\n"));
+  assert.match(besideSaid[0] ?? "", /hint: picture "moss" was placed at a scale or rotation it has no kept image for/);
 });
 
 onGpu("section 10: a picture placed at a new rotation every frame gets one performance hint; fixed scales get none", async () => {
