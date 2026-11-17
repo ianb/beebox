@@ -315,4 +315,12 @@ test("a self-sizing picture is its own version; it has no size to read, no backg
     return [v.place(pic, 3, 4)];
   });
   assert.deepEqual(empty, [0, 0, 0, 0], "a picture that paints nothing has an empty box at its origin");
+  // A brush tip under a squashing scale is weight × √|det| wide (12 here), not weight × the largest stretch (1200).
+  const squashed: number[] = [];
+  rec.record((v) => {
+    const pic = v.picture({ key: "squashed" }, () => v.at({ scale: [0.01, 100] }, v.line(0, 0, 0, 1, { stroke: "#000", weight: 12, brush: "ink" })));
+    squashed.push(pic.width, pic.height);
+    return [v.place(pic, 0, 0)];
+  });
+  assert.deepEqual(squashed, [16, 116], "the box: the tip's radius 6 and a 2 px edge either side; height 100 plus the same");
 });

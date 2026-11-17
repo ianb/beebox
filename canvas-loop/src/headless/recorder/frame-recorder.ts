@@ -62,9 +62,10 @@ export class FrameRecorder implements SketchHost {
   }
 
   // ── SketchHost ─────────────────────────────────────────────────────
-  recordLog(entry: { level: LogLevel; message: string }): void {
+  /** A log line; `quiet` (what a move inside a mousepath caused) does not make the frame captured. */
+  recordLog(entry: { level: LogLevel; message: string; quiet?: boolean }): void {
     this.#entries.push({ kind: "log", frame: this.#currentFrame, level: entry.level, message: entry.message });
-    this.#frameHadLog = true;
+    if (entry.quiet !== true) this.#frameHadLog = true;
   }
 
   requestSnapshot(label: string | undefined): void {

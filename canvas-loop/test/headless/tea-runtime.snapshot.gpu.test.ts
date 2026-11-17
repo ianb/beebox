@@ -69,7 +69,10 @@ test("a mousepath the sketch handles captures its first and last frames, not the
   const follower: LoadedTeaModule = toTeaModule({
     canvas: { width: 50, height: 50 },
     init: () => ({ x: 0 }),
-    update: (model: { x: number }, msg: Msg) => (msg.type === "mousemove" ? { x: msg.x } : model),
+    // Handled, with an activity: neither its verdict line nor its activity line makes a move's frame captured.
+    // eslint-disable-next-line max-params -- TEA contract signature
+    update: (model: { x: number }, msg: Msg, u: { handled: (name: string) => void }) => (msg.type === "mousemove" ? (u.handled("follow"), { x: msg.x }) : model),
+    activity: (model: { x: number }) => ({ x: Math.round(model.x) }),
     draw: (v: View, model: { x: number }) => [v.background("#000000"), v.circle(model.x, 25, 4, { fill: "#ffffff" })],
   });
   const events = parseTeaEvents([{ frame: 2, type: "mousepath", points: [[5, 25], [45, 25]], frames: 8 }], {});

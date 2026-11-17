@@ -226,7 +226,7 @@ class TeaRunner {
         this.#state.params = guardParams(this.#options.module.params, { ...this.#state.params, [event.name]: event.value });
         this.#recorder.recordParam({ name: event.name, value: event.value });
         this.#fold({ type: "param", name: event.name, value: event.value });
-        this.#recordActivity();
+        this.#recordActivity(false);
         return;
       }
       case "mousedown":
@@ -246,15 +246,16 @@ class TeaRunner {
     this.#handledNames = [];
     const changed = this.#fold(msg);
     const text = verdict({ handled: this.#handledNames, changed });
-    if (this.#unhandled.show(msg, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text, quiet: event.type === "mousemove" && event.quiet === true });
-    if (this.#handledNames.length > 0) this.#recordActivity();
+    const quiet = event.type === "mousemove" && event.quiet === true;
+    if (this.#unhandled.show(msg, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text, quiet });
+    if (this.#handledNames.length > 0) this.#recordActivity(quiet);
   }
 
-  /** The sketch's `activity(model)` after an action, as a transcript line (what a host would receive). */
-  #recordActivity(): void {
+  /** The sketch's `activity(model)` after an action, as a transcript line (what a host would receive); `quiet` for a move inside a mousepath. */
+  #recordActivity(quiet: boolean): void {
     const model = this.#model;
     const json = withGuards(() => this.#activity.json(model));
-    if (json !== undefined) this.#recorder.recordLog({ level: "log", message: `activity ${json}` });
+    if (json !== undefined) this.#recorder.recordLog({ level: "log", message: `activity ${json}`, quiet });
   }
 
   #fold(msg: Msg): boolean {

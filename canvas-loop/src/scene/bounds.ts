@@ -7,7 +7,7 @@
 import type { Effects, Material } from "../core/tea.js";
 import { arcSweep } from "./geometry/flatten.js";
 import { brushGrowth } from "./brush-reach.js";
-import { apply, matrixOf, maxScale, mul } from "./mat.js";
+import { apply, det, matrixOf, maxScale, mul } from "./mat.js";
 import type { Geom, Mat, PictureVersion, PixelsVersion, SceneNode, ShapeStyle } from "./nodes.js";
 
 export interface Box {
@@ -91,14 +91,14 @@ function plainReach(g: Geom, s: ShapeStyle): number {
  * effects, transformed. A brushed mark is laid in brush space, after the
  * transform (scene/brush/expand.ts): its tip is `weight × √|det|` wide even
  * under a scale that squashes one axis, and its wobble is in those units. So
- * its reach (brush-reach.ts, at most the weight times the largest stretch),
- * its wobble and a 2 px edge pad the transformed box.
+ * its reach (brush-reach.ts) at that width, its wobble and a 2 px edge pad
+ * the transformed box.
  */
 export function shapeBoxUnder(m: Mat, a: { geom: Geom; style: ShapeStyle }): Box {
   const { geom: g, style: s } = a;
   const box = transformed(m, pad(geomBox(g), plainReach(g, s) + effectsReach(s.effects)));
   if (s.brush === undefined) return box;
-  return pad(box, (s.brush.gesture.wobble ?? 0) + brushGrowth(s.brush.brush, s.weight) * maxScale(m) + 2);
+  return pad(box, (s.brush.gesture.wobble ?? 0) + brushGrowth(s.brush.brush, s.weight * Math.sqrt(Math.abs(det(m)))) + 2);
 }
 
 const casts = (m: Material | undefined): boolean => (m?.castsShadow ?? false) !== false;
