@@ -53,7 +53,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCall
     onNavigate={(target, hint) => { logActivity({ card: tab.target.path, kind: "navigated", detail: target.path }); workspace.open(target, { ...hint, originatingPane: pane }); }}
     onAddSelection={onAddSelection} />;
   // Named by side, so the two panes' "Focus card" and "Properties" are told apart.
-  return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined} data-card-focused={workspace.cardFocused || undefined}
+  return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined} data-card-focused={(!workspace.mobile && workspace.state.layout.kind === "focus") || undefined}
     role="group" aria-label={pane === "left" ? "Left pane" : "Right pane"}
     style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 2 }}
     className={visible ? "bbx-companion-desk relative flex flex-col min-w-0 min-h-0" : "hidden"}>

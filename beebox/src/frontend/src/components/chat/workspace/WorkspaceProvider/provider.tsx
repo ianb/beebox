@@ -292,7 +292,7 @@ function useWorkspaceController({ target: conversationTarget, unresolved, unstar
     const paths = workspaceTabPaths(state, { viewport, pane });
     return paths.flatMap((path) => state.tabs[path] ? [state.tabs[path]] : []);
   }
-  return { state, store, mobile, projection, transcriptVisible, cardFocused: !mobile && state.layout.kind === "focus", ready, displayReady, dispatch, open,
+  return { state, store, mobile, projection, transcriptVisible, ready, displayReady, dispatch, open,
     cancelArrival: store.cancelArrival,
     handoffBrowseDetail: (input: BrowseDetailHandoff) => performBrowseDetailHandoff({ ...input, store, viewport, dispatch }), restoreCards, updateTarget, retargetCard, adopt, activate, tabsForPane,
     notice,

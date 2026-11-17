@@ -218,8 +218,6 @@ export function ChatView(props: {
   barChrome: ReactNode;
   statusBanners: ReactNode;
   composerSection: ReactNode;
-  /** A focused card fills the window. Stays mounted so a draft or recording survives. */
-  composerHidden?: boolean;
   debugLog: ReactNode;
   /**
    * A pointer, focus, or key event inside the chat pane (transcript, cards,
@@ -245,7 +243,7 @@ export function ChatView(props: {
           {props.ambientRegion}
           {props.failedRegion}
           {statusBanners}
-          <div hidden={props.composerHidden} {...(props.composerHidden ? { inert: "" } : {})} className={props.composerHidden ? "hidden" : "contents"}>{composerSection}</div>
+          {composerSection}
         </div>
       </div>
       {debugLog}
