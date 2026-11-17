@@ -20,6 +20,7 @@ import type { SidecarTab } from "../../sidecar-tabs";
 import type { PaneId } from "../state-types.js";
 import type { AddSelectionInput } from "../../../../lib/selection/position";
 import { withoutFragment } from "../../../../lib/view-url";
+import { displayName } from "../../../../lib/display-name";
 import type { SessionContentBlock } from "../../../../api";
 import { useTurnEditedPaths } from "./turn-edits";
 import { IntentionStrip } from "../../../intention/IntentionStrip";
@@ -29,6 +30,12 @@ import { WorkspaceUpdating } from "../../WorkspaceUpdating";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
+}
+
+/** Its tab names the panel; focused, there is no tab row, so the card's title does. */
+function panelName({ path, visible, focused, identities }: { path: string; visible: boolean; focused: boolean; identities: Map<string, { title?: string }> }) {
+  if (focused) return { "aria-label": identities.get(path)?.title ?? displayName(path) };
+  return { "aria-labelledby": visible ? workspaceTabId(path) : undefined };
 }
 
 function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
@@ -67,7 +74,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCall
         onSelectTab={handleSelectTab} onCloseTab={handleCloseTab} onTogglePin={handleTogglePin} closeLabel={closeLabel} />
       <WorkspaceControls pane={pane} pdfPath={workspacePdf ? tab.target.path : undefined} />
     </div> : null}
-    <div role="tabpanel" id={workspacePanelId(tab.target.path)} aria-labelledby={visible ? workspaceTabId(tab.target.path) : undefined} tabIndex={0} aria-hidden={!visible} aria-busy={editing || undefined} data-bbx-scan="exclude"
+    <div role="tabpanel" id={workspacePanelId(tab.target.path)} {...panelName({ path: tab.target.path, visible, focused, identities })} tabIndex={0} aria-hidden={!visible} aria-busy={editing || undefined} data-bbx-scan="exclude"
       data-card-content={themedSurface ? "card" : "neutral"}
       className="bbx-interface-card-desk flex-1 min-h-0 overflow-auto"
       onFocus={() => workspace.activate(tab.target.path)}
