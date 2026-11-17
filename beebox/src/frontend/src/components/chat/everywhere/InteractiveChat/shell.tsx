@@ -319,9 +319,9 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     // internally; voided here so useChatActions' option types can stay
     // honestly void-returning.
     addFiles: (files) => { void attach.addFiles(files); }, awaitPendingUploads: attach.awaitPendingUploads,
-    onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
+    onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef, transcription: voice.transcription, ensureComposerVisibleRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    captureEmissionDispatch, sendDisabledReason: sendDisabledReasonFor(conversationSelection),
+    captureEmissionDispatch, sendDisabledReason: sendDisabledReasonFor(conversationSelection), shortcutsEnabled: !usesNativeComposer,
   });
 
   return (
