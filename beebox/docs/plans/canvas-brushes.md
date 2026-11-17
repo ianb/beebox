@@ -416,6 +416,9 @@ Not built: smudge, watercolor, pixel API, layers (see NOT in scope).
   replaces the gallery and the examples directory with one set of minimal,
   instructional examples (2026-11-16); it supersedes Track F's gallery
   entries.
+- [canvas-loop-harness-and-doc-check.subplan.md](../implemented-plans/canvas-loop-harness-and-doc-check.subplan.md):
+  a tracked GPU lock, live page and examples compare, and a home for the
+  showcase sketches, after a cull deleted `scratch/` (2026-11-17).
 
 ## Failure modes
 

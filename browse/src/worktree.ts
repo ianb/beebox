@@ -45,8 +45,8 @@ export function detectWorktreeContext(): WorktreeContext {
 
 /**
  * The base every `/`-leading path is rewritten onto, and the only URL base
- * whose navigation may seed the browse-key cookie (`isOwnOrigin` below is
- * defined against it). Browser cookies are host-scoped rather than port-scoped;
+ * whose navigation may seed the browse-key cookie (`isOwnOrigin` and
+ * `seedsBrowseKey` below are defined against it). Browser cookies are host-scoped rather than port-scoped;
  * the narrower lifetime and profile boundary are documented below.
  *
  * `BROWSE_BASE_URL` replaces the router-derived default outright, for drivers
@@ -122,13 +122,36 @@ function browseKey(): string | undefined {
  * browse invocation happens to navigate to.
  */
 export function isOwnOrigin(url: string, ctx: WorktreeContext): boolean {
-  return url === ctx.routerBase || url.startsWith(`${ctx.routerBase}/`) || url.startsWith(`${ctx.routerBase}?`);
+  return isUnder(url, ctx.routerBase);
+}
+
+function isUnder(url: string, base: string): boolean {
+  return url === base || url.startsWith(`${base}/`) || url.startsWith(`${base}?`);
 }
 
 /**
- * Cookie command to run before opening `url`. Calling this for another origin
- * is a programmer error: the caller must check `isOwnOrigin` by reaching this
- * function only for a rewritten own-origin navigation.
+ * `true` when the browse key authenticates `url`, so opening it should seed the
+ * cookie: this worktree's box (`isOwnOrigin`), plus the router's read-only dev
+ * surfaces `/<worktree>/dev/…` and `/workstreams/…`
+ * (`.claude/skills/browse/references/authentication.md`). Without the dev
+ * prefixes, a fresh profile's first `open` of a dev page landed on the login
+ * page until some box page had seeded the jar.
+ *
+ * The dev surfaces exist only on the shared router, so a `BROWSE_BASE_URL`
+ * override (a dedicated server, not the router) grants the box base alone.
+ * Every prefix shares the router base's origin, which is the cookie's scope.
+ */
+export function seedsBrowseKey(url: string, ctx: WorktreeContext): boolean {
+  if (isOwnOrigin(url, ctx)) return true;
+  const origin = new URL(ctx.routerBase).origin;
+  if (ctx.routerBase !== `${origin}/${ctx.worktree}/${ctx.box}`) return false;
+  return isUnder(url, `${origin}/${ctx.worktree}/dev`) || isUnder(url, `${origin}/workstreams`);
+}
+
+/**
+ * Cookie command to run before opening `url`. Calling this for a URL the key
+ * does not cover is a programmer error: the caller must check `seedsBrowseKey`
+ * and reach this function only for a rewritten keyed navigation.
  *
  * A cookie, and deliberately NOT an `Authorization` header, for two reasons:
  *
@@ -156,7 +179,7 @@ export function isOwnOrigin(url: string, ctx: WorktreeContext): boolean {
  * header injection too would create two auth paths with different lifetimes.
  */
 export function authCookieArgs(url: string, ctx: WorktreeContext): string[] {
-  if (!isOwnOrigin(url, ctx)) {
+  if (!seedsBrowseKey(url, ctx)) {
     throw new BrowseConfigError(`Refusing to seed browse auth for another origin: ${url}`);
   }
   const key = browseKey();

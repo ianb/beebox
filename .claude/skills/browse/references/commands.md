@@ -117,7 +117,7 @@ Each session gets its own Chrome profile under this worktree's browse cache
 (`profiles/<name>`), so sessions really do run at the same time — Chrome holds
 an exclusive lock on a profile and refuses to open one another instance owns.
 A new session therefore starts with an empty cookie jar; the browse key is
-re-seeded on its first own-origin `open`, but any login or app state you set up
+re-seeded on its first `open` of a box or read-only dev URL, but any login or app state you set up
 in one session is not visible in another.
 
 Page commands print `runtime-lint: <check> k=v …` lines to stderr when the app reports a broken runtime invariant; treat them as findings, not noise.

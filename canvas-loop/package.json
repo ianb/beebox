@@ -32,13 +32,13 @@
     }
   },
   "scripts": {
-    "cli": "node --import tsx src/headless/cli/main.ts",
+    "cli": "../bin/with-gpu node --import tsx src/headless/cli/main.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json && tsc --noEmit -p src/dev-demo/tsconfig.json && tsc --noEmit -p src/exports/tsconfig.json",
     "lint": "eslint .",
-    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test --test-timeout=120000 \"test/**/!(*.gpu).test.ts\" \"test/**/*.test.tsx\" && TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test --test-timeout=120000 --test-concurrency=1 \"test/**/*.gpu.test.ts\"",
+    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test --test-timeout=120000 \"test/**/!(*.gpu).test.ts\" \"test/**/*.test.tsx\" && TSX_TSCONFIG_PATH=src/react/tsconfig.json ../bin/with-gpu node --import tsx --test --test-timeout=120000 --test-concurrency=1 \"test/**/*.gpu.test.ts\"",
     "build:playground": "node --import tsx src/browser/build.ts",
     "build:dev-demo": "node --import tsx src/dev-demo/build.ts",
-    "examples:check": "node --import tsx src/headless/cli/main.ts examples check",
+    "examples:check": "../bin/with-gpu node --import tsx src/headless/cli/main.ts examples check",
     "sounds:build": "node --import tsx src/headless/sound-library-build.ts"
   },
   "dependencies": {

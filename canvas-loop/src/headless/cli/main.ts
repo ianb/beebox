@@ -133,6 +133,7 @@ async function main(): Promise<void> {
       scene: { type: "string" },
       note: { type: "string" },
       title: { type: "string" },
+      name: { type: "string" },
       "no-typecheck": { type: "boolean" },
     },
   });
@@ -163,6 +164,12 @@ async function main(): Promise<void> {
     console.log(out);
     return;
   }
+  if (command === "page") {
+    const { buildLivePage } = await import("../../browser/page-build.js");
+    const built = await buildLivePage({ sketches: parsed.positionals.slice(1), name: parsed.values.name });
+    console.log(built.url === undefined ? built.file : `${built.file}\n${built.url}`);
+    return;
+  }
   if (command === "zoom") {
     await zoomFile(parsed.positionals.slice(1));
     return;
@@ -170,7 +177,7 @@ async function main(): Promise<void> {
   const sketchArg = parsed.positionals[1];
   if (command !== "run") {
     throw new CliError({
-      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [--frames N] [--every N] [--seed N] [--fps N] [--events file] [--out dir] [--zoom x,y,w,h[@scale]] [--timing] [--outline] [--ratio R] [--scene [first]] [--note text] [--no-typecheck] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli examples check`,
+      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [--frames N] [--every N] [--seed N] [--fps N] [--events file] [--out dir] [--zoom x,y,w,h[@scale]] [--timing] [--outline] [--ratio R] [--scene [first]] [--note text] [--no-typecheck] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli examples check | cli page <sketch.ts>… [--name n]`,
     });
   }
   if (sketchArg === undefined) {

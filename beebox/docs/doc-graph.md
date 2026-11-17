@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-17T19:40:05Z
-Total documents: 708
+Generated: 2026-11-17T19:40:42Z
+Total documents: 709
 
 ## Issues
 
@@ -195,6 +195,7 @@ Referenced by:
 - docs/implemented-plans/box-search.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/box-view-guidance-and-checks.md:599 (mention) — lints; the preset is a standalone package (root `AGENTS.md`: *"Shared
 - docs/implemented-plans/boxes-as-packages-v2.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/canvas-loop-harness-and-doc-check.subplan.md:48 (mention) — | Docs: canvas-loop AGENTS.md, README dev section, CHANGELOG, bin/AGENTS.md line | ~60 | — |
 - docs/implemented-plans/canvas-loop-returned-scene.subplan.md:581 (mention) — are named in `TEA.md`, `BRUSHES.md`, `README.md` and `AGENTS.md`); the
 - docs/implemented-plans/canvas-loop-scene-core.subplan.md:70 (mention) — `AGENTS.md`, a new `RENDERER.md`, `CHANGELOG.md`, the gallery README, the
 - docs/implemented-plans/canvas-loop-styles.md:40 (mention) — | Docs (TEA.md, README.md, BRUSHES.md, AGENTS.md, CHANGELOG.md) | ~500 | |
@@ -365,7 +366,7 @@ Referenced by:
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real agent learned from its guidance. Box audits cover box-loaded guidance (box AGENTS.md, gene
 - ../.claude/skills/launch-worktree-session/SKILL.md:66 (mention) — `/finish` or `$finish` in prose. Both agents read `AGENTS.md`. Pass handoff
 - ../AGENTS.md:7 (link) — - **Main system:** [beebox/AGENTS.md](beebox/AGENTS.md).
-- ../bin/docs/worktree-lifecycle.md:79 (mention) — Both agents read the tracked `AGENTS.md` files directly.
+- ../bin/docs/worktree-lifecycle.md:84 (mention) — Both agents read the tracked `AGENTS.md` files directly.
 - ../dev/devprocess-talk/bottlenecks.md:109 (mention) — 2. **Prose rule → measured failure → check.** Sigils (rule Sep 20, refusal Oct 7 after 83 sessions); Codex guidance (han
 - ../dev/devprocess-talk/chapters.md:298 (mention) — file: AGENTS.md
 - ../dev/devprocess-talk/chunks/README.md:102 (mention) — | CLAUDE.md / AGENTS.md, the root file, the package file | "the instruction file every agent reads first" |
@@ -826,6 +827,7 @@ Referenced by:
 - docs/implemented-plans/box-docs-in-package.md:93 (mention) — - `README.md`: an index, one line per doc: filename and a one-line "read this
 - docs/implemented-plans/box-shape-in-package-json.md:81 (mention) — `README.md:46`, `dev/lib/context-assembly/assembly.ts:119`.
 - docs/implemented-plans/boxes-as-packages-v2.md:501 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
+- docs/implemented-plans/canvas-loop-harness-and-doc-check.subplan.md:256 (mention) — Checked against current main with a throwaway prototype: README.md, TEA.md
 - docs/implemented-plans/canvas-loop-returned-scene.subplan.md:581 (mention) — are named in `TEA.md`, `BRUSHES.md`, `README.md` and `AGENTS.md`); the
 - docs/implemented-plans/canvas-loop-scene-core.subplan.md:69 (mention) — - **Authored docs:** about 1,500 lines (`TEA.md`, `BRUSHES.md`, `README.md`,
 - docs/implemented-plans/canvas-loop-styles.md:40 (mention) — | Docs (TEA.md, README.md, BRUSHES.md, AGENTS.md, CHANGELOG.md) | ~500 | |
@@ -846,16 +848,18 @@ Referenced by:
 - docs/user-stories/catalog/2026-08-21.md:2640 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
 - src/core/agent-guide/guide.md:130 (mention) — `node_modules/beebox/box-docs/`; its `README.md` has one line per doc saying
 - ../.claude/skills/security-report/SKILL.md:274 (mention) — `beebox/README.md` keeps a short "What leaves your machine" section
+- ../dev/canvas-loop-pieces/mochi-must-not-fall/task.md:13 (mention) — **Read first:** `canvas-loop/AGENTS.md`, `TEA.md`, `BRUSHES.md`, `README.md`, the gallery README; the busy-town-showcase
+- ../dev/canvas-loop-pieces/thimble-quay/task.md:14 (mention) — **Read first:** `canvas-loop/AGENTS.md`, then `TEA.md` (the sketch contract; `draw` returns its drawing — the returned s
 - ../dev/devprocess-talk/slides/index.md:3 (link) — Draft deck for the development-practice talk; one file per slide. Main slides are numbered, supporting slides carry a le
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:17 (mention) — **Place chats are skipped.** A place chat writes to a different transcript directory (for example `…--content-inventory`
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:125 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
 - ../issues/closed/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — **Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("vibe-init writes a .madgerc that skips type imports"). `vibe
+- ../issues/closed/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md:10 (mention) — **Closed (wontfix, 2026-11-17):** Checked against main on 2026-11-17 (plan:canvas-loop-harness-and-doc-check.subplan). R
 - ../issues/closed/decisions/2026-08-19-bee-box-rename.md:27 (mention) — moved to Discord, and `README.md` links the Bee Box server there.
 - ../issues/closed/docs-and-chores/2026-05-21-docs-generated-map.md:9 (mention) — > **Closed 2026-10-22 (issue audit):** Commit a5b19c033 moved the box-invariant engine docs out of each box into the ins
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:22 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../issues/closed/docs-and-chores/2026-07-21-pages-site-go-live.md:12 (mention) — > **Closed 2026-10-22 (issue audit):** The site is live: `https://beebox.run` and `/llms.txt` return 200, and the home p
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:83 (mention) — root `CLAUDE.md`, so nothing moved into `CLAUDE.md`. The root `README.md`
-- ../issues/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md:9 (mention) — canvas-loop docs (README.md, TEA.md, BRUSHES.md, and RENDERER.md on the
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:212 (mention) — Out of date in the body above: Update the Gates section: mark gate 1's dev-router-lan-exposure FIXED and gate 2 closed;
 - ../issues/features/2026-07-19-installation-remaining-work.md:133 (mention) — Out of date in the body above: Mark item 11 done (README.md front door with agent install prompt). Under item 6, add tha
 - ../issues/features/2026-09-06-container-install-is-the-primary-path.md:45 (mention) — Partly done. The root `README.md` no longer lists the from-source guide first. It points to an agent install prompt, and
@@ -950,7 +954,7 @@ Referenced by:
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
-- ../bin/AGENTS.md:201 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
+- ../bin/AGENTS.md:210 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:40 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:90 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
@@ -4693,6 +4697,20 @@ References:
 - → docs/implemented-plans/canvas-loop-scene-core.subplan.md (mention)
 - → docs/plans/canvas-loop-scene/stage3/brushes.md (mention)
 
+#### docs/implemented-plans/canvas-loop-harness-and-doc-check.subplan.md
+
+Title: "canvas-loop: a tracked GPU lock and live page; keep the showcase pieces" | 348 lines | shipped history | implemented
+
+Referenced by:
+- docs/plans/canvas-brushes.md:419 (link) — - [canvas-loop-harness-and-doc-check.subplan.md](../implemented-plans/canvas-loop-harness-and-doc-check.subplan.md):
+
+References:
+- → ../issues/closed/code-quality/2026-11-16-canvas-loop-compare-and-speed-harness-in-scratch.md (frontmatter)
+- → ../issues/closed/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md (frontmatter)
+- → docs/plans/canvas-brushes.md (link)
+- → AGENTS.md (mention)
+- → README.md (mention)
+
 #### docs/implemented-plans/canvas-loop-returned-scene.subplan.md
 
 Title: "canvas-loop: draw returns its scene" | 1062 lines | shipped history | implemented
@@ -7631,7 +7649,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 447 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/AGENTS.md:184 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/AGENTS.md:193 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:239 (mention) — - **Lives in:** `bin/private-issues`, `bin/CLAUDE.md` "Private-issues shadow repo", `issues/CLAUDE.md`, `beebox/docs/imp
 
 References:
@@ -9756,11 +9774,12 @@ References:
 
 #### docs/plans/canvas-brushes.md
 
-Title: "canvas-loop brushes: an iterative drawing space for agents" | 559 lines | proposal | active
+Title: "canvas-loop brushes: an iterative drawing space for agents" | 562 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/canvas-brushes-effects.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The boxholder asked to look
 - docs/implemented-plans/canvas-brushes-paint.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The effects subplan
+- docs/implemented-plans/canvas-loop-harness-and-doc-check.subplan.md:11 (link) — A subplan of [canvas-brushes.md](../plans/canvas-brushes.md). On 2026-11-17 a worktree
 - docs/implemented-plans/canvas-loop-scene.md:45 (mention) — candidate, `canvas-brushes.md` Track D).
 - docs/implemented-plans/canvas-sound-library.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). Figures written by box
 - docs/plans/canvas-loop-examples.subplan.md:10 (link) — A subplan of [canvas-brushes.md](canvas-brushes.md). canvas-loop has two
@@ -9770,6 +9789,7 @@ References:
 - → docs/plans/README.md (mention)
 - → docs/plans/canvas-loop-layout-text-hits.subplan.md (link)
 - → docs/plans/canvas-loop-examples.subplan.md (link)
+- → docs/implemented-plans/canvas-loop-harness-and-doc-check.subplan.md (link)
 
 #### docs/plans/canvas-loop-box-figures.subplan.md
 
@@ -10230,7 +10250,7 @@ Title: "Document comments: a communication medium in the workstreams app" | 947 
 Referenced by:
 - docs/implemented-plans/exhibit-comments.md:55 (mention) — about (the plan's job to be done in `document-comments.md`), and it can be
 - docs/plans/general-browser.md:19 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/AGENTS.md:102 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
+- ../bin/AGENTS.md:111 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:94 (mention) — - **Lives in:** cited in plans, e.g. `beebox/docs/plans/document-comments.md:636`, `implemented-plans/doc-structure.md:7
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:179 (mention) — - **Lives in:** `bin/comments`, `bin/comments.ts`, `workstreams-app/src/server/comments-service.ts`, `workstreams-app/sr
 - ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:42 (link) — [document-comments](../../../beebox/docs/plans/document-comments.md) plan
@@ -11321,7 +11341,7 @@ Title: "An agent-neutral worktree control surface" | 706 lines | proposal | part
 
 Referenced by:
 - docs/implemented-plans/workstreams.md:28 (link) — ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
-- ../bin/docs/worktree-lifecycle.md:123 (link) — Background: [worktree control-surface design](../../beebox/docs/plans/worktree-control-surface.md).
+- ../bin/docs/worktree-lifecycle.md:128 (link) — Background: [worktree control-surface design](../../beebox/docs/plans/worktree-control-surface.md).
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:99 (mention) — - **Lives in:** `bin/workstreams` (1080 lines; `list`, `create`, `resume`, `remove`, `close`, `release`, `reset-test`, `
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:7 (frontmatter) — design: ../../../beebox/docs/plans/worktree-control-surface.md
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:21 (link) — > [the worktree control surface plan](../../../beebox/docs/plans/worktree-control-surface.md)

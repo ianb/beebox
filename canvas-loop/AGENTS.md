@@ -46,10 +46,21 @@ or transcripts.
 
 ## GPU
 
-- Run one heavy GPU process at a time on a machine (`examples:check`, the test
-  suite, long renders): several at once have crashed the GPU driver.
+- One heavy GPU process at a time on a machine: several at once have crashed
+  the GPU driver. The package's `cli`, `examples:check` and GPU tests take the
+  machine-wide lock themselves (`bin/with-gpu`; a second one waits and says
+  who holds it). Wrap any other GPU work in it: `bin/with-gpu <cmd…>`,
+  including a `bin/browse` visit to a live page.
 - A test that opens a GPU device goes in a `*.gpu.test.ts` file. `pnpm test`
   runs those one at a time, after the rest.
+
+## Live page
+
+To try sketches live (controls, frames/s, what new picture versions cost),
+`pnpm --dir canvas-loop run cli page <sketch.ts>… [--name n]` builds one page
+and prints its dev URL. Larger sketches kept for looking at live in
+`dev/canvas-loop-pieces/`, not in the examples. Keep tools in tracked code:
+a worktree cull deletes `scratch/`.
 
 ## Audit norms
 

@@ -222,8 +222,8 @@ void test("Codex preserves creation, flags, and teardown behavior", async (t) =>
   t.check(codexScript, has("-s danger-full-access -a never"));
   t.check(codexScript, has('-m "gpt-test"'));
   t.check(codexScript, has("bin/codex-session-end"));
-  t.check(defaultCodexScript, has('-m "gpt-6-sol"'));
-  t.check(defaultCodexScript, has('--arg model "gpt-6-sol"'));
+  t.check(defaultCodexScript, has('-m "gpt-6.2-sol"'));
+  t.check(defaultCodexScript, has('--arg model "gpt-6.2-sol"'));
   t.check(codexScript, has('session_registry_complete_launch "seam" "token-seam"'));
   t.check(upTo(codexScript, 'codex "${codex_args[@]}"'), has('session_registry_complete_launch "seam" "token-seam"'));
 

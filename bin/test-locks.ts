@@ -12,7 +12,7 @@
  * — test economics", mechanism A.
  */
 
-import { closeSync, mkdirSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs";
+import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { errnoCode } from "../beebox/src/shared/error-guards.js";
 import { pidAlive } from "../beebox/src/hub/child-process-utils.js";
@@ -45,6 +45,8 @@ export interface StaleProbe {
   /** This machine's boot time now, or null when unknown. */
   bootTimeMs: number | null;
   isProcessAlive: (pid: number) => boolean;
+  /** Age past which a record is debris even if its pid lives; default LOCK_STALE_MS. */
+  maxAgeMs?: number;
 }
 
 /**
@@ -64,7 +66,7 @@ export function isLockStale(held: LockRecord, staleProbe: StaleProbe): boolean {
     if (held.bootTimeMs !== null && held.bootTimeMs !== staleProbe.bootTimeMs) return true;
     if (atMs < staleProbe.bootTimeMs) return true;
   }
-  if (staleProbe.nowMs - atMs >= LOCK_STALE_MS) return true;
+  if (staleProbe.nowMs - atMs >= (staleProbe.maxAgeMs ?? LOCK_STALE_MS)) return true;
   return !staleProbe.isProcessAlive(held.pid);
 }
 
@@ -145,8 +147,8 @@ export interface Held {
   release: () => void;
 }
 
-function probe(): StaleProbe {
-  return { nowMs: Date.now(), bootTimeMs: bootTimeMs(), isProcessAlive: pidAlive };
+function probe(maxAgeMs?: number): StaleProbe {
+  return { nowMs: Date.now(), bootTimeMs: bootTimeMs(), isProcessAlive: pidAlive, ...(maxAgeMs === undefined ? {} : { maxAgeMs }) };
 }
 
 /** Reads one lock file, deleting it when it holds debris. Null means "free". */
@@ -170,23 +172,32 @@ function readLive(path: string, staleProbe: StaleProbe): LockRecord | null {
   return null;
 }
 
-/** Writes a lock file, failing rather than overwriting — that failure IS the mutex. */
+/**
+ * Writes a lock file, failing rather than overwriting — that failure IS the
+ * mutex. The record is written to a private file first and hard-linked into
+ * place, so the lock path never holds a half-written record that a waiter
+ * would read as debris and delete.
+ */
 function claim(path: string, record: LockRecord): boolean {
-  let fd: number;
+  const staged = `${path}.${String(process.pid)}.claim`;
+  writeFileSync(staged, JSON.stringify(record));
   try {
-    fd = openSync(path, "wx");
+    linkSync(staged, path);
+    return true;
   } catch (e) {
     // EEXIST is a concurrent claim winning the slot, not a failure: that is the
     // mutex working. Anything else is a real filesystem problem.
     if (errnoCode(e) === "EEXIST") return false;
     throw e;
-  }
-  try {
-    writeSync(fd, JSON.stringify(record));
   } finally {
-    closeSync(fd);
+    unlinkSync(staged);
   }
-  return true;
+}
+
+/** Whether `pid` holds the named lock now: its live record is in place. */
+export function holdsNamed(input: { dir: string; name: string; pid: number }): boolean {
+  const held = readLive(join(input.dir, input.name), probe(Number.POSITIVE_INFINITY));
+  return held !== null && held.pid === input.pid;
 }
 
 /** Removes a lock file only when it is still ours — never another run's slot. */
@@ -308,19 +319,39 @@ export type FullRunClaim = { held: Held; blockedBy: null } | { held: null; block
  * decides what a refusal means: the schedule defers its tick, a worktree run
  * exits non-zero.
  */
-export async function acquireFullRun(input: {
+export function acquireFullRun(input: {
   dir: string;
   branch: string;
   waitMs: number;
   /** Prefix on the one waiting line, so each caller names itself. */
   label?: string;
 }): Promise<FullRunClaim> {
+  return acquireNamed({ ...input, name: FULL_RUN, waitingFor: "another full run", label: input.label ?? "test-ledger" });
+}
+
+/**
+ * Claim one named exclusive lock file in `dir`, waiting at most `waitMs`
+ * (0 = one look; Infinity = until it is free). The full-run lock and the GPU
+ * lock (bin/with-gpu) are both this.
+ */
+export async function acquireNamed(input: {
+  dir: string;
+  name: string;
+  branch: string;
+  waitMs: number;
+  /** What the one waiting line says it waits for. */
+  waitingFor: string;
+  /** Prefix on the one waiting line, so each caller names itself. */
+  label: string;
+  /** Age past which a live holder's record counts as debris; default LOCK_STALE_MS. */
+  maxAgeMs?: number;
+}): Promise<FullRunClaim> {
   mkdirSync(input.dir, { recursive: true });
-  const path = join(input.dir, FULL_RUN);
+  const path = join(input.dir, input.name);
   const deadline = Date.now() + input.waitMs;
   let announced = false;
   for (;;) {
-    const staleProbe = probe();
+    const staleProbe = probe(input.maxAgeMs);
     const holder = readLive(path, staleProbe);
     if (holder === null) {
       const record: LockRecord = {
@@ -337,7 +368,7 @@ export async function acquireFullRun(input: {
     if (Date.now() >= deadline) return { held: null, blockedBy: holder };
     if (!announced && input.waitMs > 0) {
       console.error(
-        `${input.label ?? "test-ledger"}: waiting for another full run (held by pid ${String(holder.pid)}, branch ${holder.branch}, since ${holder.at})`,
+        `${input.label}: waiting for ${input.waitingFor} (held by pid ${String(holder.pid)}, branch ${holder.branch}, since ${holder.at})`,
       );
       announced = true;
     }

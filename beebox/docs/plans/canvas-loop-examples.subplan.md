@@ -67,10 +67,10 @@ check over thirteen small examples should be short enough to run whole; this
 plan adds no subset filter (see NOT in scope). Done-when gates that claim: if
 the measured run exceeds two minutes, the issue is taken off this plan's list
 and stays open. Related, not closed:
-`issues/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md` (fenced
+`issues/closed/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md` (fenced
 blocks in TEA.md and BRUSHES.md stay unchecked; the examples they link become
 checked) and
-`issues/code-quality/2026-11-16-canvas-loop-compare-and-speed-harness-in-scratch.md`
+`issues/closed/code-quality/2026-11-16-canvas-loop-compare-and-speed-harness-in-scratch.md`
 (its tool would render the examples). Searched `issues/` for `gallery`,
 `canvas-loop`, `examples`: no other open item matches.
 
