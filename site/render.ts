@@ -14,6 +14,7 @@ import { fisheyeTags } from "./fisheye.js";
 import { classifyHref, resolveInternalHref } from "./links.js";
 import { agentPromptTags } from "./agent-prompt.js";
 import { evaluationTags } from "./evaluation-tags.js";
+import { questionTags } from "./question-tags.js";
 
 // @markdoc/markdoc is CommonJS: at runtime the ESM named exports don't exist,
 // only the default namespace, so its parts are destructured off the default here.
@@ -193,7 +194,7 @@ export interface TransformedBody {
  */
 export function transformBody(body: string, params: RenderParams): TransformedBody {
   const ast = markdocParse(body);
-  const tags = { ...fisheyeTags, ...agentPromptTags, ...evaluationTags };
+  const tags = { ...fisheyeTags, ...agentPromptTags, ...evaluationTags, ...questionTags };
   const first = markdocValidate(ast, { tags }).find(
     (entry) => entry.error.level === "error" || entry.error.level === "critical",
   );

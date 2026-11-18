@@ -109,6 +109,27 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .verdict-failed { color: #8a2a18; }
 .sample-spec { margin: 0.6rem 0 1rem; padding: 12px 16px; border-left: 4px solid #8a7a5c; border-radius: 4px; background: #f6efe0; color: #3b3222; }
 .sample-spec p { margin: 0.35em 0; }
+/* Question cards carry their own paper and ink, so they read the same under every theme of the day. */
+.question-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 22px; align-items: start; margin: 1.6em -18px 2em; }
+.question-card { display: flex; flex-direction: column; gap: .5em; padding: 20px 20px 16px; box-shadow: 0 2px 6px #3a2d1a40; font-size: 16px; line-height: 1.5; }
+.question-card:nth-child(5n+1) { transform: rotate(-1.2deg); }
+.question-card:nth-child(5n+2) { transform: rotate(1.5deg); }
+.question-card:nth-child(5n+3) { transform: rotate(.7deg); }
+.question-card:nth-child(5n+4) { transform: rotate(-.7deg); }
+.question-card:nth-child(5n) { transform: rotate(1.1deg); }
+.question-answered { border-top: 2px solid #d9a3a0; background: #fffdf7 repeating-linear-gradient(#fffdf7 0 27px, #e3e9f0 27px 28px) 0 46px; color: #5c5146; }
+.question-open { background: #fbe98a; color: #5f5318; }
+.bbx-card-content .question-card p, .bbx-card-content .question-card ul { margin: 0; }
+.question-card strong { display: block; margin: .15em 0; font-size: 1.3rem; line-height: 1.3; }
+.question-answered strong { color: #2e2720; }
+.question-open strong { color: #3a3210; }
+.question-card ul { padding-left: 20px; font: 15px/1.45 "Avenir Next", Avenir, sans-serif; color: #2e2720; }
+.bbx-card-content .question-card li { margin-bottom: .25em; }
+.bbx-card-content .question-card a { color: #2f4a7a; font: 600 14px "Avenir Next", Avenir, sans-serif; }
+.question-card .question-state { margin-top: auto; padding-top: .6em; font: 600 11px/1 "Avenir Next", Avenir, sans-serif; letter-spacing: .09em; text-transform: uppercase; }
+.question-answered .question-state { color: #2f4a7a; }
+.question-open .question-state { color: #6b5d1e; }
+@media (max-width: 700px) { .question-cards { grid-template-columns: 1fr; margin: 1.4em 0; } }
 .bbx-card-content audio { display: block; width: 100%; max-width: 24rem; height: 2.25rem; margin: 0.25em 0; }
 .take-player { display: block; margin: 0.25em 0; }
 .take-player audio { scroll-margin-top: 4rem; }

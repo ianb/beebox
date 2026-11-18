@@ -1,0 +1,189 @@
+---
+title: "Questions Bee Box is trying to address"
+summary: "The questions from Ian's lightning talk on Bee Box: the ones Bee Box has an answer to, the ones still open, and the ones cut from the talk."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: author
+      contribution: Wrote the questions and the notes under them, as a lightning talk on Bee Box.
+  ai:
+    transcription: Transcribed the talk from Ian's dry runs and earlier notes; some items are trimmed to fit a slide.
+    drafting: Drafted the link labels, the two labels on the question cards, and the "Cut from the talk" heading. None of the other prose.
+    editing: Set each of the talk's items as a card by whether Bee Box has an answer, kept the talk's order, and linked answered questions to the documentation page that shows the answer. Left out two items whose wording the agent drafted.
+layout: single
+next:
+  - card: /index.site-page.card
+    label: Back to Bee Box
+---
+
+# Questions Bee Box is trying to address
+
+{% questions %}
+{% question state="answered" %}
+**How do we let people center their own focus?** Interactivity is a demand: what can we do without interactivity?
+
+- Drop in information, thoughts, followups — interactivity only for failure
+- Embrace high latency and asynchronicity
+
+[Interaction model](https://beebox.run/docs/design/interaction-model.html)
+{% /question %}
+{% question state="open" %}
+**Does every action require a poke?** Can proactivity remove another interaction? Can it stay under control and easy to understand?
+
+- Notifications: the best and worst of this
+{% /question %}
+{% question state="open" %}
+**What is good design for chat?** Can we *design* chat, not just treat it as a given? What should responses look like? Are we going to let behavioral signals replace design?
+{% /question %}
+{% question state="answered" %}
+**What are the categories of conversation?** How do we let the user say more than the AI? Listen, comment?
+
+- Modes: converse, narrate, listen, comment
+{% /question %}
+{% question state="open" %}
+**If the agent doesn't always *respond*, then how else does it *react*?** Record, structure. Respond visually? Initiate mode switches? Interject?
+{% /question %}
+{% question state="answered" %}
+**How can we let the agent help with the *entire* app?**
+
+- Everything is a document/file, including UI
+- Let the agent see what you see
+
+[Extensibility](https://beebox.run/docs/design/extensibility.html)
+{% /question %}
+{% question state="answered" %}
+**How do you trust the agent's decisions?** How do we monitor *why* things happen, not just *what* happened?
+
+- Bureaucracy: make the agent fill out paperwork, before and after
+
+[Trust](https://beebox.run/docs/design/trust.html)
+{% /question %}
+{% question state="open" %}
+**How do you create the decision criteria?** How do you turn intuition into documented criteria? How do we use corrections to fix not just the mistake, but future mistakes?
+{% /question %}
+{% question state="answered" %}
+We have an agent. It does things for you. How do we track it? Not just how do we know what it did — but **how does the agent itself understand what it did?** What is its sense of history and process?
+
+- Git as history
+- Git as explanation (commit messages)
+- The agent as explainer
+- Not meant for the user to interact with Git, or even Git history
+
+[How it works](https://beebox.run/docs/07-how-it-works.html)
+{% /question %}
+{% question state="open" %}
+The chat log is how we understand what the agent understands. It's a document it's responding to as much as a log. But **how does it model you?** How does it know where your focus is, what you're reacting to?
+
+- It can see your screen
+- Card activity: scrolled, explored, modified
+{% /question %}
+{% question state="answered" %}
+**How do we preserve authenticity of voice?** How do we keep the AI from rewriting, paraphrasing, and confusing its own output for original instructions?
+
+- Quotation markup, core to everything it writes
+- No paraphrasing as a primary rule
+
+[Provenance](https://beebox.run/docs/capabilities/provenance.html)
+{% /question %}
+{% question state="open" %}
+**So how can it draw those authentic words out of you?** You don't want it to create them — but to give you the support that keeps you from having a blank page.
+{% /question %}
+{% question state="answered" %}
+**How will the information accumulate without ending up with chaos?** How does it stay consistent? Queryable, repairable?
+
+- Typed cards: plain files with strict schemas
+- Always room for overflow information
+
+[Shape it later](https://beebox.run/docs/capabilities/shape-it-later.html)
+{% /question %}
+{% question state="open" %}
+**How do we share new ways to do things?** How do we give people both custom experiences and best practice in how things are built up?
+
+- Best-practice documents, consensus approaches, shareable tools and ideas instead of plugins
+{% /question %}
+{% question state="answered" %}
+**What happens when there's multiple channels of improvement — you're improving your system, and upstream is improving it too?**
+
+- That's both very hard and suddenly kind of doable, because the agent just goes in and fixes everything
+- Migrations carried by the agent
+
+[Migrations](https://beebox.run/docs/dev/migrations.html)
+{% /question %}
+{% question state="open" %}
+**How do you give the agent power over its environment without letting it break everything, including itself?**
+{% /question %}
+{% question state="answered" %}
+**How does one space hold different parts of your life, when they overlap and yet they kind of don't?**
+
+- Everything accessible, focused areas
+{% /question %}
+{% question state="open" %}
+**How does this engage with our understanding of space, not just language?** Space is one of our really strong intellectual capabilities — and that's kind of about how to build this as a home.
+{% /question %}
+{% question state="answered" %}
+**How do we make the compute cost reasonable for the user?**
+
+- Built on the coding-agent subscription
+- …which is useful for a lot more than the box
+
+[What it requires](https://beebox.run/docs/08-what-it-requires.html)
+{% /question %}
+{% question state="open" %}
+**When the subscription doesn't cover everything, how do you pay for all the little things?** How do you support little APIs, login providers, AI services, API keys?
+{% /question %}
+{% question state="answered" %}
+**What can we create without a dependency on capital?** How big a thing can we make without funding? And without it just being a fake it till you make it until the funding comes in.
+
+- If code is cheap, then let's make use of that
+- 100% agentically coded
+- One person, low capital (but one person isn't enough)
+
+[Agent coding](https://beebox.run/docs/dev/agent-coding.html)
+{% /question %}
+{% question state="open" %}
+**How do we remove the principal agent problem?** How do we align the software with the user?
+
+- Principal agent problem: does the software work for the user, or for the software provider?
+{% /question %}
+{% question state="open" %}
+**How does it create a space that feels like yours?** Not a space you control or that you own, but that feels like home. A lot of our software feels like a hotel. It has all the trappings of a home. It's very well kept, but it's never where you belong personally.
+
+- A home is messy, in progress
+- You bring everything home before you sort it all out
+- It's familiar
+{% /question %}
+{% /questions %}
+
+I want the user to exert their will over the product until the product becomes an expression of their will. That's different than personalization. Personalization only touches desire — often only revealed desires. Will is when you achieve autonomy and self-expressiveness.
+
+## Cut from the talk
+
+{% questions %}
+{% question state="open" %}
+**And how do you handle the boundaries — external data, where the craziness is just the nature of it?**
+{% /question %}
+{% question state="answered" %}
+**How do you give the agent tools that fit over all the things you do, so it's not having to invent new things to do normal behaviors?**
+
+- bbx: one composable command line
+- Direction as its own layer
+{% /question %}
+{% question state="open" %}
+**How do we make all the statefulness happen in a unified way?** Committing something was to do it — actions become nouns. I don't think it's been successful.
+{% /question %}
+{% question state="answered" %}
+**You know that it's no worse than the agent you're using.** It's every bit as smart as Claude, or whatever back end you have.
+{% /question %}
+{% question state="open" %}
+**What kind of reactivity?** How do we codify it — programmatically sometimes, non-programmatically other times — without being expensive? Because starting with an agent is expensive.
+{% /question %}
+{% question state="answered" %}
+**So many places where you might use a static schema, I use code.** We put live things into the system instead of dead things.
+{% /question %}
+{% question state="open" %}
+**Addictive apps drive you through the same loop continuously.** What we want is for it to be driving you into new loops.
+{% /question %}
+{% question state="open" %}
+**Can you have private spaces within a shared space?** How do you keep it from leaking? When everything's easier to do, leaking is easier too.
+{% /question %}
+{% /questions %}

@@ -30,6 +30,7 @@ import { twinCardLinks } from "./twin-links.js";
 import { writeStaticFiles } from "./docs-static.js";
 import { publishedPageBody } from "./page-publication.js";
 import { flattenEvaluationTags } from "./evaluation-tags.js";
+import { flattenQuestionTags } from "./question-tags.js";
 
 const SITE_DIR = import.meta.dirname;
 
@@ -153,8 +154,8 @@ export function twinMarkdown(
         .replace(/{%\s*agent-prompt\s+title="([^"]*)"[^%]*%}/g, (_m, title: string) => `**${title}** (paste into your agent or AI chat):`)
         .replace(/{%\s*aside\s+ref="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatAside(slug, refs.asides))
         .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, refs.nuggets));
-      // Model pills, verdicts, and sample titles carry meaning the catch-all strip would delete.
-      return flattenEvaluationTags(flatTags).replace(/{%[\S\s]*?%}/g, "");
+      // Model pills, verdicts, sample titles, and a question's kind carry meaning the catch-all strip would delete.
+      return flattenQuestionTags(flattenEvaluationTags(flatTags)).replace(/{%[\S\s]*?%}/g, "");
     })
     .join("");
   return `${flat.trimStart().trimEnd()}\n`;
