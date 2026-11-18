@@ -20,7 +20,7 @@ export const UI_INTERNALS: readonly UiInternal[] = [
 ];
 
 /** Names the primitives section uses as `<Name>` that are not exports of `components/ui/`. */
-export const EXTERNAL_PRIMITIVES: readonly string[] = ["Link"]; // TanStack Router's Link
+const EXTERNAL_PRIMITIVES: readonly string[] = ["Link"]; // TanStack Router's Link
 
 export interface UiExport {
   name: string;

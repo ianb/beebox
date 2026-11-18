@@ -40,7 +40,7 @@ const MODULE_TYPES_FOR: Record<FigureParamType, readonly string[]> = { string: [
  * other input counts only when the sketch marked it handled, and a pointer
  * input adds the innermost named drawing it landed on.
  */
-export function figureActivityDetail(event: EmittedEvent): string | null {
+function figureActivityDetail(event: EmittedEvent): string | null {
   let detail: string;
   if (event.type === "param") detail = `set ${event.name} = ${String(event.value)}`;
   else if (event.handled !== undefined && event.handled.length > 0) {
@@ -56,7 +56,7 @@ export function figureActivityDetail(event: EmittedEvent): string | null {
  * mismatch: the factory reads it from `figure.params`, and `bbx figure run`
  * names it. `module` is the sketch's untrusted `opts.module`.
  */
-export function paramMismatches(declared: readonly FigureParamDecl[], module: unknown): string[] {
+function paramMismatches(declared: readonly FigureParamDecl[], module: unknown): string[] {
   const moduleParams = isRecord(module) && isRecord(module.params) ? module.params : {};
   const out: string[] = [];
   for (const decl of declared) {

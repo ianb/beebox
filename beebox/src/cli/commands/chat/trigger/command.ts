@@ -39,7 +39,7 @@ function parseExpires(raw: string | undefined): Expires {
 }
 
 /** One line per activation: `id  state  label  (expires …)  [error]`. */
-export function renderActivationLine(a: Activation): string {
+function renderActivationLine(a: Activation): string {
   const parts = [a.id, a.state.padEnd(15), a.label, `(${a.file}; expires ${describeExpires(a.expires)}; turns ${String(a.turnsSeen)}; fires ${String(a.fires)}${a.tick === undefined ? "" : `; tick ${String(a.tick)}s`})`];
   if (a.error !== undefined) parts.push(`— ${a.error}`);
   return parts.join("  ");

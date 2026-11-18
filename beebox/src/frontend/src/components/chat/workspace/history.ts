@@ -109,7 +109,7 @@ export function workspaceDisplayReady(input: {
  * conversation's property, so the route's `card=` still opens under it; the
  * chat area says why there is no conversation.
  */
-export const UNRESOLVED_WORKSPACE_IDENTITY = "unresolved-conversation";
+const UNRESOLVED_WORKSPACE_IDENTITY = "unresolved-conversation";
 
 /**
  * Which saved arrangement the workspace shows. An unresolved selection takes

@@ -15,7 +15,7 @@ const ScopeContext = createContext<ScopeGetter | null>(null);
 const PaneCardContext = createContext<string | null>(null);
 
 /** The scope getter for one conversation; reads the latest values at call time. */
-export function useActivityScope(scope: ActivityScope): ScopeGetter {
+function useActivityScope(scope: ActivityScope): ScopeGetter {
   const latest = useRef(scope);
   useEffect(() => { latest.current = scope; }, [scope]);
   return useCallback(() => latest.current, []);

@@ -14,7 +14,7 @@ import { appBasePath, resolveAppUrl } from "../app-url.js";
 import { BROWSER_PASS_COOKIE, BROWSER_PASS_TTL_MS, signBrowserPass } from "../pass.js";
 
 /** Refresh when less than this is left, so no command meets an expired pass. */
-export const REFRESH_BELOW_MS = 30 * 60 * 1000;
+const REFRESH_BELOW_MS = 30 * 60 * 1000;
 
 /** Sends one agent-browser command through the host's command socket. */
 export type BrowserSend = (args: readonly string[]) => Promise<ExecReply>;

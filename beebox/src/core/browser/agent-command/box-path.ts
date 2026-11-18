@@ -18,7 +18,7 @@ const NAVIGATE = new Set(["open", "goto", "navigate"]);
 export type BoxPathResult = { ok: true; args: string[] } | { ok: false; message: string };
 
 /** The URL of a box page, from the app URL and the box's slug. */
-export function boxPageUrl(box: { base: URL; slug: string }, boxPath: string): string {
+function boxPageUrl(box: { base: URL; slug: string }, boxPath: string): string {
   return `${box.base.origin}${appBasePath(box.base)}${box.slug}${boxPath}`;
 }
 

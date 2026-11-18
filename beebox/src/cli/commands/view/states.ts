@@ -18,7 +18,7 @@ import { cardTypeFromName } from "../../../shared/card-name.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 
 /** The page path that opens `state` of view `slug`, or why the app would show another view. */
-export function statePagePath({ slug, state, views }: { slug: string; state: DeclaredCheckState; views: readonly ViewMeta[] }): string {
+function statePagePath({ slug, state, views }: { slug: string; state: DeclaredCheckState; views: readonly ViewMeta[] }): string {
   const type = cardTypeFromName(state.path);
   const bound = type === undefined ? undefined : views.toSorted((a, b) => a.slug.localeCompare(b.slug)).find((v) => v.rendersCardTypes.includes(type));
   if (bound === undefined) return `(no view renders ${type ?? "this"} cards; nothing to open)`;

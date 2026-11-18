@@ -32,7 +32,7 @@ export interface StripRefusalDetail {
 }
 
 /** Types a card may take in the strip in this box: built-ins plus types a strip view renders. */
-export function stripCapableTypes(metas: readonly StripViewCandidate[]): string[] {
+function stripCapableTypes(metas: readonly StripViewCandidate[]): string[] {
   const types = new Set<string>(BUILTIN_STRIP_TYPES);
   for (const meta of metas) {
     if (!meta.modes.includes("strip")) continue;

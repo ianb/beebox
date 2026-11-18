@@ -41,7 +41,7 @@ return JSON.stringify({found:true,url:location.href,card:{width:r.width,height:r
 
 const Box = z.object({ width: z.number(), height: z.number() });
 
-export const MEASURE = z.discriminatedUnion("found", [
+const MEASURE = z.discriminatedUnion("found", [
   z.object({ found: z.literal(false), url: z.string(), title: z.string() }),
   z.object({
     found: z.literal(true),

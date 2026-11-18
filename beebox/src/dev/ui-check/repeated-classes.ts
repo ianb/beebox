@@ -7,7 +7,7 @@
 import * as ts from "../../lib/typescript/syntax.js";
 
 /** Fewer tokens than this is too short to call a copied look. */
-export const MIN_TOKENS = 6;
+const MIN_TOKENS = 6;
 
 /**
  * A Tailwind-shaped token: optional variants (`hover:`, `md:`), an optional
@@ -30,11 +30,11 @@ function baseOf(token: string): string {
   return token.replace(/^(?:[\da-z-]+:)*/, "").replace(/^!?-?/, "");
 }
 
-export function isClassShaped(tokens: readonly string[]): boolean {
+function isClassShaped(tokens: readonly string[]): boolean {
   return tokens.length > 0 && tokens.every((token) => CLASS_TOKEN.test(token) || HOOK_TOKEN.test(token));
 }
 
-export function hasAppearanceToken(tokens: readonly string[]): boolean {
+function hasAppearanceToken(tokens: readonly string[]): boolean {
   return tokens.some((token) => APPEARANCE.test(baseOf(token)));
 }
 
@@ -49,7 +49,7 @@ function tokensOf(text: string, opts: { partialStart: boolean; partialEnd: boole
 }
 
 /** The candidate strings of one file: string literals and template quasis, each as a token list. */
-export function candidateStrings(sourceFile: ts.SourceFile): string[][] {
+function candidateStrings(sourceFile: ts.SourceFile): string[][] {
   const found: string[][] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {

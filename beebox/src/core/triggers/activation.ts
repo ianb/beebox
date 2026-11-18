@@ -44,12 +44,12 @@ export const expiresSchema = z.union([
 ]);
 export type Expires = z.infer<typeof expiresSchema>;
 
-export const ACTIVATION_STATES = ["armed", "failed", "done", "expired", "disarmed", "delivery-failed"] as const;
+const ACTIVATION_STATES = ["armed", "failed", "done", "expired", "disarmed", "delivery-failed"] as const;
 export type ActivationState = (typeof ACTIVATION_STATES)[number];
 /** States the runner never evaluates again. */
 export const TERMINAL_STATES: readonly ActivationState[] = ["done", "expired", "disarmed", "delivery-failed"];
 
-export const activationSchema = z.object({
+const activationSchema = z.object({
   id: z.string().min(1),
   /** Box-relative path of the trigger file. */
   file: z.string().min(1),
@@ -78,7 +78,7 @@ export type Activation = z.infer<typeof activationSchema>;
 const fileSchema = z.object({ activations: z.array(activationSchema) });
 
 /** Thrown for a session id that is not a plain id. */
-export class TriggerSessionIdError extends Error {
+class TriggerSessionIdError extends Error {
   constructor() {
     super("A trigger activation needs a plain chat session id");
     this.name = "TriggerSessionIdError";
@@ -86,7 +86,7 @@ export class TriggerSessionIdError extends Error {
 }
 
 /** Thrown when a write would build on an activation file that fails the schema. */
-export class TriggerFileInvalidError extends Error {
+class TriggerFileInvalidError extends Error {
   readonly sessionId: string;
   constructor(sessionId: string) {
     super("The activation file for this chat is invalid; fix or remove it under .beebox/triggers/");
@@ -101,11 +101,11 @@ export interface TriggerSession {
   sessionId: string;
 }
 
-export function triggersDir(boxRoot: string): string {
+function triggersDir(boxRoot: string): string {
   return path.join(boxRoot, ".beebox", "triggers");
 }
 
-export function activationFilePath({ boxRoot, sessionId }: TriggerSession): string {
+function activationFilePath({ boxRoot, sessionId }: TriggerSession): string {
   if (!SESSION_ID.test(sessionId)) throw new TriggerSessionIdError();
   return path.join(triggersDir(boxRoot), `${sessionId}.json`);
 }

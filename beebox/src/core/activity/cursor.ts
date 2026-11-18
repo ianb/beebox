@@ -32,7 +32,7 @@ export type ActivityCursor = z.infer<typeof cursorSchema>;
 const SESSION_ID = /^[\w-]{1,128}$/;
 
 /** Thrown when a cursor is asked for under a name that is not a plain session id. */
-export class ActivitySessionIdError extends Error {
+class ActivitySessionIdError extends Error {
   constructor() {
     super("The activity cursor needs a plain chat session id");
     this.name = "ActivitySessionIdError";

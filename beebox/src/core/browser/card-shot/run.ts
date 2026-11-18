@@ -25,7 +25,7 @@ export const MAX_CAPTURE_HEIGHT = 8000;
 /** Room for the app's own chrome above and below the card. */
 const MARGIN = 40;
 /** How long a capture waits for the card to appear and stop loading. */
-export const READY_TIMEOUT_MS = 15_000;
+const READY_TIMEOUT_MS = 15_000;
 
 /** True once the card is on the page and nothing in it is `aria-busy` (the app's loading states). */
 function readyExpression(panelId: string): string {

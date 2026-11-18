@@ -25,7 +25,7 @@ import { mergeAdvice, renderedAdvice, viewSourceAdvice, type ViewAdvice } from "
 import { ADVICE_PREFIX, PARTIAL_PREFIX, adviceLines, partialRemarks, viewDomSnapshotSchema } from "./check-states.js";
 
 /** How long the sweep lets one view's advise child run. */
-export const ADVICE_TIMEOUT_MS = 5_000;
+const ADVICE_TIMEOUT_MS = 5_000;
 
 /** What advice adds to a view's result. */
 export interface AdviceOutcome {

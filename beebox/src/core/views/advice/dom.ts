@@ -32,7 +32,7 @@
 import { advice, type ViewAdvice } from "./types.js";
 
 /** Cells in a table's fullest row at which it counts as wide. */
-export const WIDE_TABLE_CELLS = 4;
+const WIDE_TABLE_CELLS = 4;
 const WHERE_MAX = 60;
 const CONTROLS = "button, a[href], select, textarea, input";
 const UNNAMED_INPUT_TYPES = new Set(["hidden", "submit", "reset", "button", "image"]);
@@ -55,7 +55,7 @@ function styleOf(el: Element): CSSStyleDeclaration | null {
 }
 
 /** Whether an element scrolls sideways, by its style or a Tailwind class (no app CSS in the check). */
-export function scrollsSideways(el: Element): boolean {
+function scrollsSideways(el: Element): boolean {
   if ([...el.classList].some((c) => SCROLLING_CLASSES.has(c))) return true;
   const style = styleOf(el);
   return style !== null && ["auto", "scroll"].includes(horizontalOverflow(style));

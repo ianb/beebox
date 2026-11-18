@@ -21,7 +21,7 @@ export interface PresenceHead {
 }
 
 /** How a head is named: who, and what they are doing. */
-export function headLabel(p: PresenceHead): string {
+function headLabel(p: PresenceHead): string {
   if (p.doing === "typing") return `${p.name} is typing`;
   if (p.doing === "dictating") return `${p.name} is dictating`;
   return `${p.name} is in this chat`;

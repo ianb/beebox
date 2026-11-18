@@ -16,7 +16,7 @@ const IDENTITY = /^[\da-f]{16}$/;
 const META = new RegExp(`<meta name="${FRONTEND_BUILD_META_NAME}" content="([^"]*)"\\s*/?>`);
 
 /** True for a well-formed identity (16 lowercase hex characters). */
-export function isFrontendBuild(value: unknown): value is string {
+function isFrontendBuild(value: unknown): value is string {
   return typeof value === "string" && IDENTITY.test(value);
 }
 

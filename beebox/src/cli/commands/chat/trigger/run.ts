@@ -20,7 +20,7 @@ import { renderTraceLine } from "./log.js";
 import { parseConfig, requireSession, runCli, TriggerUsageError } from "./shared.js";
 
 /** Lines from a JSONL file of `ActivityLine`s (what `bbx chat activity --json` prints). */
-export async function readActivityFile(file: string): Promise<ActivityLine[]> {
+async function readActivityFile(file: string): Promise<ActivityLine[]> {
   const text = await fs.readFile(file, "utf-8");
   const lines: ActivityLine[] = [];
   for (const [index, raw] of text.split("\n").entries()) {

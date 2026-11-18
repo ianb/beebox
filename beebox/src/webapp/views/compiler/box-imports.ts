@@ -16,7 +16,7 @@ import type * as esbuild from "esbuild";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-export const BOX_ROOT_PREFIX = "@/";
+const BOX_ROOT_PREFIX = "@/";
 
 /** Resolve `@/<path>` against `boxRoot`; null when the box root is unknown. */
 export function boxRootImportsPlugin(boxRoot: string | null): esbuild.Plugin {
