@@ -5,19 +5,19 @@ import { useBusSubscription } from "../../../../hooks/useBusSubscription";
 import { busEventData } from "../../../../lib/bus-events";
 import type { ViewTarget } from "../../../../lib/view-url";
 import { readActiveSessions, writeActiveSessions } from "./active-sessions";
-import { AmbientSessionReply } from "./AmbientSessionReply";
+import { SessionCallouts } from "./SessionCallouts";
+import { CloseButton } from "../../../ui/CloseButton";
 
-// The studio mounts one real reply with a supplied transcript, without live subscriptions.
-export { AmbientSessionReply };
+// The studio mounts one real session with a supplied transcript, without live subscriptions.
+export { SessionCallouts };
 
-export interface AmbientSession { sessionId: string; label: string }
+export interface AmbientSession { sessionId: string }
 export interface AmbientRepliesProps {
   boxSlug: string;
   storageScope: string;
   sessions: AmbientSession[];
   selectedSessionId: string | null;
   transcriptVisible: boolean;
-  onOpenConversation: (sessionId: string) => void;
   onInspectCard: (target: ViewTarget) => void;
 }
 
@@ -31,6 +31,15 @@ export function AmbientReplies(props: AmbientRepliesProps) {
     });
   }, []);
   useEffect(() => { writeActiveSessions(props.storageScope, active); }, [props.storageScope, active]);
+  // Sessions whose callouts are on screen; the stack's one dismiss control shows while any are.
+  const [showing, setShowing] = useState<string[]>([]);
+  const handleShowing = useCallback((sessionId: string, shown: boolean) => {
+    setShowing((old) => {
+      if (old.includes(sessionId) === shown) return old;
+      return shown ? [...old, sessionId] : old.filter((id) => id !== sessionId);
+    });
+  }, []);
+  const [dismissal, setDismissal] = useState(0);
   const [completed, setCompleted] = useState<Record<string, string>>({});
   const sessions = [...new Map(props.sessions.map((session) => [session.sessionId, session])).values()];
   function refresh(sessionId: string) {
@@ -60,11 +69,15 @@ export function AmbientReplies(props: AmbientRepliesProps) {
     return () => document.removeEventListener("visibilitychange", visible);
   }, []);
   return (
-    <div role="region" className="max-h-72 overflow-y-auto" aria-label="Conversation activity">
-      {sessions.filter((session) => session.sessionId === props.selectedSessionId || active.includes(session.sessionId)).map((session) => (
-        <AmbientSessionReply key={`${props.boxSlug}:${session.sessionId}`} {...props}
-          session={session} completion={completed[session.sessionId] ?? null} onActivity={handleActivity} />
-      ))}
+    <div role="region" aria-label="New callouts" className="relative max-h-72 overflow-y-auto px-2">
+      {showing.length > 0 && <CloseButton id="bbx-ambient-dismiss" size="sm" ink label="Dismiss callouts"
+        className="absolute top-1 right-1" onClick={() => setDismissal((n) => n + 1)} />}
+      <div className={showing.length > 0 ? "pr-8" : undefined}>
+        {sessions.filter((session) => session.sessionId === props.selectedSessionId || active.includes(session.sessionId)).map((session) => (
+          <SessionCallouts key={`${props.boxSlug}:${session.sessionId}`} {...props} session={session}
+            completion={completed[session.sessionId] ?? null} dismissal={dismissal} onActivity={handleActivity} onShowing={handleShowing} />
+        ))}
+      </div>
     </div>
   );
 }

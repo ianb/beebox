@@ -1,7 +1,7 @@
 /** Bounded transcript projection; bus completion signals never supply reply text. */
 import type { SessionEntry } from "../../../api";
 import { groupMessages } from "../message-parsing";
-import { parseCallouts, stripStructuredOutputTags } from "../../../lib/structured-output-parsing";
+import { parseCallouts } from "../../../lib/structured-output-parsing";
 
 export function projectAmbientReply(sessionId: string, { entries, total, running }: { entries: SessionEntry[]; total: number; running: boolean }) {
   const groups = groupMessages(entries);
@@ -15,11 +15,7 @@ export function projectAmbientReply(sessionId: string, { entries, total, running
   const truncated = total > entries.length;
   const unsafe = !first?.uuid || (truncated && groups.length === 1);
   const identity = complete && !unsafe ? `${sessionId}:${first.uuid}` : null;
-  const callouts = identity ? parseCallouts(text) : [];
-  // A reply without callouts shows its own persisted text. Acks are dropped here:
-  // they are the least important signal, and a lone ack icon says nothing.
-  const preview = identity && callouts.length === 0 ? stripStructuredOutputTags(text).trim() : "";
-  return { identity, complete, earlier: truncated || (complete && unsafe), callouts, preview };
+  return { identity, callouts: identity ? parseCallouts(text) : [] };
 }
 
 export interface AmbientAttention {
@@ -55,13 +51,13 @@ export function canAcknowledgeAmbientReply(transcriptVisible: boolean, selection
 }
 
 /**
- * Whether a conversation's ambient panel stays out of the way. The selected
- * conversation shows its transcript when `transcriptVisible`; with the
- * transcript off screen (focus layout, cards in both panes) its panel shows the
- * reply like any other conversation's.
+ * Whether a conversation's new callouts stay out of the way. The selected
+ * conversation shows them in its transcript when `transcriptVisible`; with the
+ * transcript off screen (focus layout, cards in both panes) they show above the
+ * composer like any other conversation's.
  */
-export function ambientPanelHidden({ selected, transcriptVisible, attention, busy, error }: {
-  selected: boolean; transcriptVisible: boolean; attention: boolean; busy: boolean; error: boolean;
+export function ambientCalloutsHidden({ selected, transcriptVisible, attention, dismissed }: {
+  selected: boolean; transcriptVisible: boolean; attention: boolean; dismissed: boolean;
 }): boolean {
-  return (selected && transcriptVisible) || (!attention && !busy && !error);
+  return (selected && transcriptVisible) || !attention || dismissed;
 }
