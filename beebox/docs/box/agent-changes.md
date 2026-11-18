@@ -11,6 +11,7 @@ Newest first. Each line says what changed; the doc it names has the details.
 If an entry and a note of yours disagree, check the current docs or command,
 then fix what is out of date.
 
+- 2026-11-17 (43e6d9d8c): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, `\(…\)`, `\[…\]`, and `\ce{}` chemistry. A note saying otherwise is out of date. See `markdown.md`.
 - 2026-11-16 (75b9ce200): canvas-loop `draw` returns its drawing; `v.ctx`, `v.cache`, `v.sprite`, `v.image`, `v.paperTexture` are gone. A figure showing "being updated" needs a rewrite until `bbx figure run` is clean. See `canvas-loop.md`.
 - 2026-11-14 (c9951d645): Activity triggers: a function in `src/triggers/` watches the person in a view or figure; `bbx chat trigger arm` arms it. Its notice is the watcher's voice, not yours. See `triggers.md`.
 - 2026-11-13 (057d9030a): `<card-activity>` is gone from the chat snapshot. `<activity entries="N" cards="M"/>` is a count; `bbx chat activity` lists the person's actions. See `views.md`.
@@ -19,7 +20,6 @@ then fix what is out of date.
 - 2026-11-12 (339551c2a): canvas-loop brushes vary colour (`hueJitter`, `lightJitter`); presets `smudge` and `wet` move paint. Figures play sounds: `kind: "sample"` by name, `kind: "note"` by instrument. See `canvas-loop.md`.
 - 2026-11-12 (5af9fc687): `bbx figure run <card>` renders a canvas-loop figure headlessly. Figures and views import shared code as `@/src/lib/…`; a view embeds a figure with `<CardRef cardRef=… embed />`. See `views.md`.
 - 2026-11-10 (f92ece238): `bbx notify --target` takes `chat:new:<place directory>` (a new chat there) and `place:<place directory>` (its latest chat); the place needs its landmark card. See **REACHING_THE_BOXHOLDER**.
-- 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemistry. A note saying math is unsupported is out of date. See `markdown.md`.
 - 2026-11-09 (7e42666b9): `bbx view check` now runs effects and renders each card type, so views it passed before can fail. Views declare `checkStates`; `bbx view states <slug>` lists them. See `views.md`.
 - 2026-11-09 (45413ab02): Chat links to a view take `?viewState=` (percent-encoded JSON) to move the open view. The keys come from the view's source. See `views.md`.
 - 2026-11-08 (f233c3fdb): To see your own card or view, run `bbx browser open /views/<card path>`, then `bbx browser screenshot --card`. `bbx chat screenshot` shows only the person's screen. See **TOOLS**.
