@@ -1,5 +1,6 @@
 /**
- * Dollar-delimited TeX math for markdown-it: `$…$` inline and `$$…$$` display.
+ * TeX math for markdown-it: `$…$` or `\(…\)` inline and `$$…$$` or `\[…\]`
+ * display.
  *
  * The rules see the raw source, before Markdown escapes and emphasis, so the
  * TeX reaches the renderer as written (`\\`, `\{`, `a*b*c` intact). Code spans
@@ -16,6 +17,13 @@
  * the same one) ends with `$$`, with no blank line between; otherwise `$$…$$`
  * inside a paragraph is display math in the line. An unclosed `$$` (a message
  * still streaming) matches nothing and stays text.
+ *
+ * `\(…\)` is inline math when the first unescaped `\)` on the same line closes
+ * it. `\[…\]` is display math only as a block, with the same line rules as
+ * `$$`; inside a sentence, `\[x\]` stays escaped brackets. An unmatched `\(` or
+ * `\[` falls through to the escape rule and stays a plain paren or bracket.
+ * The rules run before the escape rule, which would otherwise drop the
+ * backslash.
  *
  * Tokens: `math_inline` (inline, `meta.display`) and `math_block`, each with
  * the TeX in `content`. `math-tokens.ts` turns them into Markdoc tags.
@@ -58,8 +66,38 @@ function findInlineClose(state: StateInline, start: number): number {
   return -1;
 }
 
+/** The index of the `\)` closing a `\(` at `start`, or -1. */
+function findParenClose(state: StateInline, start: number): number {
+  const { src, posMax } = state;
+  for (let i = start + 2; i + 1 < posMax; i++) {
+    const ch = src[i];
+    if (ch === "\n" || ch === "`") return -1;
+    if (ch !== "\\") continue;
+    if (src[i + 1] === ")") return i;
+    i++;
+  }
+  return -1;
+}
+
+function mathInlineParen(state: StateInline, silent: boolean): boolean {
+  const { src, pos } = state;
+  if (src[pos] !== "\\" || src[pos + 1] !== "(") return false;
+  const close = findParenClose(state, pos);
+  if (close === -1) return false;
+  const tex = src.slice(pos + 2, close).trim();
+  if (tex === "") return false;
+  if (!silent) {
+    const token = state.push("math_inline", "math", 0);
+    token.content = tex;
+    token.meta = { display: false };
+  }
+  state.pos = close + 2;
+  return true;
+}
+
 function mathInline(state: StateInline, silent: boolean): boolean {
   const { src, pos, posMax } = state;
+  if (src[pos] === "\\") return mathInlineParen(state, silent);
   if (src[pos] !== "$") return false;
 
   if (src[pos + 1] === "$") {
@@ -99,19 +137,27 @@ function lineText(state: StateBlock, line: number): string {
   return state.src.slice(lineMark(state.bMarks, line) + lineMark(state.tShift, line), lineMark(state.eMarks, line));
 }
 
+/** Block delimiters: an opener and the closer it pairs with. */
+const BLOCK_DELIMITERS = [
+  ["$$", "$$"],
+  ["\\[", "\\]"],
+] as const;
+
 // eslint-disable-next-line max-params -- markdown-it's block rule signature is (state, startLine, endLine, silent)
 function mathBlock(state: StateBlock, startLine: number, endLine: number, silent: boolean): boolean {
   if (lineMark(state.sCount, startLine) - state.blkIndent >= 4) return false;
   const first = lineText(state, startLine).trimEnd();
-  if (!first.startsWith("$$")) return false;
-  const rest = first.slice(2);
+  const delimiters = BLOCK_DELIMITERS.find(([open]) => first.startsWith(open));
+  if (delimiters === undefined) return false;
+  const [opener, closer] = delimiters;
+  const rest = first.slice(opener.length);
 
   let closeLine: number;
   let tex: string;
-  const sameLineClose = rest.indexOf("$$");
+  const sameLineClose = rest.indexOf(closer);
   if (sameLineClose !== -1) {
     // `$$a$$` alone on its line is a block; `$$a$$ and more` is inline.
-    if (sameLineClose + 2 !== rest.length) return false;
+    if (sameLineClose + closer.length !== rest.length) return false;
     closeLine = startLine;
     tex = rest.slice(0, sameLineClose);
   } else {
@@ -121,9 +167,9 @@ function mathBlock(state: StateBlock, startLine: number, endLine: number, silent
       const text = lineText(state, line).trimEnd();
       if (text.trim() === "") return false;
       if (lineMark(state.sCount, line) < state.blkIndent) return false;
-      const end = text.indexOf("$$");
+      const end = text.indexOf(closer);
       if (end !== -1) {
-        if (end + 2 !== text.length) return false;
+        if (end + closer.length !== text.length) return false;
         lines.push(text.slice(0, end));
         closeLine = line;
         break;
@@ -144,7 +190,7 @@ function mathBlock(state: StateBlock, startLine: number, endLine: number, silent
   return true;
 }
 
-/** Add the dollar-math rules to a markdown-it instance. */
+/** Add the math rules to a markdown-it instance. */
 export function mathPlugin(md: MarkdownIt): void {
   md.inline.ruler.before("escape", "math_inline", mathInline);
   md.block.ruler.before("paragraph", "math_block", mathBlock, { alt: ["paragraph", "reference", "blockquote", "list"] });

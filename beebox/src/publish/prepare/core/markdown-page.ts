@@ -8,9 +8,9 @@
  * `src/shared/markdoc-config/tags/core.ts` (the same config the frontend React renderer
  * wires up in `src/frontend/src/components/Markdown.tsx`'s `buildRenderConfig`).
  * Parsing goes through the shared parser (raw-HTML allow-list, comments,
- * footnotes) with dollar math on and without bare-URL autolinking: an autolink
- * would turn prose into outbound links the author never wrote. A `$…$` or
- * `$$…$$` formula publishes as MathML (`math.ts`).
+ * footnotes) with math on and without bare-URL autolinking: an autolink
+ * would turn prose into outbound links the author never wrote. A formula
+ * publishes as MathML (`math.ts`).
  *
  * Pure and deterministic given the source: no wall-clock reads, no file access.
  */

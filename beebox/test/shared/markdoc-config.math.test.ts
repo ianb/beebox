@@ -1,5 +1,5 @@
-// Dollar-delimited TeX math in the frontend parser: `$…$` inline, `$$…$$`
-// display. Prices, shell text and code stay text; the TeX reaches the renderer
+// TeX math in the frontend parser: `$…$` or `\(…\)` inline, `$$…$$` or
+// `\[…\]` display. Prices, shell text and code stay text; the TeX reaches the renderer
 // unescaped; an unclosed `$$` (a message still streaming) stays text.
 
 import { test } from "tap";
@@ -79,7 +79,33 @@ void test("math inside lists and quotes", async (t) => {
   t.check(render("> $$\n> y\n> $$"), "<blockquote><M d=\"\">y</M></blockquote>");
 });
 
-// Backend walkers and publishing use the plain parser, which has no math.
+// GPT models write LaTeX's backslash delimiters. The rule runs before the
+// escape rule, which would turn `\(` into `(`.
+void test("backslash delimiters", async (t) => {
+  t.check(render("Kepler: \\(T^2 = a^3\\) for orbits."), "<p>Kepler: <m>T^2 = a^3</m> for orbits.</p>");
+  t.check(render("Law:\n\\[\nT^2 = \\frac{4\\pi^2}{GM} a^3\n\\]\nafter"), "<p>Law:</p><M d=\"\">T^2 = \\frac{4\\pi^2}{GM} a^3</M><p>after</p>");
+  t.check(render("\\[ x^2 \\]"), "<M d=\"\">x^2</M>");
+  // `\\` inside is a TeX line break, not part of a closer.
+  t.check(render("\\[\na \\\\\nb\n\\]"), "<M d=\"\">a \\\\\nb</M>");
+  t.check(render("\\(a \\\\ b\\)"), "<p><m>a \\\\ b</m></p>");
+  t.check(render("> \\[\n> y\n> \\]"), "<blockquote><M d=\"\">y</M></blockquote>");
+});
+
+void test("backslash delimiters that are not math", async (t) => {
+  // A blank line ends the search for the closing line, as with `$$`.
+  t.check(render("\\[\na\n\nb\n\\]"), "<p>[ a</p><p>b ]</p>");
+  // Unclosed while streaming: the escape rule makes a plain paren or bracket.
+  t.check(render("see \\(x^2"), "<p>see (x^2</p>");
+  t.check(render("\\[\n\\frac{a}{b"), "<p>[ \\frac{a}{b</p>");
+  // Escaped brackets inside a sentence stay brackets; only a block is display math.
+  t.check(render("Not a \\[link\\] here"), "<p>Not a [link] here</p>");
+  t.check(render("A \\(paren\nacross lines\\)"), "<p>A (paren across lines)</p>");
+  t.check(render("Empty \\(\\) stays"), "<p>Empty () stays</p>");
+  t.check(render("Run `echo \\(x\\)` now"), "<p>Run <code>echo \\(x\\)</code> now</p>");
+  t.check(render("```tex\n\\[x\\]\n```"), "<pre data-language=\"tex\">\\[x\\]\n</pre>");
+});
+
+// Backend walkers use the plain parser, which has no math.
 void test("the plain parser leaves dollars alone", async (t) => {
   t.check(renderers.html(transform(parseMarkdown("$x$"), config)), "<article><p>$x$</p></article>");
 });

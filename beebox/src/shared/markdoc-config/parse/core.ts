@@ -14,9 +14,9 @@
  *    become a link (`.md` is a TLD), and `i.e.`-style prose could misfire.
  *    The publish renderer leaves autolinking off so a bundle gains no
  *    external references it did not ask for;
- *  - optionally, dollar-delimited TeX math (`math-rule.ts`) as render-only
- *    `math` tags. Only the frontend renderer turns it on; backend walkers and
- *    publishing see the dollar text as written.
+ *  - optionally, TeX math (`math-rule.ts`) as render-only `math` tags. The
+ *    frontend renderer and publishing turn it on; backend walkers see the
+ *    source as written.
  */
 
 import Markdoc from "@markdoc/markdoc";
