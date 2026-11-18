@@ -99,3 +99,12 @@ void test("The toggle appears only when the full list can show more", async (t) 
 void test("Webpage and recipe cards draw their own sources", async (t) => {
   t.check([undefined, "record", "doc", "pdf", "webpage", "recipe"].map(cardShowsSourcesSection), [true, true, true, true, false, false]);
 });
+
+// A chat card is named by its date, as the in-body citation chip names it,
+// however the ref is written: with a view query, or relative to the card.
+void test("A chat source reads as its date, from the resolved path", async (t) => {
+  t.check(sourceChips([
+    { ref: "/_content/chat/web/2026-10-22_0bda0c7a.chat.card?view=Card" },
+    { ref: "../chat/web/2026-10-23_1c2d3e4f.chat.card" },
+  ], card).map((chip) => chip.text), ["chat, Oct 22", "chat, Oct 23"]);
+});

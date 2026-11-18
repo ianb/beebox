@@ -67,8 +67,9 @@ function webChip(href: string, { label, ...base }: EntryBase): SourceChip {
 
 function refChip({ ref, basePath }: { ref: string; basePath: string }, { label, ...base }: EntryBase): SourceChip {
   const path = parseRef(ref).path;
-  const text = label ?? chatRefLabel(ref)?.label ?? refLabel(path);
   const target = resolveContentTarget(basePath, ref);
+  // The resolved path, so a relative ref or one with `?view=` still reads "chat, Oct 22".
+  const text = label ?? chatRefLabel(target?.path ?? path)?.label ?? refLabel(path);
   if (target === null) return { kind: "text", text, title: `${base.note ?? ref} (outside the box)`, target: null, href: null, ...base };
   return { kind: path.endsWith(".card") ? "card" : "file", text, title: base.note ?? ref, target, href: null, ...base };
 }

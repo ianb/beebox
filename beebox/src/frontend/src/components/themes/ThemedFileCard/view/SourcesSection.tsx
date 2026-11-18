@@ -5,7 +5,7 @@
  * Properties still lists `sources` in its fields table.
  */
 
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Badge } from "../../../ui/Badge";
 import { InlineAction } from "../../../ui/InlineAction";
 import { List } from "../../../ui/List";
@@ -33,14 +33,19 @@ function KindMarker({ kind }: { kind: SourceChip["kind"] }): ReactNode {
   }
 }
 
-const frame = "inline-flex min-w-0 max-w-[min(16rem,100%)] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const FRAME = "inline-flex min-w-0 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
-/** One source as a chip; a long name truncates, with the full text in the tooltip and in the expanded list. */
-function Chip({ chip, onNavigate }: { chip: SourceChip; onNavigate: Navigate }): ReactNode {
+/**
+ * One source as a chip. On the collapsed line a long name truncates (the full
+ * text is the tooltip); in the full list (`wrap`) it wraps.
+ */
+function Chip({ chip, onNavigate, wrap }: { chip: SourceChip; onNavigate: Navigate; wrap?: boolean }): ReactNode {
+  const wraps = wrap === true;
+  const frame = `${FRAME} ${wraps ? "max-w-full" : "max-w-[min(16rem,100%)]"}`;
   const badge = (
     <Badge material className="inline-flex max-w-full min-w-0 items-center gap-1">
       <KindMarker kind={chip.kind} />
-      <span className="truncate group-hover:underline">{chip.text}</span>
+      <span className={`group-hover:underline ${wraps ? "[overflow-wrap:anywhere]" : "truncate"}`}>{chip.text}</span>
     </Badge>
   );
   const { target } = chip;
@@ -58,19 +63,46 @@ function Chip({ chip, onNavigate }: { chip: SourceChip; onNavigate: Navigate }):
 function DetailRow({ chip, onNavigate }: { chip: SourceChip; onNavigate: Navigate }): ReactNode {
   return (
     <li className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-      <Chip chip={chip} onNavigate={onNavigate} />
+      <Chip chip={chip} onNavigate={onNavigate} wrap />
       {chip.pos === null ? null : <span className="text-card-soft">{chip.pos}</span>}
       {chip.note === null ? null : <span className="min-w-0 text-card-soft [overflow-wrap:anywhere]">{chip.note}</span>}
     </li>
   );
 }
 
+/**
+ * Mark the chips that wrapped onto the clipped second line `inert`, so the
+ * keyboard does not reach a link no one can see (and focusing it does not
+ * scroll the clipped row into view).
+ */
+function markWrapped(row: HTMLElement): void {
+  const top = row.getBoundingClientRect().top;
+  for (const child of row.children) {
+    if (child instanceof HTMLElement) child.inert = child.getBoundingClientRect().top > top + 1;
+  }
+}
+
+function useInertWrapped(row: RefObject<HTMLDivElement | null>, active: boolean): void {
+  useLayoutEffect(() => {
+    const element = row.current;
+    if (!active || element === null) return;
+    markWrapped(element);
+    const observer = new ResizeObserver(() => { markWrapped(element); });
+    observer.observe(element);
+    return () => { observer.disconnect(); };
+  }); // Every render: a live edit can change the chips without resizing the row.
+}
+
 export function SourcesSection({ chips, onNavigate }: { chips: readonly SourceChip[]; onNavigate: Navigate }): ReactNode {
-  const [expanded, setExpanded] = useState(false);
-  if (chips.length === 0) return null;
+  const [open, setOpen] = useState(false);
+  const row = useRef<HTMLDivElement>(null);
   const hasDetails = sourcesHaveDetails(chips);
+  // A live edit can drop the toggle while the list is open; the line then shows.
+  const expanded = open && hasDetails;
+  useInertWrapped(row, !expanded && chips.length > 1);
+  if (chips.length === 0) return null;
   const toggle = hasDetails ? (
-    <InlineAction intent="subtle" expanded={expanded} onClick={() => { setExpanded(!expanded); }} className="shrink-0">
+    <InlineAction intent="subtle" expanded={expanded} onClick={() => { setOpen(!expanded); }} className="shrink-0">
       {expanded ? "Less" : chips.length > 1 ? `All ${String(chips.length)}` : "Details"}
     </InlineAction>
   ) : null;
@@ -80,7 +112,7 @@ export function SourcesSection({ chips, onNavigate }: { chips: readonly SourceCh
         <span className="shrink-0 text-card-soft bbx-card-field-label">Sources</span>
         {/* One line: chips that do not fit wrap onto a second line, which is
             clipped, so a chip shows whole or not at all; the toggle names the total. */}
-        {expanded ? null : <div className="flex h-6 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-2 overflow-hidden">
+        {expanded ? null : <div ref={row} className="flex h-6 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-2 overflow-hidden">
           {chips.map((chip, index) => <Chip key={index} chip={chip} onNavigate={onNavigate} />)}
         </div>}
         {toggle}
