@@ -62,7 +62,7 @@ deciding whether to use Bee Box; answer my questions from those pages.
 
 ## Questions Bee Box is trying to address
 
-{% questions %}
+{% questions layout="strip" %}
 {% question state="answered" %}
 **How do we let people center their own focus?** Interactivity is a demand: what can we do without interactivity?
 

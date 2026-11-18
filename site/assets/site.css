@@ -137,7 +137,12 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .question-card .question-state { margin-top: auto; padding-top: .6em; font: 600 11px/1 "Avenir Next", Avenir, sans-serif; letter-spacing: .09em; text-transform: uppercase; }
 .question-answered .question-state { color: #2f4a7a; }
 .question-open .question-state { color: #6b5d1e; }
-@media (max-width: 700px) { .question-cards { grid-template-columns: 1fr; margin: 1.4em 0; } }
+.question-strip { display: flex; gap: 22px; align-items: stretch; overflow-x: auto; scroll-snap-type: x mandatory; margin: 1.6em -32px .4em; padding: 14px 32px 22px; }
+.question-strip .question-card { flex: 0 0 300px; scroll-snap-align: center; }
+.question-strip-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 0 0 1.6em; font: 600 14px "Avenir Next", Avenir, sans-serif; color: var(--bbx-ink-soft); }
+.question-strip-bar button { padding: 6px 14px; border: 1px solid var(--bbx-edge); border-radius: 4px; background: none; color: var(--bbx-pen); font: inherit; cursor: pointer; }
+@media (max-width: 700px) { .question-strip { margin: 1.4em -14px .4em; padding: 10px 14px 18px; } .question-strip .question-card { flex-basis: 78%; } }
+@media (max-width: 700px) { .question-cards:not(.question-strip) { grid-template-columns: 1fr; margin: 1.4em 0; } }
 .bbx-card-content audio { display: block; width: 100%; max-width: 24rem; height: 2.25rem; margin: 0.25em 0; }
 .take-player { display: block; margin: 0.25em 0; }
 .take-player audio { scroll-margin-top: 4rem; }

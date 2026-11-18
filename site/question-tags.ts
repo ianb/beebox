@@ -16,12 +16,15 @@ function isState(value: string): value is keyof typeof QUESTION_STATES {
 export const questionTags = {
   questions: {
     inline: false,
+    attributes: { layout: { type: String, matches: ["grid", "strip"] } },
     transform(node: Node, config: Config): RenderableTreeNode {
       // A stray paragraph would become a grid cell with no card around it.
       if (node.children.length === 0 || node.children.some((child) => child.type !== "tag" || child.tag !== "question")) {
         throw new Error("questions must contain only question tags, and at least one");
       }
-      return new Tag("div", { class: "question-cards" }, node.transformChildren(config));
+      // A strip is one row that scrolls sideways, for a page where the cards are not the whole content.
+      const strip = node.transformAttributes(config)["layout"] === "strip";
+      return new Tag("div", { class: strip ? "question-cards question-strip" : "question-cards" }, node.transformChildren(config));
     },
   },
   question: {
