@@ -1,0 +1,131 @@
+[
+  {
+    "frame": 0,
+    "type": "snapshot",
+    "label": "start: dark archive, every lamp off, clerk not yet in"
+  },
+  {
+    "frame": 190,
+    "type": "snapshot",
+    "label": "left stop: taking a card, one card rises out of the row"
+  },
+  {
+    "frame": 222,
+    "type": "snapshot",
+    "label": "left stop: holding the card up to read it"
+  },
+  {
+    "frame": 310,
+    "type": "snapshot",
+    "label": "leaving the left cabinet with the card in front"
+  },
+  {
+    "frame": 320,
+    "type": "param",
+    "name": "variation",
+    "value": "drop"
+  },
+  {
+    "frame": 331,
+    "type": "snapshot",
+    "label": "easter egg: the card slips from the hand and falls, inside the left band"
+  },
+  {
+    "frame": 345,
+    "type": "snapshot",
+    "label": "easter egg: back for the dropped card"
+  },
+  {
+    "frame": 360,
+    "type": "param",
+    "name": "variation",
+    "value": "auto"
+  },
+  {
+    "frame": 596,
+    "type": "snapshot",
+    "label": "right stop: card held over the gap in the row"
+  },
+  {
+    "frame": 619,
+    "type": "snapshot",
+    "label": "right stop: card lowered into the gap"
+  },
+  {
+    "frame": 800,
+    "type": "param",
+    "name": "variation",
+    "value": "stilts"
+  },
+  {
+    "frame": 821,
+    "type": "snapshot",
+    "label": "easter egg: accordion stilts to reach a high drawer at the right"
+  },
+  {
+    "frame": 823,
+    "type": "param",
+    "name": "variation",
+    "value": "hop"
+  },
+  {
+    "frame": 823,
+    "type": "snapshot",
+    "label": "plain version: a wing-flutter hop to the same drawer"
+  },
+  {
+    "frame": 830,
+    "type": "param",
+    "name": "variation",
+    "value": "auto"
+  },
+  {
+    "frame": 990,
+    "type": "snapshot",
+    "label": "climbing down the right ladder with the card tucked in"
+  },
+  {
+    "frame": 1520,
+    "type": "param",
+    "name": "variation",
+    "value": "surprise"
+  },
+  {
+    "frame": 1535,
+    "type": "snapshot",
+    "label": "easter egg: reads the card and is surprised"
+  },
+  {
+    "frame": 1545,
+    "type": "param",
+    "name": "variation",
+    "value": "auto"
+  },
+  {
+    "frame": 1900,
+    "type": "param",
+    "name": "variation",
+    "value": "moth"
+  },
+  {
+    "frame": 1900,
+    "type": "snapshot",
+    "label": "easter egg: a moth circles the lit lamp"
+  },
+  {
+    "frame": 1910,
+    "type": "param",
+    "name": "variation",
+    "value": "auto"
+  },
+  {
+    "frame": 3257,
+    "type": "snapshot",
+    "label": "bottom level: filing a card in the lowest left cabinet"
+  },
+  {
+    "frame": 3999,
+    "type": "snapshot",
+    "label": "last frame: dark again, same as the start"
+  }
+]

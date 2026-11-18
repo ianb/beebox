@@ -1,5 +1,6 @@
 // Server-render every reading arrangement. JavaScript enhances these normal links.
 import { FISHEYE_CSS } from "./fisheye.js";
+import { ROOM_CSS } from "./room.js";
 import { THREADS_CSS } from "./threads.js";
 import { addMenuIcons, brandMark } from "./menu-icons.js";
 import { escapeHtml } from "./render.js";
@@ -121,7 +122,7 @@ export function workspaceShell(workspace: SiteWorkspace, page: SitePage): string
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(pageTitle(page.frontmatter.title))}</title><meta name="description" content="${description}">
-${styles}<style>${FISHEYE_CSS}${THREADS_CSS}</style>
+${styles}<style>${FISHEYE_CSS}${THREADS_CSS}${ROOM_CSS}</style>
 <noscript><style>.fx-b[hidden="until-found"]{display:inline;content-visibility:visible;width:auto;height:auto;overflow:visible}.fx-t{display:none}</style></noscript>
 </head><body class="bbx-box-presentation" data-chrome-theme="${chrome.theme}" data-chrome-stock="${chrome.stock ?? "cream"}" data-site-base="${escapeHtml(workspace.base)}">
 <script src="${escapeHtml(workspace.base)}assets/day-theme.js"></script>

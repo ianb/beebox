@@ -102,6 +102,7 @@ writes the input manifest last (so a partial build never masks staleness).
   or an aside body that refs another aside fails the build. Referenced and
   inline asides render through the one shared `asideTag` helper in `fisheye.ts`,
   so the two forms cannot drift into different markup.
+- `room.ts`, `room-bundle.ts` — lazy file-room page background: loader script/CSS inlined in navigation.js, and the `assets/file-room.js` bundle (canvas-loop).
 - `links.ts` — base-path handling and internal-link resolution.
 - `evaluation-tags.ts` — markup for model-comparison pages: `{% model name vendor %}` pills,
   `{% verdict is="correct|okay|failed" %}` badges, `{% sample title %}` boxes, and

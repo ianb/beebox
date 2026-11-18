@@ -21,6 +21,14 @@
       "types": "./src/browser/mount.ts",
       "default": "./src/browser/mount.ts"
     },
+    "./bundle": {
+      "types": "./src/browser/bundle.ts",
+      "default": "./src/browser/bundle.ts"
+    },
+    "./site-background": {
+      "types": "./src/browser/site-background.ts",
+      "default": "./src/browser/site-background.ts"
+    },
     "./browser/figure.css": "./src/browser/figure.css",
     "./sketch-check": {
       "types": "./src/headless/sketch-types.ts",

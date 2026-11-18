@@ -22,6 +22,9 @@ export interface SourceInput {
   hash: string;
 }
 
+/** canvas-loop/src directories the file-room bundle reads. */
+const ROOM_SOURCE_DIRS = ["site", "browser", "core", "scene", "gpu", "device", "headless"];
+
 export const MANIFEST_NAME = ".inputs.json";
 
 const manifestSchema = z.object({
@@ -85,6 +88,20 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
     if (!entry.isFile() || entry.name.startsWith(".")) continue;
     const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/");
     if (/\.(css|svg|webp|png|jpg)$/.test(rel)) rels.push(rel);
+  }
+
+  // The file-room background bundle (room-bundle.ts) builds from canvas-loop's
+  // sketch and runtime sources; tolerated absent like the theme inputs.
+  // Only for a checkout whose build makes the bundle: the router checks every
+  // worktree with one copy of this file, and an older checkout's build records no such inputs.
+  const canvasSrc = path.join(siteDir, "..", "canvas-loop", "src");
+  const bundlesRoom = await fileExists(path.join(siteDir, "room-bundle.ts"));
+  for (const dir of bundlesRoom ? ROOM_SOURCE_DIRS : []) {
+    for (const entry of await readdirDirents(path.join(canvasSrc, dir))) {
+      if (!entry.isFile() || entry.name.startsWith(".")) continue;
+      const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/");
+      if (/\.(ts|wgsl|css|json)$/.test(rel)) rels.push(rel);
+    }
   }
 
   return rels.toSorted((a, b) => a.localeCompare(b));

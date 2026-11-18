@@ -30,6 +30,7 @@ import { twinCardLinks } from "./twin-links.js";
 import { writeStaticFiles } from "./docs-static.js";
 import { publishedPageBody } from "./page-publication.js";
 import { flattenEvaluationTags } from "./evaluation-tags.js";
+import { buildRoomBundle } from "./room-bundle.js";
 import { flattenQuestionTags } from "./question-tags.js";
 
 const SITE_DIR = import.meta.dirname;
@@ -80,6 +81,8 @@ export interface BuildSiteOptions {
   writeSourceManifest?: boolean;
   /** The agent-docs corpus (dist/docs/, llms.txt sections). Off for box-export dry-runs. */
   buildAgentDocs?: boolean;
+  /** assets/file-room.js, the lazily loaded background animation. Off for box-export dry-runs. */
+  buildRoom?: boolean;
 }
 
 export interface BuildSiteResult {
@@ -254,6 +257,7 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
   await fs.cp(path.join(SITE_DIR, "assets"), path.join(distDir, "assets"), { recursive: true });
   await fs.writeFile(path.join(distDir, "assets/navigation.js"), NAVIGATION_SCRIPT, "utf8");
   await fs.writeFile(path.join(distDir, "assets/day-theme.js"), dayThemeScript(dayRotation()), "utf8");
+  if (options.buildRoom !== false) await buildRoomBundle(distDir);
   await writeThemeAssets({ beeboxDir: BEEBOX_DIR, distDir });
   await copyTalk(distDir);
 

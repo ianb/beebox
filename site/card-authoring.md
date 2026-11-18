@@ -220,3 +220,14 @@ card alone, centered, the way the navigation card itself renders. The front
 page uses it so the prompts sit above the fold in one document. Everything
 else about the page (menu, `next`, links) is unchanged.
 
+
+## Background animation
+
+On single-column pages, in a window at least 1200px wide, a dark hand-drawn
+"file room" animation fills the page behind the card and moves with its
+scroll. It is not shown, and not downloaded, on two-card pages, on narrow
+windows, with reduced motion, or without WebGPU; those pages look as before.
+The page, its styles and its scripts load first; the animation is a separate
+file (`assets/file-room.js`) fetched when the browser is idle, and no page's
+HTML references it. A scene that fails or draws under 20 frames a second
+removes itself.
