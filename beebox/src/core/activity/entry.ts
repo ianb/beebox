@@ -10,12 +10,12 @@ import { truncateTitle } from "../file-summary.js";
 
 /** A line stays under the size the filesystem appends atomically. */
 export const MAX_LINE_BYTES = 4000;
-export const MAX_DETAIL_CHARS = 500;
+const MAX_DETAIL_CHARS = 500;
 
 const idSchema = z.string().min(1).max(200);
 const pathSchema = z.string().min(1).max(300);
 
-export const activityInputSchema = z.object({
+const activityInputSchema = z.object({
   card: pathSchema,
   via: pathSchema.optional(),
   kind: z.enum(ACTIVITY_KINDS),

@@ -14,7 +14,7 @@ import { othersFor, type Watcher } from "./others.js";
 import { callSummary, forwardSignal, joinCall, memberOf, removeMember, setTranscribing, snapshotOf, warnOnThrow, type Call, type Place } from "./call.js";
 
 export type * from "./types.js";
-export { COMPOSING_TTL_MS, CALL_MEMBER_CAP, NO_ANSWER_MS } from "./types.js";
+export { COMPOSING_TTL_MS, NO_ANSWER_MS } from "./types.js";
 export { othersFor, type Watcher } from "./others.js";
 
 interface LiveWatcher extends Watcher {

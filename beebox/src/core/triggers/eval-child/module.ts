@@ -7,7 +7,7 @@
 import { isRecord } from "../../../shared/is-record.js";
 import { TICK_FLOOR_SECONDS, type TriggerModule } from "../types.js";
 
-export const TYPES_IMPORT = "import type { TriggerModule } from \"beebox/triggers\"";
+const TYPES_IMPORT = "import type { TriggerModule } from \"beebox/triggers\"";
 
 export type TriggerModuleCheck = { module: TriggerModule } | { invalid: string };
 

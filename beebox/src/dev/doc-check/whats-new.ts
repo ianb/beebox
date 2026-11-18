@@ -8,7 +8,7 @@
 import { ENTRY_LIKE, MAX_WORDS, realDate } from "./agent-changes.js";
 
 /** New: something to see or use. Changed: works differently. Agent: seen only through what the agent does. */
-export const WHATS_NEW_CATEGORIES = ["New", "Changed", "Agent"] as const;
+const WHATS_NEW_CATEGORIES = ["New", "Changed", "Agent"] as const;
 
 const ENTRY_LINE = /^- (\d{4}-\d{2}-\d{2}) \*\*(\w+)\*\*: (\S.*)$/;
 const FORM = `- YYYY-MM-DD **${WHATS_NEW_CATEGORIES.join("|")}**: text`;

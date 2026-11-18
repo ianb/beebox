@@ -152,7 +152,7 @@ export const HUB_EMAIL_HEADER = "x-bbx-authenticated-email";
 export const HUB_SECRET_HEADER = "x-bbx-hub-secret";
 export const HUB_AUTH_OFF_HEADER = "x-bbx-hub-auth";
 /** The person's display name from the hub's user store, URI-encoded (a header carries ASCII only). */
-export const HUB_NAME_HEADER = "x-bbx-authenticated-name";
+const HUB_NAME_HEADER = "x-bbx-authenticated-name";
 
 /** The hub's name header for a verified identity: none when the name is only the email. */
 export function hubNameHeader(identity: { email: string; name: string | null }): Record<string, string> {

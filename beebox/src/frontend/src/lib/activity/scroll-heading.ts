@@ -9,7 +9,7 @@ import { realTimers, type ActivityTimers } from "./queue";
 import { useActivityLogger } from "./scope";
 
 /** Scrolling counts as settled after this long without movement. */
-export const SETTLE_MS = 1_000;
+const SETTLE_MS = 1_000;
 const HEADING_CAP = 120;
 
 /** A heading's vertical extent, in the same coordinates as the viewport. */

@@ -20,7 +20,7 @@ const HEIF_BRANDS: ReadonlySet<string> = new Set([
 ]);
 
 /** Bytes needed to read the `ftyp` box's major brand. */
-export const HEIF_SNIFF_BYTES = 12;
+const HEIF_SNIFF_BYTES = 12;
 
 /** True when `head` (the file's first bytes) opens a HEIF-family container. */
 export function isHeifHeader(head: Uint8Array): boolean {

@@ -112,7 +112,7 @@ class LibheifStartError extends Error {
   }
 }
 
-export class HeifDecodeError extends Error {
+class HeifDecodeError extends Error {
   constructor(detail: string) {
     super(detail);
     this.name = "HeifDecodeError";

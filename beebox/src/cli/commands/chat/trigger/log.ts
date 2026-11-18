@@ -15,7 +15,7 @@ function clock(at: string): string {
   return Number.isNaN(d.getTime()) ? at : `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
 }
 
-export function renderRecord(record: TraceRecord): string {
+function renderRecord(record: TraceRecord): string {
   switch (record.kind) {
     case "log":
       return `log: ${record.message}`;

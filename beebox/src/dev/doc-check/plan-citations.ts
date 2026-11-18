@@ -16,12 +16,12 @@ import * as ts from "../../lib/typescript/syntax.js";
 import { AGENT_DOCS_PREFIX, isFilePathExempt } from "./scan-scope.js";
 
 /** Code files whose comments are held to the plan-citation form. */
-export const PLAN_CITATION_SOURCE_RE = /\.(?:ts|tsx|mts|js|mjs)$/;
+const PLAN_CITATION_SOURCE_RE = /\.(?:ts|tsx|mts|js|mjs)$/;
 
 const PLAN_FILE_RE = /^beebox\/docs\/(?:plans|implemented-plans|unimplemented-plans)\/[^/]+\.md$/;
 
 /** The plan's name when `rel` is a plan file (README.md is not a plan). */
-export function planNameOf(rel: string): string | undefined {
+function planNameOf(rel: string): string | undefined {
   if (!PLAN_FILE_RE.test(rel) || rel.endsWith("/README.md")) return undefined;
   return path.posix.basename(rel, ".md");
 }
@@ -145,7 +145,7 @@ export function repairPlanCitations({ rel, content, plans, parse }: {
   return { content: out, rewrites: paths.length };
 }
 
-export function describePlanCitationProblem(rel: string, p: PlanCitationProblem): string {
+function describePlanCitationProblem(rel: string, p: PlanCitationProblem): string {
   if (p.kind === "path") return `plan path in a code comment: ${rel}:${String(p.line)} \`${p.token}\` -> \`${p.citation ?? ""}\` (cite plans by name; pnpm doc-check --fix rewrites it)`;
   return `unknown plan citation: ${rel}:${String(p.line)} \`${p.token}\` names no file in beebox/docs/{plans,implemented-plans,unimplemented-plans}/`;
 }

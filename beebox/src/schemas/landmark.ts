@@ -152,7 +152,7 @@ export type LandmarkDestinationData = z.infer<typeof LandmarkDestination>;
  * length cap (boxholder, 2026-11-09). No Markdown-shape rule: the renderer
  * shows inline content only, so a stray block marker renders as its text.
  */
-export const IntentionText = z
+const IntentionText = z
   .string()
   .refine((s) => s.trim() !== "", "an intention must not be blank")
   .refine((s) => !s.includes("\n"), "an intention must be a single line");
@@ -163,7 +163,7 @@ export const IntentionText = z
  * happens in, which arrival opens in place of the landmark. A hand-written
  * bare string means `{ text }`; serialization writes the object form.
  */
-export const LandmarkIntention = z.preprocess(
+const LandmarkIntention = z.preprocess(
   (v) => (typeof v === "string" ? { text: v } : v),
   z.object({ text: IntentionText, ref: z.string().optional() }),
 );
