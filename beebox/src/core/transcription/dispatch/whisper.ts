@@ -20,7 +20,7 @@ import type {
   TranscriptionError,
   TranscriptionResult,
 } from "./core.js";
-import { truncateUpstreamBody } from "../upstream-body.js";
+import { readUpstreamErrorBody, truncateUpstreamBody } from "../upstream-body.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -199,18 +199,10 @@ const whisperErrorBodySchema = z.object({
 });
 
 async function parseErrorResponse(response: Response): Promise<TranscriptionError> {
-  let errorDetails: string;
-  let errorCode: string | undefined;
-
-  try {
-    const raw: unknown = await response.json();
-    const errorJson = whisperErrorBodySchema.safeParse(raw).data;
-    errorDetails = errorJson?.error?.message ?? JSON.stringify(raw);
-    errorCode = errorJson?.error?.code;
-  } catch (e) {
-    console.warn("Whisper error response was not JSON, falling back to text body:", e);
-    errorDetails = await response.text();
-  }
+  const { text, json } = await readUpstreamErrorBody(response);
+  const errorJson = whisperErrorBodySchema.safeParse(json).data;
+  const errorDetails = errorJson?.error?.message ?? text;
+  const errorCode = errorJson?.error?.code;
 
   // Determine if error is permanent
   const permanent = isPermanentError(response.status, errorCode);

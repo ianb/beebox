@@ -18,6 +18,7 @@ import type {
 import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../../deepgram-key.js";
 import { isAuthRejection, markSecretVerificationFailed } from "../../secrets/probe-registry.js";
 import { errorMessage } from "../../../shared/error-guards.js";
+import { readUpstreamErrorBody } from "../upstream-body.js";
 
 const DEEPGRAM_ENDPOINT = "https://api.deepgram.com/v1/listen";
 const DEEPGRAM_MODEL = "nova-3";
@@ -206,17 +207,10 @@ const deepgramErrorBodySchema = z.object({
 });
 
 async function parseErrorResponse(response: Response): Promise<DeepgramApiError> {
-  let errorDetails: string;
-  let errorCode: string | undefined;
-  try {
-    const raw: unknown = await response.json();
-    const errorJson = deepgramErrorBodySchema.safeParse(raw).data;
-    errorDetails =
-      errorJson?.err_msg ?? errorJson?.error ?? errorJson?.message ?? JSON.stringify(raw);
-    errorCode = errorJson?.err_code;
-  } catch (_e) {
-    errorDetails = await response.text();
-  }
+  const { text, json } = await readUpstreamErrorBody(response);
+  const errorJson = deepgramErrorBodySchema.safeParse(json).data;
+  const errorDetails = errorJson?.err_msg ?? errorJson?.error ?? errorJson?.message ?? text;
+  const errorCode = errorJson?.err_code;
 
   const permanent = isPermanentError(response.status, errorCode);
 

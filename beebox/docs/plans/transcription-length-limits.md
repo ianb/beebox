@@ -39,9 +39,10 @@ with an inline `service === "voxtral" ? … : 300`. The developer ruled this out
 
 Chosen design, one track:
 
-- `HQ_SERVICE_LENGTH_LIMITS` in `shared/transcription-services.ts`: for each
-  HQ service, the list of limits on the routes it can take. A limit is a
-  duration or an upload size, with its route and source.
+- In `shared/transcription-services.ts`, the HQ service list becomes a list
+  of definitions, `{ id, lengthLimits }`, and `HQ_TRANSCRIPTION_SERVICES` is
+  derived from it. `lengthLimits` lists the limits on the routes the service
+  can take: a duration or an upload size, each with its route and source.
 - `hqPieceSeconds(service)` in `hq-job/pieces.ts` converts each limit to
   seconds of 16 kHz mono WAV and takes the smallest. The job starts there.
 - The halving retry stays. It now skips steps that would resend the same
@@ -62,9 +63,9 @@ Estimate: source and tests about 250 changed lines; authored docs about 20
   from it; no Voxtral special case; keep halving as the safety net; each entry
   cites a doc URL or dated measurement; express the limit that binds, by route
   and as bytes or duration; check upload time and request timeout.
-- `docs/engineering-principles.md` #2 (exhaustiveness): the limits object
-  `satisfies Record<HqTranscriptionService, …>`, so a missing or extra service
-  fails compilation.
+- `docs/engineering-principles.md` #2 (exhaustiveness): each service is
+  defined once, with a non-empty `lengthLimits` tuple, so a service without
+  limits fails compilation.
 - #8 (one way): one table of limits; one error-body reader for the HQ arms;
   the job's halving logic is reused.
 - #4 (resilient AND never silent): a capacity 429 keeps the existing
@@ -73,14 +74,20 @@ Estimate: source and tests about 250 changed lines; authored docs about 20
   before planning (see NOT in scope).
 
 **Registry shape.** The handoff asks to reuse the service registry rather
-than add a parallel table. The registry is the `as const` array
-`HQ_TRANSCRIPTION_SERVICES`, which `z.enum` and the frontend picker consume.
-Deriving that array from an object's keys needs a type assertion, which the
-lint preset forbids (`personal-vibe-check/preset/enabled-rules.ts:40`). The
-limits therefore sit directly under the array in the same file, typed
-`satisfies Record<HqTranscriptionService, …>`. The compiler rejects a
-service with no limits and a limit for a service that does not exist, so
-the two cannot drift.
+than add a parallel table. `HQ_TRANSCRIPTION_SERVICES` becomes
+`HQ_SERVICE_DEFINITIONS.map((d) => d.id)`, and the type comes from the
+definitions' `id`. Its consumers (`z.enum` at `capture/staging-schema.ts:162`,
+`dispatch/core.ts:170`, `trpc/routers/transcription.ts:22`; the CLI's `Set`
+and `join` at `cli/commands/chat/audio.ts:49,208,219`; `filter` in
+`test/core/transcription/dispatch/openrouter.test.ts:27,35`) accept a
+derived array; Zod 4.4.3's `z.enum` takes any readonly string array. Deriving
+from `Object.keys` would need a type assertion, which the lint preset forbids
+(`personal-vibe-check/preset/enabled-rules.ts:40`).
+
+**Route policy.** The Whisper family takes direct OpenAI or OpenRouter per
+call. Its piece length is the smaller of the two routes' limits (300 s), by
+policy: non-diarized parts join without markers, so the shorter piece costs a
+person nothing, and planning stays independent of key lookup.
 
 ## What already exists
 
@@ -120,10 +127,16 @@ the two cannot drift.
 
 ## Prior art (external)
 
-- Mistral audio overview, https://docs.mistral.ai/studio-api/audio/overview —
-  Voxtral Mini Transcribe V2 accepts recordings "up to 3 hours" per request,
-  with diarization. Adopted as one Voxtral entry; the measurement adds a
-  lower one.
+- Mistral known limitations,
+  https://docs.mistral.ai/resources/known-limitations#audio-transcription —
+  "Maximum audio duration: 60 minutes", "Maximum file size: 500 MB". The page
+  names no model. Adopted as the Voxtral duration and size entries.
+- Mistral legacy overview, https://docs.mistral.ai/studio/audio/deprecated/overview —
+  Voxtral Mini Transcribe 2: "recordings up to 3 hours per request". The two
+  pages disagree; the measurement below sides with 60 minutes. Evaluated,
+  cited in the duration entry's source.
+- The current Voxtral 3 pages state no duration or size limit
+  (https://docs.mistral.ai/studio/audio/specs-and-limits/limits).
 - OpenAI speech-to-text guide,
   https://developers.openai.com/api/docs/guides/speech-to-text — "File
   uploads are currently limited to 25 MB" (the Audio API FAQ states 25 MiB for
@@ -176,7 +189,8 @@ loop (one sentence 98 times, timestamps past the end of the audio). The same
 audio cut to 300 s looped the same way, so the loop comes from the repeated
 content, not from length.
 
-Conclusion: Voxtral's limit is 60 minutes. Capacity refusals appeared at
+Conclusion: Voxtral's limit is 60 minutes, which is also Mistral's
+documented general limit. Capacity refusals appeared at
 every length from 30 minutes up and cleared on a later try. At 175 minutes
 every request was refused. A 429 is `transient`, so a 3-hour piece would
 retry until the 24-hour bound. At 60 minutes the retry path recovers. The
@@ -211,23 +225,32 @@ value is provisional, and its `source` says so.
     export type HqLengthLimit =
       | { kind: "seconds"; maxSeconds: number; route: string; source: string }
       | { kind: "file-bytes"; maxFileBytes: number; route: string; source: string };
-    export const HQ_SERVICE_LENGTH_LIMITS = { … } satisfies Record<HqTranscriptionService, readonly HqLengthLimit[]>;
+    export const HQ_SERVICE_DEFINITIONS = [
+      { id: "whisper", lengthLimits: [OPENAI_DIRECT_UPLOAD, OPENROUTER_JSON_BODY] },
+      …
+    ] as const satisfies readonly { id: string; lengthLimits: readonly [HqLengthLimit, ...HqLengthLimit[]] }[];
+    export type HqTranscriptionService = (typeof HQ_SERVICE_DEFINITIONS)[number]["id"];
+    export const HQ_TRANSCRIPTION_SERVICES = HQ_SERVICE_DEFINITIONS.map((d) => d.id);
     ```
-    Shared constants for the OpenRouter JSON limit (300 s), the OpenAI direct
-    upload limit (25,000,000 bytes), the Mistral documented limit (10,800 s),
-    the Mistral measured limit (3,600 s), and the MAI diarization ceiling
-    (900 s). Whisper family: OpenAI direct and OpenRouter. `mai`: OpenRouter.
+    Shared constants for the OpenRouter JSON limit (300 s, policy under the
+    measured `mai-diarized` JSON ceiling), the OpenAI direct upload limit
+    (25,000,000 bytes), Mistral's duration limit (3,600 s, documented and
+    measured with `voxtral-mini-latest` in all three modes), Mistral's file
+    size limit (500,000,000 bytes), and the MAI diarization ceiling (900 s).
+    Whisper family: OpenAI direct and OpenRouter. `mai`: OpenRouter.
     `mai-diarized`: OpenRouter and the MAI ceiling. Both Voxtral services:
-    Mistral documented and Mistral measured.
+    Mistral duration and Mistral size.
   - `hq-job/pieces.ts`: remove `HQ_PIECE_SECONDS`. Add
     `hqPieceSeconds(service)`: a `seconds` limit is `maxSeconds`; a
     `file-bytes` limit is `floor((maxFileBytes - WAV_HEADER_BYTES) / PCM_BYTES_PER_SECOND)`.
     Result: Whisper 300, MAI 300, Voxtral 3600.
-  - `hq-job/pieces.ts`: `shorterPieceSeconds(current, rejectedSeconds)`
-    halves `current` with `nextPieceSeconds` until the result is below
-    `rejectedSeconds` (the rejected piece's actual length), or returns `null`
-    at the floor. A 600 s recording at 3600 goes to 450, not 1800 and 900;
-    a 200 s recording at 300 still goes to 150.
+  - `hq-job/pieces.ts`: `nextPieceSeconds` halves, and when the half falls
+    below the floor it returns the floor once (225 → 150), then `null` at the
+    floor. From 300 the sequence is unchanged (300 → 150 → null).
+    `shorterPieceSeconds(current, rejectedSeconds)` repeats `nextPieceSeconds`
+    until the result is below `rejectedSeconds` (the rejected piece's actual
+    length), or returns `null`. A 600 s recording at 3600 goes to 450, not
+    1800 and 900; a 200 s recording at 300 still goes to 150.
   - `hq-job/core.ts`: start at `hqPieceSeconds(hqRequest.service)`; on resume,
     `Math.min(stored, hqPieceSeconds(service))`; on `piece-too-long`, call
     `shorterPieceSeconds(pieceSeconds, pieceBytes.length / PCM_BYTES_PER_SECOND)`.
@@ -235,12 +258,13 @@ value is provisional, and its `source` says so.
     and returns `{ text, json }`, `json` being the parsed value or `undefined`.
     The four parsers above use it.
   - `voxtral/core.ts`: `timeout: voxtralTimeoutMs(body.length)`,
-    `120_000 + 1_000 ms per 1,000,000 bytes` (115 MB → 235 s). This applies
-    to every caller of the arm. A larger upload gets more time, and an upload
-    under 1 MB keeps today's 120 s.
+    `120_000 + 2_000 ms per 1,000,000 bytes` (115 MB → 350 s, which leaves
+    about 2 minutes for processing after a 4 Mbps upload). This applies
+    to every caller of the arm. A larger upload gets more time; a small one
+    keeps about 120 s (122 s at 0.5 MB, since partial MB round up).
   - Correct the comments that call 300 s the job's universal piece length
     (`dispatch/openrouter.ts:41-43`, `hq-job/pieces.ts:1-12`).
-- **Vocabulary lock-ins.** `HQ_SERVICE_LENGTH_LIMITS`, `HqLengthLimit`
+- **Vocabulary lock-ins.** `HQ_SERVICE_DEFINITIONS`, `lengthLimits`, `HqLengthLimit`
   (`kind: "seconds" | "file-bytes"`), `hqPieceSeconds`, `shorterPieceSeconds`,
   `readUpstreamErrorBody`.
 - **Depends on.**
@@ -285,10 +309,10 @@ none
 | A 60 min Voxtral piece gets 429 `backend_out_of_capacity` | new job test (429 then success) | transient retry with backoff | clear: status shows retrying |
 | Mistral refuses 60 min pieces for hours | no | transient retries until the 24 h bound, then `expired`; the recording stays for `bbx chat retranscribe` | clear, slow. Each refusal returned no `usage`, so probably unbilled (UNVERIFIED) |
 | A plain-text 413 loses its status | new parser test | `readUpstreamErrorBody` | clear after fix |
-| A service is added without limits | compile error | `satisfies Record<…>` | clear |
+| A service is added without limits | compile error | non-empty `lengthLimits` tuple | clear |
 | Voxtral model changes (Voxtral 3 issue) and limits differ | no | 413/408 halve; 429 retries | the `source` line names model and date |
 | A limit is lowered by a deploy while a job is mid-retry | new job test | resume takes the smaller | clear |
-| Memory: a 2-hour recording holds 230 MB of PCM plus a 115 MB WAV copy and a 115 MB multipart copy (~460 MB before HTTP buffers) | no | box `MemoryHigh=2G` throttles | logged by systemd |
+| Memory: a 2-hour recording holds 230 MB of PCM; building one 60 min request adds a WAV and a multipart copy. Measured: RSS 311 MB → 530 MB in a bare process | no | box `MemoryHigh=2G` throttles | logged by systemd |
 | Slow uplink: a 115 MB upload exceeds the timeout | `voxtralTimeoutMs` test | 235 s, then transient retry | clear |
 
 No critical gap. Accepted risks:
@@ -296,8 +320,13 @@ No critical gap. Accepted risks:
 - Persistent refusal. A capacity refusal recovered on a later try in every
   case measured at ≤ 90 min, and 24-hour retry is existing behavior.
 - Memory. The full-PCM buffer predates this plan. The two extra copies are
-  bounded at 60 minutes (~230 MB), under the 2 GB box ceiling. Streaming the
+  bounded at 60 minutes (~220 MB measured), under the 2 GB box ceiling. Two
+  long recordings transcribing at once would double that; streaming the
   upload is NOT in scope.
+- Composer wait. A slow box uplink (4 Mbps) needs about 230 s to upload an
+  hour of WAV. That total is the same in one piece or twelve, so long pieces
+  do not change whether the composer's 5-minute wait
+  (`frontend/src/lib/audio/hq-wait.ts`) is met.
 
 ## Agent-flow / user-flow edge cases
 
@@ -367,15 +396,17 @@ Skip: infrastructure only. No agent-facing concept changes.
 
 - `pieces.test.ts`: `hqPieceSeconds` for every service (one whole-value
   check over the list: whisper 300, mai 300, voxtral 3600); `planPieces` at
-  3600 s exactly and one sample over; `shorterPieceSeconds` for 3600/600 →
-  450, 300/200 → 150, 300/120 → null.
+  3600 s exactly and one sample over; `nextPieceSeconds` 225 → 150 and
+  150 → null; `shorterPieceSeconds` for 3600/600 → 450, 300/200 → 150,
+  300/120 → null.
 - `hq-job.test.ts`, with a transcribe seam that records the service and WAV
   byte length of each call:
   - a 600 s `voxtral-diarized` recording sends one piece and joins without a
     part marker; the same recording on `mai-diarized` sends two;
   - a 413 on that single 600 s Voxtral piece sends 450 s pieces next;
   - a resumed `retrying` state with `pieceSeconds: 7200` on Voxtral resumes at
-    3600.
+    3600, and one with `pieceSeconds: 300` keeps 300;
+  - a 429 on a Voxtral piece retries the same piece and then succeeds.
 - `upstream-body` test: a plain-text 413 `Response` through the Voxtral
   parser yields an error with `status: 413` and the text as `body`.
 - `voxtralTimeoutMs` at 0 and 115,200,044 bytes.

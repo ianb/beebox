@@ -37,9 +37,11 @@
  * ceiling somewhere between those, not "no cap" — the earlier claim that only
  * the documented 25 MB multipart cap applied was wrong (the incident this
  * measurement traces to: `plan:resilient-voice-recording`, "The
- * incident this plan answers"). The HQ job (`core/voice-recording/hq-job.ts`)
- * keeps every piece it sends at or under `HQ_PIECE_SECONDS` (300 s, ~9.6 MB
- * WAV / ~12.8 MB JSON) specifically to stay under this ceiling. Multipart
+ * incident this plan answers"). Every service that can route here carries a
+ * 300 s limit (~9.6 MB WAV / ~12.8 MB JSON) in its `lengthLimits`
+ * (`shared/transcription-services.ts`), and the HQ job
+ * (`core/voice-recording/hq-job/core.ts`) cuts pieces to it, to stay under
+ * this ceiling. Multipart
  * would allow a longer piece under its documented 25 MB cap, but that's
  * unmeasured here (including whether the Azure diarization passthrough
  * survives a multipart body) — NOT in scope.
@@ -57,7 +59,7 @@ import { isRecord } from "../../../shared/is-record.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { OPENROUTER_BASE_URL } from "../../openrouter.js";
 import { buildDiarizedText, joinSegmentTexts, repairMissingSentenceSpaces } from "../voxtral-text.js";
-import { truncateUpstreamBody } from "../upstream-body.js";
+import { readUpstreamErrorBody, truncateUpstreamBody } from "../upstream-body.js";
 import type {
   DetailedTranscriptionResult,
   TranscribeAudioParams,
@@ -125,14 +127,7 @@ function isPermanentOpenRouterError(status: number): boolean {
 
 async function parseOpenRouterErrorResponse(error: HTTPError): Promise<OpenRouterApiError> {
   const { response } = error;
-  let details: string;
-  try {
-    const raw: unknown = await response.json();
-    details = JSON.stringify(raw);
-  } catch (e) {
-    console.warn("[transcription/openrouter] error response was not JSON, falling back to text body:", e);
-    details = await response.text();
-  }
+  const { text: details } = await readUpstreamErrorBody(response);
   const permanent = isPermanentOpenRouterError(response.status);
   return new OpenRouterApiError(
     { status: response.status, statusText: response.statusText, details },
