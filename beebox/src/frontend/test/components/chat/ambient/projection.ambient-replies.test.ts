@@ -1,7 +1,7 @@
 // # Ambient reply identity and attention
 //
 // A completion event is a refresh signal, not answer content. Only a complete
-// persisted assistant group supplies a stable preview. Bounded tails must not
+// persisted assistant group supplies callouts. Bounded tails must not
 // interpret an arbitrary suffix as a whole callout.
 
 import { test } from "tap";
@@ -18,22 +18,19 @@ const answer = entry({ uuid: "a1", type: "assistant", text: '<callout context="C
 void test("line 17", async (t) => {
   t.check(projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: false }), {
     identity: "kitchen:a1",
-    complete: true,
-    earlier: false,
     callouts: [{ context: "Comparison", body: "See [report](view:report.doc.card)" }],
-    preview: "",
   });
 
   // The same transcript while the run is still going is not a reply yet:
-  t.check(projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: true }), { identity: null, complete: false, earlier: false, callouts: [], preview: "" });
+  t.check(projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: true }), { identity: null, callouts: [] });
 
   // A bounded tail that cut the question: complete, but no identity and no callouts.
-  t.check(projectAmbientReply("kitchen", { entries: [answer], total: 20, running: false }), { identity: null, complete: true, earlier: true, callouts: [], preview: "" });
+  t.check(projectAmbientReply("kitchen", { entries: [answer], total: 20, running: false }), { identity: null, callouts: [] });
 
   // A legacy assistant entry with no uuid has nothing stable to name:
-  t.check(projectAmbientReply("kitchen", { entries: [question, entry({ uuid: "", type: "assistant", text: "Legacy answer" })], total: 2, running: false }), { identity: null, complete: true, earlier: true, callouts: [], preview: "" });
+  t.check(projectAmbientReply("kitchen", { entries: [question, entry({ uuid: "", type: "assistant", text: "Legacy answer" })], total: 2, running: false }), { identity: null, callouts: [] });
 
-  t.check(projectAmbientReply("kitchen", { entries: [question], total: 1, running: false }), { identity: null, complete: false, earlier: false, callouts: [], preview: "" });
+  t.check(projectAmbientReply("kitchen", { entries: [question], total: 1, running: false }), { identity: null, callouts: [] });
 });
 
 // Old history establishes a baseline. A new reply needs attention; another new
@@ -83,38 +80,20 @@ void test("A route may show the retained previous transcript while a new landmar
   t.check(canAcknowledgeAmbientReply(false, "ready"), false);
 });
 
-// The selected conversation gets an ambient panel while its transcript is off screen
-// (focus layout, cards in both panes), and none while the transcript shows.
-void test("The selected conversation gets an ambient panel only while its transcript is off screen.", async (t) => {
-  const { ambientPanelHidden } = await import("../../../../src/components/chat/ambient/projection.js");
-  const reply = { attention: true, busy: false, error: false };
-  t.check(ambientPanelHidden({ selected: true, transcriptVisible: false, ...reply }), false);
-  t.check(ambientPanelHidden({ selected: true, transcriptVisible: true, ...reply }), true);
-  // A running turn shows the panel too, so a send made while the transcript is hidden is acknowledged:
-  t.check(ambientPanelHidden({ selected: true, transcriptVisible: false, attention: false, busy: true, error: false }), false);
-  // Another conversation is unaffected by transcript visibility; with nothing to report it stays hidden:
-  t.check(ambientPanelHidden({ selected: false, transcriptVisible: true, ...reply }), false);
-  t.check(ambientPanelHidden({ selected: true, transcriptVisible: false, attention: false, busy: false, error: false }), true);
+// The selected conversation's callouts show above the composer only while its
+// transcript is off screen (focus layout, cards in both panes).
+void test("The selected conversation's callouts show only while its transcript is off screen.", async (t) => {
+  const { ambientCalloutsHidden } = await import("../../../../src/components/chat/ambient/projection.js");
+  t.check(ambientCalloutsHidden({ selected: true, transcriptVisible: false, attention: true }), false);
+  t.check(ambientCalloutsHidden({ selected: true, transcriptVisible: true, attention: true }), true);
+  // Another conversation is unaffected by transcript visibility:
+  t.check(ambientCalloutsHidden({ selected: false, transcriptVisible: true, attention: true }), false);
+  // A seen or dismissed reply shows nothing:
+  t.check(ambientCalloutsHidden({ selected: false, transcriptVisible: false, attention: false }), true);
 });
 
-// A plain-text reply (no callout or ack) is previewed as its own persisted text,
-// so a selected chat with its transcript hidden shows what the agent said.
-void test("A plain-text reply is previewed as its own text.", async (t) => {
-  const ok = entry({ uuid: "a2", type: "assistant", text: "Ok." });
-  t.check(projectAmbientReply("chat", { entries: [question, ok], total: 2, running: false }).preview, "Ok.");
-  t.check(projectAmbientReply("chat", { entries: [question, ok], total: 2, running: true }).preview, "");
-  t.check(projectAmbientReply("chat", { entries: [question, answer], total: 2, running: false }).preview, "");
-});
-
-// A reply that edited a card carries an ack; the preview drops the ack and keeps
-// the text, so the panel never shows a lone ack icon in place of the reply.
-void test("A reply with an ack is previewed as its text without the ack.", async (t) => {
+// A reply without callouts has nothing to show above the composer; its text and acks never appear there.
+void test("A reply without callouts has no callouts.", async (t) => {
   const edited = entry({ uuid: "a3", type: "assistant", text: 'Added two categories.\n<ack kind="edit" target="Trivia.landmark.card"/>' });
-  t.check(projectAmbientReply("chat", { entries: [question, edited], total: 2, running: false }), {
-    identity: "chat:a3",
-    complete: true,
-    earlier: false,
-    callouts: [],
-    preview: "Added two categories.",
-  });
+  t.check(projectAmbientReply("chat", { entries: [question, edited], total: 2, running: false }), { identity: "chat:a3", callouts: [] });
 });

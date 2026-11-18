@@ -1,10 +1,9 @@
 import { systemCardAttentionRef } from "../../../../lib/system-card-navigation";
 import { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
-import { explicitConversationHistoryState } from "../../workspace/history";
 import { canAcknowledgeAmbientReply } from "../../ambient/projection";
 /** The single composer/runtime owner, kept mounted while the routed card changes. */
 import { useEffect, useRef, useState, useMemo } from "react";
-import { useParams, useSearch, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useParams, useSearch, useRouterState } from "@tanstack/react-router";
 import { InteractiveChat } from "../InteractiveChat/shell";
 import { useEmissionStoreInstance } from "../../input-store";
 import { isNativeShell, postNativeMessage } from "../../native-post";
@@ -13,7 +12,6 @@ import { useConversationRoute } from "./use-conversation-route";
 import { readTrackedSessions, writeTrackedSessions } from "../../ambient/tracked-sessions";
 import { AmbientReplies, type AmbientSession } from "../../ambient/AmbientReplies/view";
 import { useViewNavigate } from "../../../../hooks/useViewNavigate";
-import { href, toSearch } from "../../../../lib/routing";
 import { Button } from "../../../ui/Button";
 import { Text } from "../../../ui/Text";
 import { ChatNotificationBanner } from "../../../notifications/ChatNotificationBanner";
@@ -48,22 +46,13 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
   const sessionId = target?.kind === "session" ? target.sessionId : null;
   const sessionLabel = conversation.rendered?.label ?? "Conversation";
   const inspect = useViewNavigate();
-  const navigate = useNavigate();
-  function handleOpenConversation(id: string) {
-    if (route.chatPage) {
-      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: id }), state: explicitConversationHistoryState({}) });
-      return;
-    }
-    void conversation.select({ kind: "session", sessionId: id });
-    if (workspace) workspace.dispatch({ type: "showChat", pane: workspace.state.lastCardPane, viewport: workspace.mobile ? "mobile" : "desktop" });
-  }
   const [sessions, setSessions] = useState<AmbientSession[]>(() => readTrackedSessions(storageScope));
   const publicationRevision = useRef(0);
   usePageTitle(route.chatPage ? sessionLabel : null);
   useEffect(() => {
     if (!sessionId) return;
-    setSessions((old) => [...old.filter((session) => session.sessionId !== sessionId), { sessionId, label: sessionLabel }]);
-  }, [sessionId, sessionLabel]);
+    setSessions((old) => [...old.filter((session) => session.sessionId !== sessionId), { sessionId }]);
+  }, [sessionId]);
   useEffect(() => { writeTrackedSessions(storageScope, sessions); }, [storageScope, sessions]);
   useEffect(() => {
     if (!routeReady || (!workspace.ready && conversation.selection.kind === "ready")) return;
@@ -90,10 +79,9 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
     openCaptureOnMount={search.capture === "1" && !usesNativeComposer}
     transcriptVisible={transcriptVisible}
     selectionNotice={<>{notice}<ChatNotificationBanner />{workspace.notice ? <Text as="div" size="sm" tone="muted">{workspace.notice}</Text> : null}</>}
-    // Keep reply observation alive, but show its panels only away from the transcript.
+    // Keep reply observation alive, but show callouts only away from the transcript.
     ambientRegion={<div hidden={transcriptVisible}><AmbientReplies storageScope={storageScope} boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
-      transcriptVisible={canAcknowledgeAmbientReply(transcriptVisible, conversation.selection.kind)} onInspectCard={inspect}
-      onOpenConversation={handleOpenConversation} /></div>}
+      transcriptVisible={canAcknowledgeAmbientReply(transcriptVisible, conversation.selection.kind)} onInspectCard={inspect} /></div>}
   />;
 }
 
