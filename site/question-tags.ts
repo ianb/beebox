@@ -41,7 +41,7 @@ export const questionTags = {
 
 /** The machine-facing twin keeps each card's kind as a line of text above it. */
 export function flattenQuestionTags(markdown: string): string {
-  return markdown.replace(/{%\s*question\s+state="([^"]*)"\s*%}/g, (_m, state: string) =>
+  return markdown.replace(/{%\s*question\s[^%]*?\bstate="([^"]*)"[^%]*%}/g, (_m, state: string) =>
     isState(state) ? `_${QUESTION_STATES[state]}:_\n` : "",
   );
 }

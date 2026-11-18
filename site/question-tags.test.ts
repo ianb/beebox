@@ -26,4 +26,6 @@ test("the machine-facing twin says which kind each question is", () => {
   assert.match(twin, /_Bee Box has an answer:_\n\n?\*\*Does it keep history\?\*\* Yes\./);
   assert.match(twin, /_Still open:_\n\n?\*\*Does it feel like home\?\*\*/);
   assert.doesNotMatch(twin, /{%/);
+  // An id or other attribute beside the state must not cost the twin its label.
+  assert.match(twinMarkdown('{% questions %}\n{% question #q state="open" %}\n**Q?**\n{% /question %}\n{% /questions %}', { nuggets: [], asides: new Map() }), /_Still open:_/);
 });
