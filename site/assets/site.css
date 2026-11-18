@@ -31,6 +31,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .site-menu-panel .menu-label, .site-menu-panel h2 { padding: 8px 12px 4px; margin: 0; font-size: 12px; font-weight: 400; text-transform: uppercase; color: #8b7358; }
 #site-workspace { display: grid; grid-template-columns: 1fr 1fr; height: calc(100dvh - 60px); max-width: 1500px; margin: auto; }
 #site-workspace.single { grid-template-columns: 1fr; max-width: 820px; }
+/* A single card's pane spans the window, so the wheel scrolls the card from anywhere on the page, not only over the card. */
+@media (min-width: 701px) {
+  #site-workspace.single { max-width: none; }
+  #site-workspace.single .pane { padding-inline: max(24px, calc((100% - 772px) / 2)); }
+}
 .pane { min-width: 0; overflow: auto; padding: 16px 24px 48px; scrollbar-gutter: stable; }
 .pane + .pane { border-left: 1px solid #c8c1b7; }
 .pane-label { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-bottom: 8px; font-size: 12px; color: #62584c; }
