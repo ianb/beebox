@@ -5,6 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **`./site-background` and `./bundle`.** `mountFileRoom()` puts the file-room
+  sketch behind a page as a fixed canvas that follows the reading pane's
+  scroll, and removes itself if it fails or draws under 20 fps. `bundleEntry`
+  is exported for builds that ship a bundle as a static asset.
 - **Figures sleep in hidden tabs.** A figure whose tab is hidden sleeps as
   one scrolled off screen does: its loop stops at once and its GPU
   resources are freed after two seconds. It wakes when the tab is shown and

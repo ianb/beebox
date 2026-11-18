@@ -675,6 +675,9 @@ importers:
 
   site:
     dependencies:
+      '@ianbicking/canvas-loop':
+        specifier: workspace:*
+        version: link:../canvas-loop
       '@markdoc/markdoc':
         specifier: ^0.5.7
         version: 0.5.7(@types/react@18.3.29)(react@18.3.1)

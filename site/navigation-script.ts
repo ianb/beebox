@@ -1,5 +1,6 @@
 // Browser enhancement shipped as a static asset; HTML remains independently readable.
 import { FISHEYE_SCRIPT } from "./fisheye.js";
+import { ROOM_SCRIPT } from "./room.js";
 import { THREADS_SCRIPT } from "./threads.js";
 
 export const NAVIGATION_SCRIPT = `
@@ -37,6 +38,7 @@ export const NAVIGATION_SCRIPT = `
   }
 
 ${THREADS_SCRIPT}
+${ROOM_SCRIPT}
   function initializeContent() {
     ${FISHEYE_SCRIPT}
     for (const surface of document.querySelectorAll('.bbx-card-surface')) {
@@ -113,6 +115,7 @@ ${THREADS_SCRIPT}
       if (normalize(new URL(link.href).pathname) === normalize(new URL(current, location.href).pathname)) link.setAttribute('aria-current', 'page');
     }
     runThreads();
+    runRoom();
   }
 
   function restore(params) {

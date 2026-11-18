@@ -15,6 +15,7 @@
     "coverage": "tsx story/coverage.ts"
   },
   "dependencies": {
+    "@ianbicking/canvas-loop": "workspace:*",
     "@markdoc/markdoc": "^0.5.7",
     "yaml": "^2.7.0",
     "zod": "^4.4.3"
