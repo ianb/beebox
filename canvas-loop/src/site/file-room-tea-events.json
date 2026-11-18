@@ -1,0 +1,7 @@
+[
+  { "frame": 0, "type": "snapshot", "label": "start: lamps off, bee not yet in" },
+  { "frame": 555, "type": "snapshot", "label": "bee at the second cabinet, drawer open, its lamp lit" },
+  { "frame": 1050, "type": "snapshot", "label": "mid-flight between cabinets" },
+  { "frame": 2205, "type": "snapshot", "label": "right side: drawer open at the last cabinet" },
+  { "frame": 3599, "type": "snapshot", "label": "last frame: same as the start" }
+]
