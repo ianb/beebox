@@ -5,7 +5,7 @@ authorship:
   people:
     - name: Ian Bicking
       role: author
-      contribution: Wrote the description and the list under it for this page, and the questions and their notes as a lightning talk on Bee Box; set the direction for the front page and the intent of its prompts.
+      contribution: Wrote the description, the list under it, and the list of what he uses it for, for this page, and the questions and their notes as a lightning talk on Bee Box; set the direction for the front page and the intent of its prompts.
   ai:
     transcription: Transcribed the talk from Ian's dry runs and earlier notes; some items are trimmed to fit a slide.
     drafting: Drafted the agent prompts, the link labels, and the two labels on the question cards. None of the other prose.
@@ -43,6 +43,17 @@ on top of a subscription like Claude Code or Codex.
   (running locally in a VM). Most useful is running on a VPS. Other techniques
   are a bit wonky.
 - It is early: self-hosted, one maintainer, changing fast.
+
+## Stuff I personally use it for
+
+(that therefore I think it is perhaps good or interesting or something)
+
+1. Home inventory management, collections, etc.
+2. Research and updating content
+3. Family archive
+4. Education experiments (I'm not claiming it's good for education, but I
+   think it *is* good for experimenting in education!)
+5. Collecting and assembling writing ideas
 
 {% agent-prompt title="Learn about Bee Box" id="learn-with-your-agent" %}
 ```
