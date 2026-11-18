@@ -8,7 +8,7 @@
 // navigation.js and runs after every page swap.
 
 export const ROOM_CSS = `
-canvas.site-room { position: fixed; left: 0; top: 0; width: 100vw; height: 93.75vw; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 1.2s; will-change: transform; background: #060608; }
+canvas.site-room { position: fixed; left: 0; top: 0; width: 100vw; height: 93.75vw; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 1.2s; will-change: transform; background: #060608; box-shadow: 0 100vh 0 #060608; }
 canvas.site-room.on { opacity: 1; }
 body[data-site-room] #site-workspace { position: relative; z-index: 1; }
 body[data-site-room] #site-header.bbx-app-nav { position: relative; z-index: 2; }
