@@ -37,9 +37,14 @@ export const LEVELS = Math.floor((HEIGHT - 520) / LEVEL_GAP) + 1;
 export const levelFloor = (level: number): number => LEVEL_TOP + level * LEVEL_GAP;
 /** The clerk's feet stand this far below the cabinets' base, on the platform's front edge. */
 export const GROUND_OFF = 13;
-export const LADDER_X = { left: 100, right: 1500 } as const;
-/** The middle of the canvas is covered by the page card; the clerk hurries through it. */
-export const MIDDLE = { from: 620, to: 980 } as const;
+/**
+ * Everything that matters (cabinets, lamps, the clerk at work, ladders) stays within
+ * the outer 240 pixels of the canvas, which stay visible in the narrowest window; the
+ * page card covers the middle, which the clerk crosses at a run.
+ */
+export const BAND = 240;
+export const LADDER_X = { left: 216, right: 1384 } as const;
+export const MIDDLE = { from: BAND, to: WIDTH - BAND } as const;
 
 // ---- cabinets --------------------------------------------------------------------------
 
@@ -50,16 +55,17 @@ export interface Cabinet {
   /** 0..3: wood or steel, two looks each; cabinets of one variant share their cached pictures. */
   variant: number;
 }
-const LEFT_X = [300, 350, 280, 340, 310] as const;
-const RIGHT_X = [1300, 1250, 1320, 1270, 1290] as const;
+// Left cabinets the clerk stands left of (-1) sit at x 134..140; those they stand right of (+1) at 110..118, so a ladder fits at the band's inner edge.
+const LEFT_X = [140, 110, 134, 118, 138] as const;
+const RIGHT_X = [1480, 1470, 1476, 1466, 1480] as const;
 /** Cabinet 2k is the left one on level k, 2k + 1 the right one. */
 export const CABS: readonly Cabinet[] = Array.from({ length: LEVELS * 2 }, (_, i): Cabinet => {
   const level = Math.floor(i / 2);
   const left = i % 2 === 0;
   const lamp = (level + i) % 2 === 0 ? "banker" : "pendant";
-  return { x: (left ? LEFT_X[level] : RIGHT_X[level]) ?? 300, level, lamp, variant: (lamp === "pendant" ? 2 : 0) + (level % 2) };
+  return { x: (left ? LEFT_X[level] : RIGHT_X[level]) ?? 140, level, lamp, variant: (lamp === "pendant" ? 2 : 0) + (level % 2) };
 });
-const FIRST_CAB: Cabinet = { x: 300, level: 0, lamp: "banker", variant: 0 };
+const FIRST_CAB: Cabinet = { x: 140, level: 0, lamp: "banker", variant: 0 };
 export const cabAt = (i: number): Cabinet => CABS[i] ?? FIRST_CAB;
 export const cabBase = (i: number): number => levelFloor(cabAt(i).level);
 export const ROWS = 4;

@@ -10,6 +10,8 @@ const START = 60;
 const DWELL = 180;
 const WALK = 4.2;
 const RUN = 11;
+/** The first stretch after leaving the first cabinet is a stroll (in every variation), so the "drop" variation has time to play out in view. */
+const STROLL = 1.5;
 const CLIMB = 3.6;
 const ENTRY_X = -130;
 /** Frames a turn-around takes. */
@@ -67,9 +69,9 @@ function buildSegs(): { segs: Seg[]; end: number } {
   const walk = (x1: number, drop: boolean): void => {
     for (const [a, b] of pieces(px, x1)) {
       const mid = a >= MIDDLE.from && a <= MIDDLE.to && b >= MIDDLE.from && b <= MIDDLE.to;
-      const zone = drop && !dropDone && !mid && Math.abs(b - a) > 150;
+      const zone = drop && !dropDone && !mid && Math.abs(b - a) > 100;
       if (zone) dropDone = true;
-      add({ kind: "walk", x0: a, y0: py, x1: b, y1: py, dir: b === a ? dir : sign(b - a), stop: -1, carrying, speed: mid ? RUN : WALK, dropZone: zone });
+      add({ kind: "walk", x0: a, y0: py, x1: b, y1: py, dir: b === a ? dir : sign(b - a), stop: -1, carrying, speed: zone ? STROLL : mid ? RUN : WALK, dropZone: zone });
     }
     if (px !== x1) add({ kind: "walk", x0: px, y0: py, x1, y1: py, dir, stop: -1, carrying, speed: WALK });
   };
