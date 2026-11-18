@@ -84,12 +84,14 @@ void test("A route may show the retained previous transcript while a new landmar
 // transcript is off screen (focus layout, cards in both panes).
 void test("The selected conversation's callouts show only while its transcript is off screen.", async (t) => {
   const { ambientCalloutsHidden } = await import("../../../../src/components/chat/ambient/projection.js");
-  t.check(ambientCalloutsHidden({ selected: true, transcriptVisible: false, attention: true }), false);
-  t.check(ambientCalloutsHidden({ selected: true, transcriptVisible: true, attention: true }), true);
+  t.check(ambientCalloutsHidden({ selected: true, transcriptVisible: false, attention: true, dismissed: false }), false);
+  t.check(ambientCalloutsHidden({ selected: true, transcriptVisible: true, attention: true, dismissed: false }), true);
   // Another conversation is unaffected by transcript visibility:
-  t.check(ambientCalloutsHidden({ selected: false, transcriptVisible: true, attention: true }), false);
+  t.check(ambientCalloutsHidden({ selected: false, transcriptVisible: true, attention: true, dismissed: false }), false);
   // A seen or dismissed reply shows nothing:
-  t.check(ambientCalloutsHidden({ selected: false, transcriptVisible: false, attention: false }), true);
+  t.check(ambientCalloutsHidden({ selected: false, transcriptVisible: false, attention: false, dismissed: false }), true);
+  // A new completion whose refresh still shows the dismissed reply does not bring it back:
+  t.check(ambientCalloutsHidden({ selected: false, transcriptVisible: false, attention: true, dismissed: true }), true);
 });
 
 // A reply without callouts has nothing to show above the composer; its text and acks never appear there.

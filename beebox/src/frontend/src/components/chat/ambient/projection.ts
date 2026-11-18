@@ -56,8 +56,8 @@ export function canAcknowledgeAmbientReply(transcriptVisible: boolean, selection
  * transcript off screen (focus layout, cards in both panes) they show above the
  * composer like any other conversation's.
  */
-export function ambientCalloutsHidden({ selected, transcriptVisible, attention }: {
-  selected: boolean; transcriptVisible: boolean; attention: boolean;
+export function ambientCalloutsHidden({ selected, transcriptVisible, attention, dismissed }: {
+  selected: boolean; transcriptVisible: boolean; attention: boolean; dismissed: boolean;
 }): boolean {
-  return (selected && transcriptVisible) || !attention;
+  return (selected && transcriptVisible) || !attention || dismissed;
 }

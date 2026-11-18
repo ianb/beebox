@@ -56,16 +56,10 @@ function useSessionCallouts(props: Props) {
   useEffect(() => { writeAttention(key, attention); }, [key, attention]);
   const selected = props.selectedSessionId === session.sessionId;
   const { transcriptVisible, dismissal } = props;
+  // A reply that arrives while its transcript is on screen is read there, so it never shows here later.
   useEffect(() => {
-    if (selected && transcriptVisible) setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
-  }, [selected, transcriptVisible]);
-  // A dismissal made before this session mounted is not about its reply.
-  const seenDismissal = useRef(dismissal);
-  useEffect(() => {
-    if (dismissal === seenDismissal.current) return;
-    seenDismissal.current = dismissal;
-    setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
-  }, [dismissal]);
+    if (selected && transcriptVisible && attention.attention) setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
+  }, [selected, transcriptVisible, attention.attention]);
   // Nothing about a failed refresh shows here; the next bus event or reconnect refetches.
   const error = history.error ?? status.error;
   useEffect(() => {
@@ -76,7 +70,16 @@ function useSessionCallouts(props: Props) {
     if (completion !== null && completion !== attention.lastCompletion) return;
     if (loaded) onActivity(session.sessionId, busy || attention.attention);
   }, [loaded, busy, attention.attention, attention.lastCompletion, completion, session.sessionId, onActivity]);
-  const showing = !ambientCalloutsHidden({ selected, transcriptVisible, attention: attention.attention }) && reply.callouts.length > 0;
+  // A completion can set attention while the cached transcript still holds the dismissed reply.
+  const showing = !ambientCalloutsHidden({ selected, transcriptVisible, attention: attention.attention, dismissed: reply.identity === attention.dismissedReply })
+    && reply.callouts.length > 0;
+  // The stack's × acknowledges only what it showed: a session still loading keeps its unseen reply.
+  const seenDismissal = useRef(dismissal);
+  useEffect(() => {
+    if (dismissal === seenDismissal.current) return;
+    seenDismissal.current = dismissal;
+    if (showing) setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
+  }, [dismissal, showing]);
   useEffect(() => {
     onShowing(session.sessionId, showing);
     return () => onShowing(session.sessionId, false);
