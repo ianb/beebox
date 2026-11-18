@@ -24,10 +24,18 @@ export function truncateUpstreamBody(body: string): string {
  * and fall back to `text()` on the same body, and that second read throws: the
  * HTTP status was lost with it, so the HQ job saw a status-less error and
  * retried a too-long piece instead of halving it
- * (`plan:transcription-length-limits`).
+ * (`plan:transcription-length-limits`). For the same reason a body that
+ * cannot be read (the connection dropped after the headers) yields a
+ * placeholder rather than throwing.
  */
 export async function readUpstreamErrorBody(response: Response): Promise<{ text: string; json: unknown }> {
-  const text = await response.text();
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (e) {
+    console.warn(`[transcription] HTTP ${String(response.status)} error body could not be read:`, e);
+    return { text: "(error body unreadable)", json: undefined };
+  }
   try {
     const json: unknown = JSON.parse(text);
     return { text, json };

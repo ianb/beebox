@@ -69,3 +69,11 @@ void test("A plain-text 413 from Voxtral still halves the HQ piece", async (t) =
     classification: "piece-too-long",
   });
 });
+
+// A body that cannot be read (the connection dropped after the headers) still
+// leaves the status, so a 413 halves rather than resending the same piece.
+void test("An unreadable 413 body still halves the HQ piece", async (t) => {
+  const stream = new ReadableStream({ start(controller) { controller.error(new Error("connection reset")); } });
+  const error = await parseErrorResponse(new Response(stream, { status: 413 }));
+  t.check(classifyHqError(extractHqErrorInput(error)), "piece-too-long");
+});

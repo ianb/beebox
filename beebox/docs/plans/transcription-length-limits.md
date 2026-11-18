@@ -313,7 +313,7 @@ none
 | Voxtral model changes (Voxtral 3 issue) and limits differ | no | 413/408 halve; 429 retries | the `source` line names model and date |
 | A limit is lowered by a deploy while a job is mid-retry | new job test | resume takes the smaller | clear |
 | Memory: a 2-hour recording holds 230 MB of PCM; building one 60 min request adds a WAV and a multipart copy. Measured: RSS 311 MB → 530 MB in a bare process | no | box `MemoryHigh=2G` throttles | logged by systemd |
-| Slow uplink: a 115 MB upload exceeds the timeout | `voxtralTimeoutMs` test | 235 s, then transient retry | clear |
+| Slow uplink: a 115 MB upload exceeds the timeout | `voxtralTimeoutMs` test | 352 s, then transient retry | clear |
 
 No critical gap. Accepted risks:
 

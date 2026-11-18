@@ -125,9 +125,12 @@ function isPermanentOpenRouterError(status: number): boolean {
   return status >= 400 && status < 500 && status !== 429;
 }
 
-async function parseOpenRouterErrorResponse(error: HTTPError): Promise<OpenRouterApiError> {
+export async function parseOpenRouterErrorResponse(error: Pick<HTTPError, "response">): Promise<OpenRouterApiError> {
   const { response } = error;
-  const { text: details } = await readUpstreamErrorBody(response);
+  const { text, json } = await readUpstreamErrorBody(response);
+  // Compact JSON before truncation keeps MAI's `diarization_unavailable` code
+  // inside the 500 characters the job classifies on.
+  const details = json === undefined ? text : JSON.stringify(json);
   const permanent = isPermanentOpenRouterError(response.status);
   return new OpenRouterApiError(
     { status: response.status, statusText: response.statusText, details },
