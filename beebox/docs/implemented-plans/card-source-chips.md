@@ -1,6 +1,6 @@
 ---
 title: "Sources line at the top of a card's front"
-status: draft
+status: implemented
 workstream: card-source-chips
 issues: []
 ---
