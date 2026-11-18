@@ -15,8 +15,8 @@
  *  - The `{% quote %}` tag becomes `QuoteInline` or `QuoteBlock` (see
  *    `markdoc-config.ts` and `Quote.tsx`).
  *  - A fenced code block becomes `Fence`: the block plus a Copy button.
- *  - A `$…$` or `$$…$$` span becomes `MathFormula`, which loads KaTeX on
- *    first use (`Math.tsx`).
+ *  - A `$…$`, `$$…$$`, `\(…\)` or `\[…\]` span becomes `MathFormula`, which
+ *    loads KaTeX on first use (`Math.tsx`).
  *
  * Callers can pass `components` to override or extend the map. The most
  * common case is chat, which replaces `Img` and `Para` to render embeds,

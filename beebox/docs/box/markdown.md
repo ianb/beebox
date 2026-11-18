@@ -88,8 +88,8 @@ the body.
 TeX math between dollar signs renders as a formula in chat, card bodies, and
 published pages:
 `$E = mc^2$` in a line, and `$$…$$` on its own lines for a displayed formula.
-Chemistry uses mhchem: `$\ce{2H2 + O2 -> 2H2O}$`. Only dollar delimiters
-render; `\(…\)` and `\[…\]` do not.
+Chemistry uses mhchem: `$\ce{2H2 + O2 -> 2H2O}$`. Prefer dollars;
+`\(…\)` in a line and `\[…\]` on its own lines also render.
 
 ```markdown
 The energy is $E = mc^2$.
