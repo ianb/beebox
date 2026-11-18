@@ -69,8 +69,8 @@ const MISTRAL_DURATION: HqLengthLimit = {
   source:
     "https://docs.mistral.ai/resources/known-limitations — \"Maximum audio duration: 60 minutes\" (no model named; "
     + "the legacy Voxtral Mini Transcribe 2 page says 3 hours). Measured 2026-11-18 with voxtral-mini-latest: "
-    + "60 min succeeds diarized, word-timed, and plain; 75 and 90 min succeed diarized; every length from 30 min "
-    + "up sees intermittent 429 backend_out_of_capacity that clears on retry; 175 min refused 4 of 4 "
+    + "60 min succeeds diarized, word-timed, and plain; 75 and 90 min succeed diarized; 30, 60, and 90 min "
+    + "also saw intermittent 429 backend_out_of_capacity that cleared on a later try; 175 min refused 4 of 4 "
     + "(plan:transcription-length-limits). 3600 s is the planning cap.",
 };
 

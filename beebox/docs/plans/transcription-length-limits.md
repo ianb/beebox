@@ -190,8 +190,8 @@ audio cut to 300 s looped the same way, so the loop comes from the repeated
 content, not from length.
 
 Conclusion: Voxtral's limit is 60 minutes, which is also Mistral's
-documented general limit. Capacity refusals appeared at
-every length from 30 minutes up and cleared on a later try. At 175 minutes
+documented general limit. Capacity refusals appeared at 30, 60, and 90
+minutes and cleared on a later try. At 175 minutes
 every request was refused. A 429 is `transient`, so a 3-hour piece would
 retry until the 24-hour bound. At 60 minutes the retry path recovers. The
 value is provisional, and its `source` says so.
