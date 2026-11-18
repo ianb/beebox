@@ -23,6 +23,8 @@ export interface CardThemeSurfaceProps {
   /** The back face; its controls can turn the card over with {@link useShowCardFront}. */
   properties: ReactNode;
   actions?: ReactNode;
+  /** The card's Sources line (`SourcesSection`), under the title on the front; the back lists `sources` in its fields. */
+  sources?: ReactNode;
   problem?: ReactNode;
   /** The side shown first; the theme studio shows a back. Default `"front"`. */
   initialSide?: "front" | "back";
@@ -46,7 +48,7 @@ export function useShowCardFront(): () => void {
 }
 
 /** Front stays mounted while turned over, retaining authored view state. */
-export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, children, properties, actions, problem, initialSide }: CardThemeSurfaceProps) {
+export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, children, properties, actions, sources, problem, initialSide }: CardThemeSurfaceProps) {
   const [back, setBack] = useState(initialSide === "back");
   const [turn, setTurn] = useState<"out" | "in" | null>(null);
   // React's `useId` spells its values with colons, which the control address
@@ -116,6 +118,7 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
           <h2 className="min-w-0">{title}</h2>
         </div>}
         {detail === undefined ? null : <Text as="p" size="sm" tone="subtle" material truncate title={detail} className="mt-1">{detail}</Text>}
+        {back ? null : sources}
         {actions ? <div className="flex gap-2 mt-2 print:hidden">{actions}</div> : null}
       </header>
       {problem}
