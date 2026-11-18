@@ -189,6 +189,30 @@ other empty bodies fail the build. Provenance is appended automatically,
 independently of any editorial note inside the body. Main documents can opt
 into the same fields. Changing a card's suffix does not waive this guard.
 
+## Question cards
+
+A run of questions, each on its own small card: an index card when Bee Box has
+an answer, a sticky note when the question is still open. The card states its
+kind in words as well as color, and the Markdown twin keeps that line.
+
+```markdown
+{% questions %}
+{% question state="answered" %}
+**The question, in bold.** The rest of the wording.
+
+- Notes
+
+[Where the answer is](https://beebox.run/docs/…)
+{% /question %}
+{% question state="open" %}
+**A question with no answer yet.**
+{% /question %}
+{% /questions %}
+```
+
+`questions` holds only `question` tags; `state` is `answered` or `open`. The
+bold text is set large on a line of its own, so bold the whole question.
+
 ## Single-column pages
 
 A page card with `layout: single` renders without a context pane: the reading

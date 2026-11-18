@@ -1,30 +1,48 @@
 ---
 title: "Bee Box"
-summary: "A personal assistant you run yourself: a coding agent as the engine, on your own subscription, over a folder of files you own."
+summary: "A personal assistant for a person or a family or small group, built on top of a subscription like Claude Code or Codex, and the questions it is trying to address."
 authorship:
   people:
     - name: Ian Bicking
-      role: creator
-      contribution: Set the direction for Bee Box, chose what the front page should say, and supplied the prompts' intent.
+      role: author
+      contribution: Wrote the description and the list under it for this page, and the questions and their notes as a lightning talk on Bee Box; set the direction for the front page and the intent of its prompts.
   ai:
-    transcription: none
-    drafting: Drafted the description and the attribute list from the project's own documentation and the themes note.
-    editing: Arranged the card as what Bee Box is, the learning prompt, what it is exploring, and the install prompt, with the developer prompt on its own page.
-    source-preparation: Checked each attribute against the repository before stating it.
+    transcription: Transcribed the talk from Ian's dry runs and earlier notes; some items are trimmed to fit a slide.
+    drafting: Drafted the agent prompts, the link labels, and the two labels on the question cards. None of the other prose.
+    editing: Ordered the list at the top and corrected its spelling. Chose ten of the talk's questions, set each as a card by whether Bee Box has an answer, and linked each answered question to the documentation page that shows the answer.
 layout: single
 next:
+  - card: /questions.site-page.card
+    label: All the questions
   - card: /walkthrough.site-page.card
     label: Explore a morning with the box (draft)
 ---
 
 # Bee Box
 
-A personal assistant you run yourself. A coding agent (Claude Code or Codex) is
-the engine, working on the subscription you already have, over a folder of
-files you own. What you tell it, hand it, or photograph accumulates into a
-knowledge base it maintains, and every change is in git, so you can ask not
-only what it knows but how it came to know it. Self-hosted, source-available
-under GPLv3, one maintainer, early.
+Bee Box is a personal assistant for a person or a family or small group, built
+on top of a subscription like Claude Code or Codex.
+
+- It is not just open source, but highly open; there's a priority on the agent
+  understanding its environment, capabilities, and functions
+- It is good at holding data, structuring and restructuring your data, at
+  human scales (it's not a database, it can hold thousands but not millions of
+  things)
+- It has room to annotate and link data so you can hold everything, and apply
+  structure as it is discovered
+- There are multiple paths to take in data (voice/camera hybrid, uploads,
+  triage processes)
+- It treats voice as a primary input
+- **Your words vs its words:** provenance is a first class concept, with
+  writing tools that keep AI text well marked so you can maintain your
+  authentic voice
+- It is self-modifiable, the agent is given access and tools to modify your
+  experience within safe guidelines
+- It does the normal stuff like schedules and notifications and email, etc.
+- Easiest is the [Mac app](https://beebox.run/docs/capabilities/mac-app.html)
+  (running locally in a VM). Most useful is running on a VPS. Other techniques
+  are a bit wonky.
+- It is early: self-hosted, one maintainer, changing fast.
 
 {% agent-prompt title="Learn about Bee Box" id="learn-with-your-agent" %}
 ```
@@ -33,22 +51,84 @@ deciding whether to use Bee Box; answer my questions from those pages.
 ```
 {% /agent-prompt %}
 
-## What it is exploring
+## Questions Bee Box is trying to address
 
-- Claude Code or Codex is the engine. You bring your own subscription; Bee Box
-  is the box it works in.
-- A knowledge base that is a folder of typed documents you own, linked like a
-  wiki, with every change in git so the history answers "why" as well as
-  "what". Each record has a checked shape, room for prose, and carries what
-  belongs to it.
-- What you say is stored as a quote, with who said it. What the agent works
-  out is marked as inference and points at its source. The two never blur.
-- An assistant that builds its own views, routines, and kinds of record when
-  you ask.
-- Voice at length, and camera and voice together, from your phone.
+{% questions %}
+{% question state="answered" %}
+**How do we let people center their own focus?** Interactivity is a demand: what can we do without interactivity?
 
-The [documentation index](https://beebox.run/llms.txt) says how each of these
-is expressed, and where each is thinner than it sounds.
+- Drop in information, thoughts, followups — interactivity only for failure
+- Embrace high latency and asynchronicity
+
+[Interaction model](https://beebox.run/docs/design/interaction-model.html)
+{% /question %}
+{% question state="open" %}
+**Does every action require a poke?** Can proactivity remove another interaction? Can it stay under control and easy to understand?
+
+- Notifications: the best and worst of this
+{% /question %}
+{% question state="answered" %}
+**How do you trust the agent's decisions?** How do we monitor *why* things happen, not just *what* happened?
+
+- Bureaucracy: make the agent fill out paperwork, before and after
+
+[Trust](https://beebox.run/docs/design/trust.html)
+{% /question %}
+{% question state="answered" %}
+We have an agent. It does things for you. How do we track it? Not just how do we know what it did — but **how does the agent itself understand what it did?** What is its sense of history and process?
+
+- Git as history
+- Git as explanation (commit messages)
+- The agent as explainer
+- Not meant for the user to interact with Git, or even Git history
+
+[How it works](https://beebox.run/docs/07-how-it-works.html)
+{% /question %}
+{% question state="answered" %}
+**How do we preserve authenticity of voice?** How do we keep the AI from rewriting, paraphrasing, and confusing its own output for original instructions?
+
+- Quotation markup, core to everything it writes
+- No paraphrasing as a primary rule
+
+[Provenance](https://beebox.run/docs/capabilities/provenance.html)
+{% /question %}
+{% question state="open" %}
+**So how can it draw those authentic words out of you?** You don't want it to create them — but to give you the support that keeps you from having a blank page.
+{% /question %}
+{% question state="answered" %}
+**How will the information accumulate without ending up with chaos?** How does it stay consistent? Queryable, repairable?
+
+- Typed cards: plain files with strict schemas
+- Always room for overflow information
+
+[Shape it later](https://beebox.run/docs/capabilities/shape-it-later.html)
+{% /question %}
+{% question state="answered" %}
+**What can we create without a dependency on capital?** How big a thing can we make without funding? And without it just being a fake it till you make it until the funding comes in.
+
+- If code is cheap, then let's make use of that
+- 100% agentically coded
+- One person, low capital (but one person isn't enough)
+
+[Agent coding](https://beebox.run/docs/dev/agent-coding.html)
+{% /question %}
+{% question state="open" %}
+**How do we remove the principal agent problem?** How do we align the software with the user?
+
+- Principal agent problem: does the software work for the user, or for the software provider?
+{% /question %}
+{% question state="open" %}
+**How does it create a space that feels like yours?** Not a space you control or that you own, but that feels like home. A lot of our software feels like a hotel. It has all the trappings of a home. It's very well kept, but it's never where you belong personally.
+
+- A home is messy, in progress
+- You bring everything home before you sort it all out
+- It's familiar
+{% /question %}
+{% /questions %}
+
+I want the user to exert their will over the product until the product becomes an expression of their will. That's different than personalization. Personalization only touches desire — often only revealed desires. Will is when you achieve autonomy and self-expressiveness.
+
+[All the questions](/questions.site-page.card)
 
 {% agent-prompt title="Install Bee Box" id="install-with-your-agent" %}
 ```

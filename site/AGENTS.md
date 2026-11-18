@@ -34,11 +34,14 @@ remote assets — the page is CSP-clean and viewable offline). The output in
 
 ## Authorship is explicit
 
-Never present agent-written prose as the boxholder's voice. Every published
-page card carries a person-centered `authorship` account and explicit AI
-contribution categories. Agent-drafted informational prose may publish when
-that contribution is described there; prose intended to become Ian's own words
-stays a visible bracketed placeholder until he replaces it.
+The front page and the questions page are Ian's own words. AI-drafted prose
+goes in the agent-facing corpus (`llms.txt` and `docs/`), never on those pages;
+only agent prompts, link labels, and navigation there may be agent-drafted.
+Elsewhere, agent-drafted informational prose may publish when the card's
+`authorship` describes that contribution. Never present agent-written prose as
+Ian's voice: prose meant to become his words stays a visible bracketed
+placeholder until he replaces it. Every published page card carries a
+person-centered `authorship` account and explicit AI contribution categories.
 
 ## Deployment
 
@@ -104,6 +107,7 @@ writes the input manifest last (so a partial build never masks staleness).
   `{% verdict is="correct|okay|failed" %}` badges, `{% sample title %}` boxes, and
   `{% audio src="/assets/…" ref="…" /%}` players (`ref`, optional, labels the take and is the player's id); the `.md` twin keeps the first three and drops players.
   An audio `src` joins the link check: it must be a file under `site/assets/`.
+- `question-tags.ts` — `{% questions %}` wrapping `{% question state="answered|open" %}` cards; see card-authoring.md.
 - `sources.ts` — the single definition of the input source set + content-hash
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and
   `workstreams-app/src/router/server/site.ts` (compares it to decide whether to auto-rebuild). One
