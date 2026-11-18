@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-18T20:32:40Z
-Total documents: 710
+Generated: 2026-11-18T22:24:04Z
+Total documents: 711
 
 ## Issues
 
@@ -89,6 +89,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-studio-shared-coverage.md** — "Restore shared theme rule coverage" (157 lines) · shipped history · implemented
+- **docs/implemented-plans/transcription-length-limits.md** — "Per-service length limits for the HQ transcription job" (427 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
@@ -1557,6 +1558,7 @@ Referenced by:
 - docs/implemented-plans/todo-annotation.md:54 (mention) — - `beebox/docs/engineering-principles.md` — especially
 - docs/implemented-plans/top-nav-ia.md:117 (mention) — - `beebox/docs/engineering-principles.md` — reuse-over-rebuild,
 - docs/implemented-plans/transcript-confidence.md:68 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: confidence rides
+- docs/implemented-plans/transcription-length-limits.md:66 (mention) — - `docs/engineering-principles.md` #2 (exhaustiveness): each service is
 - docs/implemented-plans/tts-streamed-playback.md:73 (mention) — (`docs/engineering-principles.md:49`). Streaming moves the moment of failure
 - docs/implemented-plans/typescript-7.md:63 (mention) — - `beebox/docs/engineering-principles.md` §8 "One way to do each thing": every
 - docs/implemented-plans/ui-primitives-dedup.md:130 (mention) — - **`beebox/docs/engineering-principles.md` §8, "One way to do each thing":**
@@ -3121,7 +3123,7 @@ References:
 
 #### docs/box/whats-new.md
 
-Title: "What's new in Bee Box" | 25 lines | current reference
+Title: "What's new in Bee Box" | 26 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/whats-new.md:110 (mention) — `docs/box/whats-new.md` is in every install.
@@ -8119,6 +8121,7 @@ Title: "Resilient voice recording and HQ transcription" | 1200 lines | shipped h
 
 Referenced by:
 - docs/implemented-plans/native-hq-fallback-resilience.md:31 (mention) — - The shipped resilience precedent deliberately says “Track 6 (iOS) is reverted. The native app keeps its one-shot path”
+- docs/implemented-plans/transcription-length-limits.md:146 (mention) — (`docs/implemented-plans/resilient-voice-recording.md`, incident section):
 - ../issues/bugs/2026-09-10-live-transcription-failure-loses-the-hq-pass.md:4 (frontmatter) — design: ../../beebox/docs/implemented-plans/resilient-voice-recording.md
 - ../issues/closed/bugs/2026-09-11-codex-landed-probe-scans-oldest-page.md:39 (mention) — `docs/plans/resilient-voice-recording.md`). It was found while designing that
 
@@ -9036,6 +9039,14 @@ References:
 - → ../issues/features/2026-08-12-show-retranscription-in-chat.md (frontmatter)
 - → AGENTS.md (mention)
 - → docs/engineering-principles.md (mention)
+
+#### docs/implemented-plans/transcription-length-limits.md **[ORPHAN]**
+
+Title: "Per-service length limits for the HQ transcription job" | 427 lines | shipped history | implemented
+
+References:
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/resilient-voice-recording.md (mention)
 
 #### docs/implemented-plans/triage-compiled-instructions.md
 
