@@ -23,7 +23,8 @@ export const ROOM_SCRIPT = `
   let roomStop = null;
   let roomLoading = false;
   let roomFailed = false;
-  const roomWide = matchMedia('(min-width: 1200px)');
+  // Wide enough for the margins to show the scene, and not so tall that the scene (2:3) would end above the window's foot.
+  const roomWide = matchMedia('(min-width: 1200px) and (min-aspect-ratio: 2/3)');
   const roomCalm = matchMedia('(prefers-reduced-motion: reduce)');
 
   function roomEligible() {
@@ -33,13 +34,17 @@ export const ROOM_SCRIPT = `
 
   function runRoom() {
     if (!roomEligible()) {
-      if (roomStop) { roomStop(); roomStop = null; }
+      if (roomStop) { roomStop.teardown(); roomStop = null; }
       return;
     }
-    if (roomStop || roomLoading || roomFailed) return;
+    // A page swap keeps the mount; the new pane starts at its own scroll position.
+    if (roomStop) { roomStop.place(); return; }
+    if (roomLoading || roomFailed) return;
     roomLoading = true;
     const start = async () => {
       try {
+        // The window may have narrowed, or the page changed, while this waited for an idle moment.
+        if (!roomEligible()) return;
         const room = await import(base + 'assets/file-room.js');
         if (roomEligible() && !roomStop) roomStop = room.mountFileRoom();
       } catch (error) {

@@ -12,12 +12,21 @@ const WATCH_MS = 5000;
 /** Fewer frames than this in that time (20 fps) and the scene is removed. */
 const MIN_FRAMES = 100;
 
+/** A timer gap longer than this means the tab's timers were suspended, not that the scene was visible. */
+const MAX_TICK_MS = 1000;
+
+/** The mounted background: `place` re-reads the reading pane's scroll, `teardown` (idempotent) removes it. */
+export interface MountedRoom {
+  place: () => void;
+  teardown: () => void;
+}
+
 /**
- * Put the file-room animation behind the page. Returns a teardown (idempotent)
- * that removes the canvas and the `data-site-room` mark. A figure that fails
- * or runs under 20 fps tears itself down the same way.
+ * Put the file-room animation behind the page. The teardown removes the canvas
+ * and the `data-site-room` mark. A figure that fails, loses its GPU device or
+ * runs under 20 fps tears itself down the same way.
  */
-export function mountFileRoom(): () => void {
+export function mountFileRoom(): MountedRoom {
   const module = coerceModule(fileRoom);
   const size = module.canvas ?? { width: 1600, height: 2400 };
   const canvas = document.createElement("canvas");
@@ -60,12 +69,17 @@ export function mountFileRoom(): () => void {
       console.warn("site background: the file-room animation failed and was removed", error);
       teardown();
     },
+    // A lost device would leave a dead canvas over the page's own background.
+    onNotice: (message) => {
+      if (message !== undefined) teardown();
+    },
   });
 
   // Visible time only: a hidden tab neither draws nor counts.
   const tick = (): void => {
     const now = performance.now();
-    if (document.visibilityState === "visible") visibleMs += now - lastTick;
+    const gap = now - lastTick;
+    if (document.visibilityState === "visible" && gap < MAX_TICK_MS) visibleMs += gap;
     lastTick = now;
     if (visibleMs >= WATCH_MS) {
       clearInterval(watchdog);
@@ -98,5 +112,5 @@ export function mountFileRoom(): () => void {
     lastTick = performance.now();
     watchdog = window.setInterval(tick, 250);
   });
-  return teardown;
+  return { place: schedule, teardown };
 }

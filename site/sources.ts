@@ -92,8 +92,11 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
 
   // The file-room background bundle (room-bundle.ts) builds from canvas-loop's
   // sketch and runtime sources; tolerated absent like the theme inputs.
+  // Only for a checkout whose build makes the bundle: the router checks every
+  // worktree with one copy of this file, and an older checkout's build records no such inputs.
   const canvasSrc = path.join(siteDir, "..", "canvas-loop", "src");
-  for (const dir of ROOM_SOURCE_DIRS) {
+  const bundlesRoom = await fileExists(path.join(siteDir, "room-bundle.ts"));
+  for (const dir of bundlesRoom ? ROOM_SOURCE_DIRS : []) {
     for (const entry of await readdirDirents(path.join(canvasSrc, dir))) {
       if (!entry.isFile() || entry.name.startsWith(".")) continue;
       const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/");
