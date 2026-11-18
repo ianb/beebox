@@ -5,6 +5,7 @@ see or use), **Changed** (something that works differently), or **Agent**
 (something you see only through what the box's agent does). The list started
 on 2026-11-16, with the week before it filled in. Ask the box about any of
 them.
+- 2026-11-18 **Changed**: On a recipe, a source that is a scan or another card in your box is now a link that opens it, and its note shows beside it.
 - 2026-11-18 **Changed**: A recording with speaker labels, using the Voxtral service, now comes back as one transcript for up to an hour, not in 5-minute parts with new speaker names each part.
 - 2026-11-18 **New**: A card made from files, web pages, or other cards lists them under its title. Tap one to open it; tap "All" to see each with its note.
 - 2026-11-17 **Changed**: When another conversation replies while you are elsewhere, its row above the message box shows the start of what it said, not a small icon.

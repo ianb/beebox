@@ -122,3 +122,42 @@ void test("params.path names the card, and the view finds it in cards.", async (
   const bare = await renderRecipe(box, {});
   t.check(bare, any(String).includes("This recipe card is not available."));
 });
+
+// ## The Source line links each source where it lives
+//
+// An in-box ref renders as a `CardLink` to the file's page (in the app the
+// view host resolves a relative or `attach/` ref against the recipe card; this
+// Node render has no base, so the refs here are box-absolute). A web ref or
+// `href` opens a new tab; a label-only source is text. A note follows its
+// source in parentheses.
+void test("The Source line links in-box refs into the app and shows notes", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ deps: true, git: true });
+  await activateRecipe(box);
+  await box.write("_content/recipes/Soup.recipe.card", `---
+title: Soup
+sources:
+  - { ref: /_content/recipes/scans/soup-page.jpg, note: Handwritten copy }
+  - { ref: /_content/recipes/Granny.recipe.card, label: Granny's version }
+  - { ref: "https://example.org/soup" }
+  - { href: "https://example.org/stock", label: Stock }
+  - { label: A neighbour }
+---
+Simmer.
+`);
+  const html = await renderRecipe(box, { path: "_content/recipes/Soup.recipe.card" });
+  const line = /<p class="text-sm text-card-soft mb-4">(.*?)<\/p>/.exec(html.replace(/<!-- -->/g, ""))?.[1];
+  t.check(line, [
+    'Source: <span><a href="/test/views/_content/recipes/scans/soup-page.jpg" class="bbx-theme-link">soup page</a> (Handwritten copy)</span>',
+    '<span>, <a href="/test/views/_content/recipes/Granny.recipe.card" class="bbx-theme-link">Granny&#x27;s version</a></span>',
+    '<span>, <a href="https://example.org/soup" target="_blank" rel="noreferrer" class="underline">https://example.org/soup</a></span>',
+    '<span>, <a href="https://example.org/stock" target="_blank" rel="noreferrer" class="underline">Stock</a></span>',
+    "<span>, A neighbour</span>",
+  ].join(""));
+});
