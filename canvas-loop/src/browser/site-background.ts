@@ -12,9 +12,6 @@ const WATCH_MS = 5000;
 /** Fewer frames than this in that time (20 fps) and the scene is removed. */
 const MIN_FRAMES = 100;
 
-/** A timer gap longer than this means the tab's timers were suspended, not that the scene was visible. */
-const MAX_TICK_MS = 1000;
-
 /** The mounted background: `place` re-reads the reading pane's scroll, `teardown` (idempotent) removes it. */
 export interface MountedRoom {
   place: () => void;
@@ -41,6 +38,7 @@ export function mountFileRoom(): MountedRoom {
   let done = false;
   let frames = 0;
   let measuring = false;
+  let wasHidden = false;
   let visibleMs = 0;
   let lastTick = performance.now();
   let raf = 0;
@@ -75,11 +73,20 @@ export function mountFileRoom(): MountedRoom {
     },
   });
 
-  // Visible time only: a hidden tab neither draws nor counts.
+  // A hidden tab neither draws nor counts: the measurement starts over once the tab is visible again.
+  const noteHidden = (): void => {
+    if (document.visibilityState !== "visible") wasHidden = true;
+  };
   const tick = (): void => {
     const now = performance.now();
-    const gap = now - lastTick;
-    if (document.visibilityState === "visible" && gap < MAX_TICK_MS) visibleMs += gap;
+    if (wasHidden || document.visibilityState !== "visible") {
+      wasHidden = document.visibilityState !== "visible";
+      frames = 0;
+      visibleMs = 0;
+      lastTick = now;
+      return;
+    }
+    visibleMs += now - lastTick;
     lastTick = now;
     if (visibleMs >= WATCH_MS) {
       clearInterval(watchdog);
@@ -92,6 +99,7 @@ export function mountFileRoom(): MountedRoom {
     done = true;
     clearInterval(watchdog);
     if (raf !== 0) cancelAnimationFrame(raf);
+    document.removeEventListener("visibilitychange", noteHidden);
     document.removeEventListener("scroll", schedule, { capture: true });
     window.removeEventListener("resize", schedule);
     attached.teardown();
@@ -99,6 +107,7 @@ export function mountFileRoom(): MountedRoom {
     delete document.body.dataset["siteRoom"];
   }
 
+  document.addEventListener("visibilitychange", noteHidden);
   document.addEventListener("scroll", schedule, { capture: true, passive: true });
   window.addEventListener("resize", schedule);
   place();
