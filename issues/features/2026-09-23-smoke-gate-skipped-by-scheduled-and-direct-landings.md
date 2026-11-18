@@ -206,3 +206,49 @@ as in the third window.
 
 No bug filed in this window is traced to an unwalked landing. The hourly
 full-suite run caught no regressions on `main`.
+
+## Evidence, sixth window (2026-11-18 review)
+
+Window 2026-11-11T21:17Z to 2026-11-18T22:10Z. The counting rule is the same
+as in the third window. The 2026-10-28, 2026-11-04 and 2026-11-11 reviews
+added no section here.
+
+- 150 landings; 76 code landings (63 merges, 13 direct commits); 47 walked;
+  29 not walked. The walked share is 62%. This is the lowest share in the
+  six recorded windows (72%, 73%, 80%, 76%, 73%).
+- The smoke log has 52 runs in the window, all green.
+- Schedule merges with no walk: `worktree-sdk-update` 3 times (`d5111b375`,
+  `0c1ab7d1b`, `57b9db451`, each `beebox/package.json` + `pnpm-lock.yaml`),
+  `worktree-knip-sweep` twice (`259873943`, 57 files; `4191dc6d0`, 45 files,
+  both across `beebox/src`), and `worktree-supplemental-lint` once
+  (`446e19c88`, 15 files in `beebox/src/cli`).
+- Interactive worktree merges with no walk: 10.
+  - `worktree-canvas-brushes` 4 times: `7d0de419d` (255 files, including
+    `canvas-loop/package.json`), `d8e49619a`, `529a87745` (`deploy.sh`,
+    `server-bin/bbx-box-install`) and `5d9f81568` (503 files). The log has 15
+    runs on this branch, all on other commits. This is the same pattern as
+    `worktree-theme-polish` in the fourth window.
+  - `worktree-heic-upload` (`60da88b72`, 12 files, including
+    `beebox/src/frontend/package.json` and the chat attachment code) and
+    `worktree-direct-chat-load` (`07d50262d`, 6 files in the chat shell and
+    conversation selection). The log has no run on either branch.
+  - `worktree-homepage-questions` (`6ba715aaf`), `worktree-card-focus-space`
+    (`9e9a2dd19`, theme CSS), `worktree-self-hosted-turn` (`0a9ef7137`,
+    `deploy.sh`, coturn, `server-bin`) and `worktree-cross-box-leak-scan`
+    (`45fd5613f`, `deploy.sh` only). Each branch has runs, but none on a
+    commit in the merge.
+- Direct commits on `main` with no walk: 13, up from 8. Three change frontend
+  source: `4aafbbfb7` (attachment chip filename), `d45c74f22` (muted-speech
+  probe, 4 files in `InteractiveChat`) and `ccf538f3d` (`FigureView`). The
+  others are `c8e32a2f1` (`shared/model-ids.ts`), `b6e50e606` (transcription),
+  `66e9011df` (`core/migrations.ts`), three box-browser commits (`1ac8445bc`,
+  `061536dc7`, `c59425b7b`), two docs-gen commits (`742fdca15`,
+  `464cdcdbb`), and two deploy commits (`6b85bd2ef`, `acab27c18`).
+
+The interactive misses show that the hole is not limited to schedules and
+direct commits. Branches that ran `/finish` at some point still land later
+commits with no walk. Of the options under "What would close it", only a check
+in `bin/land` covers this case.
+
+No bug filed in this window is traced to an unwalked landing. The hourly
+full-suite run caught no regressions on `main`.
