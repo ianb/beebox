@@ -10,7 +10,7 @@ import { getApiBase } from "../../../api";
 import type { SessionEntry } from "../../../api";
 import type { AckIndication } from "../../../lib/structured-output-parsing";
 import type { OnZoomView } from "../markdown-rendering";
-import { AckBadgeCluster } from "../ack-badge";
+import { AckBadgeCluster } from "./ack-badge";
 import { AudioOverlayBadgeCluster, TranscriptionProvenanceBadge } from "./audio-overlay-badge";
 import { useAudioOverlayEntry, type AudioOverlayStore } from "../audio-overlay-store";
 import {

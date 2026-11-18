@@ -4,10 +4,10 @@
  * and an optional ref link.
  */
 
-import { Popover } from "../ui/Popover";
-import { getAckKind, type AckIndication } from "../../lib/structured-output-parsing";
-import { parseViewUrl } from "../../lib/view-url";
-import type { OnZoomView } from "./markdown-rendering";
+import { Popover } from "../../ui/Popover";
+import { getAckKind, type AckIndication } from "../../../lib/structured-output-parsing";
+import { parseViewUrl } from "../../../lib/view-url";
+import type { OnZoomView } from "../markdown-rendering";
 
 /**
  * Small ack badges shown alongside a user message — one per `<ack>` the

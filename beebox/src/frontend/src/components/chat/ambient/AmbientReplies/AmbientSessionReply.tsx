@@ -9,7 +9,6 @@ import { ErrorText } from "../../../ui/ErrorText";
 import { Hint } from "../../../ui/Hint";
 import { Accordion } from "../../../ui/Accordion";
 import { CalloutStack } from "../../CalloutBlock";
-import { AckBadgeCluster } from "../../ack-badge";
 import { projectAmbientReply, observeAmbientReply, recordAmbientCompletion, ambientPanelHidden } from "../projection";
 import { readAttention, writeAttention } from "./attention-store";
 import { useBoxConversation } from "../../everywhere/conversation-context/context";
@@ -88,7 +87,6 @@ export function AmbientSessionReply(props: Props) {
           {!loading && !error && !transcript?.entries.length && <Hint>Conversation history is unavailable.</Hint>}
           {Boolean(reply.earlier) && <Hint>Earlier responses in conversation</Hint>}
           {<CalloutStack callouts={reply.callouts} onZoomView={({ target }) => props.onInspectCard(target)} />}
-          {<AckBadgeCluster acks={reply.acks} onZoomView={({ target }) => props.onInspectCard(target)} />}
           <div className="flex gap-2 flex-wrap mt-2">
             <Button id={`bbx-ambient-open-${session.sessionId}`} size="sm" onClick={() => { acknowledge(); props.onOpenConversation(session.sessionId); }}>Open conversation</Button>
             <Button id={`bbx-ambient-dismiss-${session.sessionId}`} size="sm" intent="ghost" onClick={acknowledge}>Dismiss</Button>
