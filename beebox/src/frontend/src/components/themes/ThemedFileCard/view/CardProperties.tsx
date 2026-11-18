@@ -47,7 +47,10 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
   // A landmark's front is the place page, which draws its body but not its
   // fields. With an empty body (most landmarks) the split puts them on the
   // front, so Properties lists them for a landmark either way.
-  const properties = withoutHeaderName(data.type === "landmark" ? { ...split.front, ...split.properties } : split.properties, cardTitle(data));
+  // The front shows `sources` as the header's Sources line, not as a field, so
+  // Properties lists it wherever the split put it.
+  const sources = split.front.sources === undefined ? {} : { sources: split.front.sources };
+  const properties = withoutHeaderName(data.type === "landmark" ? { ...split.front, ...split.properties } : { ...sources, ...split.properties }, cardTitle(data));
   const contains = foundBy.contains;
   const evidence = foundBy["contains-evidence"];
   const prominence = prominenceText(foundBy.prominence, data.schema);

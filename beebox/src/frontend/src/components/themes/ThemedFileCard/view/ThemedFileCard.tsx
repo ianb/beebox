@@ -16,6 +16,7 @@ import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
 import { isCardPath } from "../../../file-view-data";
 import { readCardSymbol } from "@shared/card-symbol";
 import { Skeleton } from "../../../ui/Skeleton";
+import { CardSources } from "./SourcesSection";
 
 interface ThemedFileCardProps {
   data: FileData;
@@ -60,6 +61,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
       hasExplicitView={hasExplicitView} onSelect={onSelect} onNavigate={onNavigate}
       actions={isCard ? <CardActions target={target} onTrashed={onClose} vertical="above" /> : null}
       qrReachable={isOffMachineOrigin(here)} />}
+    sources={<CardSources data={data} onNavigate={onNavigate} />}
     actions={mode === "chat" || onOpenInPanel ? <CardSurfaceActions mode={mode} path={data.path} onOpenInPanel={onOpenInPanel} /> : null}
     problem={error ? <div className="bbx-card-problem" role="status">Appearance could not be applied: {error}{presentation ? <Button size="sm" intent="ghost" onClick={handlePresentationRetry}>Retry</Button> : null}</div> : null}
   >{children}<CardPrintFooter boxSlug={boxSlug} path={data.path} here={here} /></CardThemeSurface>;

@@ -263,3 +263,24 @@ void test("A page shows the same card with its fields in Properties and no headi
     "body",
   ]);
 });
+
+// ## The front leaves `sources` to the header
+//
+// In a card's own frame the header draws the Sources line
+// (`ThemedFileCard`), so the front's field table leaves `sources` out even
+// when the body is empty. An embed has no header: its field block keeps it
+// (plan:card-source-chips).
+void test("A framed front leaves sources to the header; an embed keeps them", async (t) => {
+  const data: FileData = {
+    path: "_content/house/Boiler.record.card",
+    type: "record",
+    frontmatter: { name: "Boiler manual", description: "Basement boiler", sources: [{ ref: "/_content/house/boiler.pdf" }] },
+    body: "",
+    schema: { hasBodyField: true, defaultProminence: "ordinary" },
+  };
+  const view = React.createElement(MarkdownCardView, { data, onNavigate: noop, mode: "companion" });
+  const page = renderToStaticMarkup(React.createElement(QueryClientProvider, { client: new QueryClient() },
+    React.createElement(BoxSlugProvider, { boxSlug: "test1", children: view })));
+  t.check(cells(page), "|Description|Basement boiler|");
+  t.check(await renderEmbed(data), any(String).includes(">Sources<"));
+});

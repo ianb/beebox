@@ -26,6 +26,7 @@ import { CardBody } from "./CardBody";
 import { cardTypeMarkdown } from "./type-markdown";
 import { bodyHeadingField, bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../lib/card-field-faces";
 import type { FileData, RendererProps } from "../../file-type-registry";
+import { cardShowsSourcesSection } from "../../lib/source-chips";
 
 /** The embed's own heading: the card's title (`bodyHeadingTitle`) and the type's summary line. Null when it has neither. */
 function embedHeading({ title, detail }: { title: string | undefined; detail: string | undefined }): ReactNode {
@@ -39,10 +40,18 @@ function embedHeading({ title, detail }: { title: string | undefined; detail: st
   );
 }
 
-/** The fields the front shows; in an embed, without the field `EmbedHeading` draws as the title. */
+/**
+ * The fields the front shows; in an embed, without the field `EmbedHeading`
+ * draws as the title. In a framed card the header's Sources line shows
+ * `sources` (`ThemedFileCard`), so the table leaves it out.
+ */
 function frontFields(data: FileData, { bodyEmpty, mode }: { bodyEmpty: boolean; mode: RendererProps["mode"] }): Record<string, unknown> {
   if (data.frontmatter === undefined) return {};
   const { front } = splitCardFields(data.frontmatter, { hasBodyField: data.schema?.hasBodyField ?? null, bodyEmpty, mode });
+  // Embed and strip are frameless (`isFrameless`): no header there.
+  if (mode !== "embed" && mode !== "strip") {
+    return cardShowsSourcesSection(data.type) ? Object.fromEntries(Object.entries(front).filter(([key]) => key !== "sources")) : front;
+  }
   if (mode !== "embed") return front;
   const headingField = bodyHeadingField(data.frontmatter);
   return Object.fromEntries(Object.entries(front).filter(([key]) => key !== headingField));
