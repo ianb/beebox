@@ -49,8 +49,8 @@ on top of a subscription like Claude Code or Codex.
 1. Home inventory and collections
 2. Research and updating content
 3. Family archive
-4. Education experiments. I'm not claiming it's good for education, but I
-   think it *is* good for experimenting in education.
+4. Education experiments (I'm not claiming it's good for education, but I
+   think it *is* good for experimenting in education)
 5. Collecting and assembling writing ideas
 
 {% agent-prompt title="Learn about Bee Box" id="learn-with-your-agent" %}
