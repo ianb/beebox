@@ -21,7 +21,7 @@ export const COMPOSER_FOCUS_KEYS = "Control+L";
 /** The composer textareas' authored addresses (desktop row, phone row). */
 const COMPOSER_INPUT_IDS = new Set(["bbx-composer-input", "bbx-composer-input-mobile"]);
 
-export function isComposerFocusKey(event: KeyboardEvent): boolean {
+function isComposerFocusKey(event: KeyboardEvent): boolean {
   return event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "l";
 }
 
@@ -39,7 +39,7 @@ function overlayOpen(doc: Document): boolean {
   return doc.querySelector(OVERLAY) !== null;
 }
 
-export function isComposerInput(element: Element): boolean {
+function isComposerInput(element: Element): boolean {
   return element instanceof HTMLTextAreaElement && COMPOSER_INPUT_IDS.has(element.id);
 }
 
@@ -57,7 +57,7 @@ function visibleComposer(doc: Document): HTMLTextAreaElement | null {
  * composer or with nothing focused (the body). Any other focused element —
  * a button, a field, a menu — keeps its own Enter.
  */
-export function isVoiceSendEnter(event: KeyboardEvent): boolean {
+function isVoiceSendEnter(event: KeyboardEvent): boolean {
   if (event.key !== "Enter" || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false;
   if (event.repeat || event.defaultPrevented || isComposing(event)) return false;
   const target = event.target;
@@ -71,7 +71,7 @@ export function isVoiceSendEnter(event: KeyboardEvent): boolean {
  * recorded while live text is paused (its words come from the HQ pass, as the
  * Send button allows). With nothing said, Enter does nothing.
  */
-export function voiceEnterHasMessage(opts: { input: string; transcript: string; state: TranscriptionState }): boolean {
+function voiceEnterHasMessage(opts: { input: string; transcript: string; state: TranscriptionState }): boolean {
   if (opts.state === "recordingLocal") return true;
   return joinTranscript(opts.input, opts.transcript).trim().length > 0;
 }

@@ -18,7 +18,7 @@ function px(n: number): string {
 }
 
 /** "whole card (366×2027)", or what part of the card the image shows. */
-export function fitLine(m: FoundMeasure): string {
+function fitLine(m: FoundMeasure): string {
   const missing: string[] = [];
   if (m.painted.y > 0.5 || m.painted.height < m.card.height - 0.5) {
     missing.push(`the image shows ${px(m.painted.height)} of the card's ${px(m.card.height)} height, from ${px(m.painted.y)} down`);

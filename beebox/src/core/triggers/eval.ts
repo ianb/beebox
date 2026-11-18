@@ -20,9 +20,9 @@ import { inspectResultSchema, type EvalJob, type InspectJob, type InspectResult 
 import { traceRecordSchema, type TraceRecord } from "./trace.js";
 
 /** How long one evaluation may run before the child is killed. */
-export const EVAL_DEADLINE_MS = 20_000;
+const EVAL_DEADLINE_MS = 20_000;
 /** The most output (stdout plus stderr) a child may write before it is killed; a logging loop stops here, not at the deadline. */
-export const OUTPUT_CAP_BYTES = 1024 * 1024;
+const OUTPUT_CAP_BYTES = 1024 * 1024;
 
 export interface EvalOutput {
   /** Every record the child wrote, in order, plus `log` records for its stray output. */

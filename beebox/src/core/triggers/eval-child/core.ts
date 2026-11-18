@@ -37,7 +37,7 @@ import type { TraceRecord } from "../trace.js";
 import type { TriggerContext, TriggerInput, TriggerJudgeInput, TriggerJudgeResult, TriggerModule, TriggerResult } from "../types.js";
 
 /** What the parent hands the child on stdin. */
-export const evalJobSchema = z.object({
+const evalJobSchema = z.object({
   boxRoot: z.string(),
   /** Box-relative path of the trigger file. */
   file: z.string(),
@@ -54,7 +54,7 @@ export const evalJobSchema = z.object({
 export type EvalJob = z.infer<typeof evalJobSchema>;
 
 /** `--inspect`: the module's label for a config, and its tick. */
-export const inspectJobSchema = z.object({ boxRoot: z.string(), file: z.string(), config: z.unknown() });
+const inspectJobSchema = z.object({ boxRoot: z.string(), file: z.string(), config: z.unknown() });
 export type InspectJob = z.infer<typeof inspectJobSchema>;
 export const inspectResultSchema = z.union([
   z.object({ label: z.string(), tick: z.number().optional() }),

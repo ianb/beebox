@@ -39,7 +39,7 @@ function initialParams(decl: ParamsDecl, job: FigureJob): Record<string, string 
  * still read it from `figure.params`, so it is reported here, once per run,
  * and not in the browser.
  */
-export function undeclaredCardParams(decl: ParamsDecl, cardParams: readonly string[]): string[] {
+function undeclaredCardParams(decl: ParamsDecl, cardParams: readonly string[]): string[] {
   const missing = cardParams.filter((name) => decl[name] === undefined);
   if (missing.length === 0) return [];
   return [`card params not in the module's params: ${missing.join(", ")}. They set no control and are not set in this run; the factory still reads them from figure.params`];

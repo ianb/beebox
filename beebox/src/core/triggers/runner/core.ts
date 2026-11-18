@@ -34,18 +34,16 @@ import { appendTrace, type TraceLine, type TraceOutcome } from "../trace.js";
 import { HISTORY_CAP, type TriggerReason } from "../types.js";
 import { admitResult, settleDelivery, type Deliver } from "./admit.js";
 
-export { FIRE_FLOOR_MS } from "./admit.js";
-
 /** Evaluate this long after the latest activity batch… */
-export const SETTLE_MS = 1000;
+const SETTLE_MS = 1000;
 /** …but no later than this long after the first pending batch. */
-export const SETTLE_CAP_MS = 3000;
+const SETTLE_CAP_MS = 3000;
 /** Injected timers: `after` runs `fn` once after `ms` and returns a cancel. */
 export interface RunnerTimers {
   after: (ms: number, fn: () => void) => () => void;
 }
 
-export const realTimers: RunnerTimers = {
+const realTimers: RunnerTimers = {
   after: (ms, fn) => {
     const handle = setTimeout(fn, ms);
     handle.unref();

@@ -67,6 +67,13 @@ const config: KnipConfig = {
         // "agent-browser/package.json" with createRequire to find the pinned
         // native binary; nothing imports the package.
         "agent-browser",
+        // canvas-loop's runtime dependencies. `bbx figure run` imports
+        // @ianbicking/canvas-loop/headless, which loads them; canvas-loop is in
+        // ignoreWorkspaces, so knip never sees the import. beebox declares them
+        // so a packed install can run figures; test/deploy/figure-gpu.test.ts
+        // checks the versions match canvas-loop's.
+        "@napi-rs/canvas",
+        "webgpu",
       ],
     },
     "beebox/src/frontend": {

@@ -36,7 +36,7 @@ export type CodexCommandAction =
  * unreadable. One malformed action drops them all, so the step falls back to
  * its command rather than describing part of it.
  */
-export function codexCommandActions(raw: unknown): CodexCommandAction[] | null {
+function codexCommandActions(raw: unknown): CodexCommandAction[] | null {
   const parsed = z.array(commandActionSchema).min(1).safeParse(raw);
   if (!parsed.success) return null;
   return parsed.data.map((action): CodexCommandAction => {

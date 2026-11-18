@@ -9,11 +9,11 @@
 import type { ActivityEntryInput } from "@core/activity/entry.js";
 
 /** Most entries in one request (the route accepts 1..200). */
-export const MAX_BATCH = 200;
+const MAX_BATCH = 200;
 /** Above this many waiting entries the oldest are dropped. */
-export const MAX_QUEUED = 500;
+const MAX_QUEUED = 500;
 /** A batch is dropped once its failures have spanned this long. */
-export const RETRY_WINDOW_MS = 60_000;
+const RETRY_WINDOW_MS = 60_000;
 /** Wait before the first send, so a burst of pushes travels as one batch. */
 const BATCH_DELAY_MS = 250;
 const FIRST_BACKOFF_MS = 1_000;

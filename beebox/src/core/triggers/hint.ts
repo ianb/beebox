@@ -65,7 +65,7 @@ export async function triggersHint(boxRoot: string, sessionId: string): Promise<
 }
 
 /** Mark the given ended activations noticed (and persist their expiry), under the lock. */
-export async function markExpiredNoticed(who: { boxRoot: string; sessionId: string }, ids: readonly string[]): Promise<void> {
+async function markExpiredNoticed(who: { boxRoot: string; sessionId: string }, ids: readonly string[]): Promise<void> {
   await updateActivations(who, {
     fn: (activations) => activations.map((a) => (ids.includes(a.id) && (a.state === "expired" || a.state === "done") ? { ...a, noticed: true } : a)),
   });

@@ -24,7 +24,7 @@ import type { TraceOutcome } from "../trace.js";
 import { TEXT_CAP } from "../types.js";
 
 /** A result inside this long of the last fire is suppressed. */
-export const FIRE_FLOOR_MS = 5000;
+const FIRE_FLOOR_MS = 5000;
 
 export interface AdmitArgs {
   who: TriggerSession;

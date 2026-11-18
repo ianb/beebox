@@ -7,7 +7,7 @@
 import { z } from "zod";
 
 /** Source rules read the view's code; DOM rules read what it rendered. */
-export const ADVICE_RULES = [
+const ADVICE_RULES = [
   "enter-without-ime-check",
   "clickable-non-control",
   "viewport-height",

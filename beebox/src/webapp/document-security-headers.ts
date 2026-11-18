@@ -26,7 +26,7 @@ import type { FastifyInstance } from "fastify";
  * frozen captured-page route's `sandbox` CSP, and the auth routes'
  * `Referrer-Policy: no-referrer`.
  */
-export const DOCUMENT_SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
+const DOCUMENT_SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["X-Frame-Options", "SAMEORIGIN"],
   ["Content-Security-Policy", "frame-ancestors 'self'"],
   ["Referrer-Policy", "strict-origin-when-cross-origin"],

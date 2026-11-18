@@ -39,10 +39,10 @@ export const traceRecordSchema = z.discriminatedUnion("kind", [
 ]);
 export type TraceRecord = z.infer<typeof traceRecordSchema>;
 
-export const TRACE_OUTCOMES = ["none", "fired", "done", "suppressed", "stale", "error", "delivery-failed", "skipped", "expired"] as const;
+const TRACE_OUTCOMES = ["none", "fired", "done", "suppressed", "stale", "error", "delivery-failed", "skipped", "expired"] as const;
 export type TraceOutcome = (typeof TRACE_OUTCOMES)[number];
 
-export const traceLineSchema = z.object({
+const traceLineSchema = z.object({
   at: z.string(),
   session: z.string(),
   activation: z.string(),
@@ -70,7 +70,7 @@ function rotatedPath(boxRoot: string): string {
 }
 
 /** Thrown when a line would not fit one atomic append even with its records emptied. */
-export class TraceLineTooLongError extends Error {
+class TraceLineTooLongError extends Error {
   readonly bytes: number;
   constructor(bytes: number) {
     super("A trigger trace line does not fit one atomic append even with its records emptied");

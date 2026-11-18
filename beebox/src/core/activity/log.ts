@@ -29,7 +29,7 @@ export function rotatedActivityLogPath(boxRoot: string): string {
   return path.join(boxRoot, ".beebox", "activity.1.jsonl");
 }
 
-export function activityLockPath(boxRoot: string): string {
+function activityLockPath(boxRoot: string): string {
   return path.join(boxRoot, ".beebox", "activity.lock");
 }
 
