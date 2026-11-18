@@ -25,7 +25,7 @@ export interface MountedRoom {
  */
 export function mountFileRoom(): MountedRoom {
   const module = coerceModule(fileRoom);
-  const size = module.canvas ?? { width: 1600, height: 2400 };
+  const size = module.canvas ?? { width: 1600, height: 1500 };
   const canvas = document.createElement("canvas");
   canvas.className = "site-room";
   canvas.setAttribute("aria-hidden", "true");

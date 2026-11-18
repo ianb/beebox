@@ -23,16 +23,16 @@ export const hash = (n: number): number => {
 // ---- the canvas and its levels -----------------------------------------------------
 
 export const WIDTH = 1600;
-/** Canvas height. The route below is built for five levels, which fit in 2400. */
-export const HEIGHT = 2400;
+/** Canvas height. The route below is built for three levels of 500 pixels. */
+export const HEIGHT = 1500;
 /** Scale of everything drawn, relative to the first version. */
 export const K = 0.65;
 const LEVEL_TOP = 400;
-export const LEVEL_GAP = 470;
-/** The part of the canvas that belongs to a level: from above its lamps to just below its platform. */
+export const LEVEL_GAP = 500;
+export const LEVELS = Math.floor((HEIGHT - 500) / LEVEL_GAP) + 1;
+/** The part of the canvas that belongs to a level: from above its lamps to just above the next level's lamps. */
 export const bandTop = (level: number): number => (level === 0 ? 0 : LEVEL_TOP + level * LEVEL_GAP - 380);
-export const bandBottom = (level: number): number => (level >= Math.floor((HEIGHT - 520) / LEVEL_GAP) ? HEIGHT : LEVEL_TOP + level * LEVEL_GAP + 90);
-export const LEVELS = Math.floor((HEIGHT - 520) / LEVEL_GAP) + 1;
+export const bandBottom = (level: number): number => (level >= LEVELS - 1 ? HEIGHT : bandTop(level + 1));
 /** Top of the platform each level's cabinets stand on. */
 export const levelFloor = (level: number): number => LEVEL_TOP + level * LEVEL_GAP;
 /** The clerk's feet stand this far below the cabinets' base, on the platform's front edge. */
@@ -95,7 +95,7 @@ export interface Stop {
   /** Which side of the cabinet the clerk stands on: -1 left, 1 right. */
   side: -1 | 1;
 }
-/** Down the archive: right ladder after level 0, left after 1, right after 2, left after 3. Rows 1 are high drawers. */
+/** Down the archive: right ladder after level 0, left after level 1, then across level 2 and out. Rows 1 are high drawers. */
 export const STOPS: readonly Stop[] = [
   { cab: 0, row: 3, act: "take", side: -1 },
   { cab: 1, row: 3, act: "file", side: -1 },
@@ -103,10 +103,8 @@ export const STOPS: readonly Stop[] = [
   { cab: 3, row: 1, act: "file", side: 1 },
   { cab: 2, row: 3, act: "take", side: 1 },
   { cab: 4, row: 3, act: "file", side: -1 },
-  { cab: 5, row: 1, act: "take", side: -1 },
-  { cab: 7, row: 3, act: "file", side: 1 },
-  { cab: 6, row: 1, act: "take", side: 1 },
-  { cab: 8, row: 3, act: "file", side: -1 },
+  { cab: 4, row: 1, act: "take", side: -1 },
+  { cab: 5, row: 3, act: "file", side: -1 },
 ];
 const FIRST_STOP: Stop = { cab: 0, row: 3, act: "take", side: -1 };
 export const stopAt = (i: number): Stop => STOPS[i] ?? FIRST_STOP;

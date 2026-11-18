@@ -8,7 +8,7 @@
 // navigation.js and runs after every page swap.
 
 export const ROOM_CSS = `
-canvas.site-room { position: fixed; left: 0; top: 0; width: 100vw; height: 150vw; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 1.2s; will-change: transform; background: #060608; }
+canvas.site-room { position: fixed; left: 0; top: 0; width: 100vw; height: 93.75vw; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 1.2s; will-change: transform; background: #060608; }
 canvas.site-room.on { opacity: 1; }
 body[data-site-room] #site-workspace { position: relative; z-index: 1; }
 body[data-site-room] #site-header.bbx-app-nav { position: relative; z-index: 2; }
@@ -23,8 +23,8 @@ export const ROOM_SCRIPT = `
   let roomStop = null;
   let roomLoading = false;
   let roomFailed = false;
-  // Wide enough for the margins to show the scene, and not so tall that the scene (2:3) would end above the window's foot.
-  const roomWide = matchMedia('(min-width: 1200px) and (min-aspect-ratio: 2/3)');
+  // Wide enough for the margins to show the scene, and not so tall that the scene (16:15) would end above the window's foot.
+  const roomWide = matchMedia('(min-width: 1200px) and (min-aspect-ratio: 16/15)');
   const roomCalm = matchMedia('(prefers-reduced-motion: reduce)');
 
   function roomEligible() {
