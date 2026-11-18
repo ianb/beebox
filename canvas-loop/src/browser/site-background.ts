@@ -48,8 +48,8 @@ export function mountFileRoom(): MountedRoom {
     raf = 0;
     const pane = document.querySelector("#reading-card");
     const fraction = pane === null ? 0 : pane.scrollTop / Math.max(1, pane.scrollHeight - pane.clientHeight);
-    const canvasHeight = (window.innerWidth * size.height) / size.width;
-    const travel = Math.max(0, canvasHeight - window.innerHeight);
+    // The height the page actually gave the canvas, so its bottom edge never rises above the window's.
+    const travel = Math.max(0, canvas.offsetHeight - window.innerHeight);
     canvas.style.transform = `translateY(${-Math.min(1, Math.max(0, fraction)) * travel}px)`;
   };
   const schedule = (): void => {
