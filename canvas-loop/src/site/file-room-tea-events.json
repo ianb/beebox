@@ -1,7 +1,8 @@
 [
-  { "frame": 0, "type": "snapshot", "label": "start: lamps off, bee not yet in" },
-  { "frame": 555, "type": "snapshot", "label": "bee at the second cabinet, drawer open, its lamp lit" },
-  { "frame": 1050, "type": "snapshot", "label": "mid-flight between cabinets" },
-  { "frame": 2205, "type": "snapshot", "label": "right side: drawer open at the last cabinet" },
-  { "frame": 3599, "type": "snapshot", "label": "last frame: same as the start" }
+  { "frame": 0, "type": "snapshot", "label": "start: dark room, every lamp off, bee not yet in" },
+  { "frame": 300, "type": "snapshot", "label": "bee at the left cabinet, drawer open, taking a card, lamp lit" },
+  { "frame": 520, "type": "snapshot", "label": "bee walking to the next cabinet with the card" },
+  { "frame": 1500, "type": "snapshot", "label": "bee across the dark middle, at a right-hand cabinet" },
+  { "frame": 2142, "type": "snapshot", "label": "bee hopping up to a high drawer at the far right cabinet" },
+  { "frame": 3599, "type": "snapshot", "label": "last frame: dark again, same as the start" }
 ]

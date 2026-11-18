@@ -1,125 +1,129 @@
-// The still parts of the file room: wall, floor, cabinets, drawer faces, the
-// high windows and the lamp cords. `roomPicture` is drawn once and cached.
-import type { Drawing, Picture, Style, View } from "@ianbicking/canvas-loop";
-import { CAB_W, FLOOR, LAMPS, STEEL, TALL, cabRows, cabTop, hash, slotOf } from "./file-room-layout-tea.js";
+// The still parts of the file room, drawn by hand: a faint floor and four
+// separate cabinets standing in the dark, each with drawers, label holders and
+// pulls. Every part is a cached picture, recorded once.
+import type { Drawing, Picture, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import { corners, pencilHatch, penBox, penLine } from "./file-room-ink-tea.js";
+import { CABS, CAB_W, FLOOR, ROWS, PITCH, cabAt, cabTop, hash, lampRim } from "./file-room-layout-tea.js";
 
-export const CREAM = "#e9dfc3";
-export const BRASS = "#a98a4a";
+export const CREAM = "#eadfc2";
+export const BRASS = "#b08f4c";
+const LABELS = ["A-C", "D-F", "G-J", "K-M", "N-P", "Q-S", "T-V", "W-Z", "1931", "1932", "1933", "1934", "Misc", "Paid", "Open", "Ref"] as const;
 
-const LABELS = ["A-C", "D-F", "G-J", "K-M", "N-P", "Q-S", "T-V", "W-Z", "1931", "1932", "1933", "1934", "Misc", "Paid", "Open"] as const;
-const WOOD_FACE = "#6b4630";
-const STEEL_FACE = "#4d5c63";
-
-function shade(color: string, amount: number): string {
-  return amount >= 0 ? `color-mix(in oklab, ${color}, white ${Math.round(amount * 100)}%)` : `color-mix(in oklab, ${color}, black ${Math.round(-amount * 100)}%)`;
-}
+const WOOD: readonly string[] = ["#8c5a37", "#7e4f31", "#94623c", "#85553a"];
+const STEEL: readonly string[] = ["#4c6068", "#445a62", "#526870", "#48606a"];
+const bodyColour = (cab: number): string => (cabAt(cab).lamp === "banker" ? "#6a3f27" : "#34444a");
 
 export interface FaceSpec {
   cab: number;
   row: number;
-  /** 0 closed .. 1 fully open: an open drawer casts a shadow. */
-  open: number;
 }
 
-/** A drawer face centred on (0, 0): panel, grain, label holder and pull. */
+/** A drawer face centred on (0, 0): painted panel, grain strokes, hatched shadow, label holder and pull. */
 export function drawerFace(v: View, spec: FaceSpec): Drawing {
-  const { cab, row, open } = spec;
-  const steel = STEEL[cab] === true;
-  const n = cab * 10 + row;
-  const face = shade(steel ? STEEL_FACE : WOOD_FACE, (hash(n) - 0.5) * 0.06);
-  const w = CAB_W - 24;
-  const grain: Style = { stroke: steel ? "rgba(255,255,255,0.05)" : "rgba(20,10,5,0.28)", weight: 1.2 };
+  const { cab, row } = spec;
+  const steel = cabAt(cab).lamp === "pendant";
+  const seed = cab * 10 + row + 1;
+  const tones = steel ? STEEL : WOOD;
+  const tone = (i: number): string => tones[(seed + i) % tones.length] ?? "#7e4f31";
+  const outer = corners({ x: -75, y: -36, w: 150, h: 72, seed, off: 1.8 });
+  const grain: Style = { weight: 15, brush: { preset: "bristle", load: 0.55, bristles: 9, lightJitter: 0.07, hueJitter: 5, opacity: 0.55 } };
   return [
-    v.roundRect(-w / 2, -44, w, 88, 3, { fill: face, stroke: "rgba(0,0,0,0.5)", weight: 2, material: { bevel: 3, relief: 0.25, shine: steel ? 0.25 : 0.05, castsShadow: open > 0 ? 18 : false } }),
-    v.roundRect(-w / 2 + 7, -37, w - 14, 74, 2, { fill: "rgba(0,0,0,0)", stroke: "rgba(0,0,0,0.28)", weight: 1.5 }),
-    [0, 1, 2].map((i) => {
-      const y = -12 + i * 17 + (hash(n + i) - 0.5) * 6;
-      return v.line(-w / 2 + 12 + hash(n * 3 + i) * 20, y, w / 2 - 12 - hash(n * 5 + i) * 30, y + (hash(n + 9 * i) - 0.5) * 3, grain);
+    v.polygon(outer, { fill: tone(0) }),
+    v.clip(outer, [
+      [-26, -5, 17].map((y, i) => v.line(-80, y + i, 80, y - 1 + i, { ...grain, stroke: tone(i + 1), gesture: { wobble: 1.6, seed: seed * 7 + i, faint: true } })),
+    ]),
+    pencilHatch(v, { clip: outer, x: -10, y: -36, w: 100, h: 72, seed, spacing: 7 }),
+    penBox(v, { x: -75, y: -36, w: 150, h: 72, seed, weight: 2.8 }),
+    penBox(v, { x: -64, y: -26, w: 128, h: 52, seed: seed + 40, weight: 1.3, color: "rgba(23,17,13,0.55)", off: 1.2 }),
+    // label holder: brass frame, a card with a letter
+    v.polygon(corners({ x: -40, y: -31, w: 56, h: 20, seed: seed + 3, off: 1 }), { fill: BRASS }),
+    v.polygon(corners({ x: -36, y: -28, w: 48, h: 14, seed: seed + 4, off: 0.8 }), { fill: CREAM }),
+    penBox(v, { x: -40, y: -31, w: 56, h: 20, seed: seed + 9, weight: 1.6 }),
+    v.text(LABELS[(cab * 5 + row * 3) % LABELS.length] ?? "A-C", { x: -12, y: -21 }, { size: 12, font: "Georgia, serif", style: "italic", fill: "#2a1d14", align: "center", valign: "middle" }),
+    // pull
+    v.polygon(corners({ x: -30, y: 6, w: 60, h: 10, seed: seed + 6, off: 1 }), { fill: BRASS }),
+    penBox(v, { x: -30, y: 6, w: 60, h: 10, seed: seed + 7, weight: 1.8 }),
+    penLine(v, { a: [-28, 19], b: [28, 19], seed: seed + 8, weight: 2.2, color: "rgba(23,17,13,0.8)" }),
+  ];
+}
+
+/** The picture of one drawer face, for the drawer that slides out. */
+export function facePicture(v: View, spec: FaceSpec): Picture {
+  return v.picture({ key: `face-${spec.cab}-${spec.row}` }, () => drawerFace(v, spec));
+}
+
+/** The inside of a drawer seen from above, drawn at full depth: dark tray and a row of index cards. Anchored at its back edge. */
+export function trayPicture(v: View): Picture {
+  return v.picture({ key: "tray" }, () => [
+    v.polygon([[-62, 0], [62, 0], [75, 28], [-75, 28]], { fill: "#1c1410" }),
+    Array.from({ length: 13 }, (_, i) => {
+      const x = -58 + i * 9.6;
+      const h = 15 + hash(i * 3.1) * 8;
+      return [
+        v.rect(x - 4, 27 - h, 8, h, { fill: i % 5 === 2 ? "#d9c78f" : CREAM }),
+        penBox(v, { x: x - 4, y: 27 - h, w: 8, h, seed: i + 1, weight: 1, off: 0.5 }),
+        i % 4 === 1 && v.rect(x - 2, 27 - h - 2, 4, 4, { fill: i % 8 === 1 ? "#b8574a" : "#4f7aa8" }),
+      ];
     }),
-    v.rect(-26, -32, 52, 20, { fill: BRASS, material: { bevel: 1.5, shine: 0.5 } }),
-    v.rect(-22, -29, 44, 14, { fill: CREAM }),
-    v.text(LABELS[(cab + row * 3) % LABELS.length] ?? "A-C", { x: 0, y: -22 }, { size: 11, font: "Georgia, serif", style: "bold", fill: "#3a2e22", align: "center", valign: "middle" }),
-    v.roundRect(-20, 8, 40, 9, 4, { fill: BRASS, material: { bevel: 3, shine: 0.7 } }),
-    v.rect(-20, 17, 40, 3, { fill: "rgba(0,0,0,0.3)" }),
-  ];
-}
-
-function cabinet(v: View, c: number): Drawing {
-  const x = c * CAB_W + 4;
-  const top = cabTop(c);
-  const steel = STEEL[c] === true;
-  return [
-    v.rect(x, top, CAB_W - 8, FLOOR - top, { fill: steel ? "#38454c" : "#4a3223", material: { bevel: 4, relief: 0.2, castsShadow: 20 } }),
-    v.rect(x - 2, top - 7, CAB_W - 4, 8, { fill: steel ? "#56666e" : "#6a4a35", material: { bevel: 2, shine: 0.15 } }),
-    v.rect(x + 2, FLOOR - 14, CAB_W - 12, 14, { fill: "#1d1713", material: { bevel: 1 } }),
-    Array.from({ length: cabRows(c) }, (_, row) => {
-      const s = slotOf(c, row);
-      return [v.rect(s.x + 2, s.y, s.w - 4, s.h, { fill: "#120d0a" }), v.at({ translate: [s.x + s.w / 2, s.y + s.h / 2] }, drawerFace(v, { cab: c, row, open: 0 }))];
-    }),
-  ];
-}
-
-function boxesOnTop(v: View, c: number): Drawing {
-  const top = cabTop(c) - 7;
-  const x = c * CAB_W;
-  const edge: Style = { stroke: "rgba(0,0,0,0.4)", weight: 1.5 };
-  return [
-    v.rect(x + 22, top - 46, 70, 46, { ...edge, fill: "#6b5a3c", material: { bevel: 2, castsShadow: 12 } }),
-    v.rect(x + 22, top - 58, 70, 12, { ...edge, fill: "#7b6a47", material: { bevel: 2 } }),
-    v.rect(x + 50, top - 36, 26, 14, { fill: CREAM }),
-    v.rect(x + 104, top - 36, 66, 36, { ...edge, fill: "#4b5546", material: { bevel: 2, castsShadow: 10 } }),
-    v.rect(x + 122, top - 26, 28, 12, { fill: CREAM }),
-  ];
-}
-
-function bankerBase(v: View, x: number): Drawing {
-  const y = cabTop(1) - 7;
-  return [
-    v.ellipse(x, y - 4, 30, 7, { fill: "#2c2a22", material: { bevel: 2, shine: 0.6 } }),
-    v.rect(x - 30, y - 12, 60, 8, { fill: "#2c2a22", material: { bevel: 2, shine: 0.6 } }),
-    v.rect(x - 4, y - 52, 8, 42, { fill: BRASS, material: { bevel: 2, shine: 0.8 } }),
-  ];
-}
-
-function floorClutter(v: View): Drawing {
-  const edge: Style = { stroke: "rgba(0,0,0,0.4)", weight: 1.5 };
-  return [
-    v.rect(60, 800, 110, 60, { ...edge, fill: "#6b5a3c", material: { bevel: 2, castsShadow: 14 } }),
-    v.rect(76, 810, 40, 16, { fill: CREAM }),
-    v.rect(1400, 810, 100, 50, { ...edge, fill: "#4b5546", material: { bevel: 2, castsShadow: 14 } }),
-    v.polygon([[1180, 850], [1230, 842], [1250, 860], [1196, 868]], { fill: CREAM }),
-    v.polygon([[620, 830], [668, 822], [684, 838], [632, 848]], { fill: "#d6c9a6" }),
-  ];
-}
-
-/** The wall, floor, cabinets and the lamp cords and banker's lamp bases: drawn once. */
-export function roomPicture(v: View): Picture {
-  return v.picture({ key: "room", width: 1600, height: 900 }, () => [
-    v.rect(0, 0, 1600, FLOOR, { fill: "#2b3248", material: { relief: 0.08 } }),
-    Array.from({ length: 20 }, (_, i) => v.rect(i * 80, 0, 3, FLOOR, { fill: "rgba(0,0,0,0.16)" })),
-    v.rect(0, 238, 1600, 5, { fill: "#1d2233" }),
-    v.rect(0, FLOOR, 1600, 140, { fill: "#2a1e17", material: { relief: 0.1 } }),
-    Array.from({ length: 22 }, (_, i) => v.line(-40 + i * 80, FLOOR + 2, -240 + i * 100, 900, { stroke: "rgba(8,4,2,0.4)", weight: 1.5 })),
-    v.rect(0, FLOOR - 2, 1600, 4, { fill: "rgba(0,0,0,0.5)" }),
-    floorClutter(v),
-    [2, 3, 5, 7, 0].map((c) => boxesOnTop(v, c)),
-    TALL.map((_, c) => cabinet(v, c)),
-    LAMPS.map((l) => (l.kind === "pendant" ? v.line(l.x, 0, l.x, 118, { stroke: "#16120f", weight: 3 }) : bankerBase(v, l.x))),
   ]);
 }
 
-function window(v: View, x: number): Drawing {
+function cabinet(v: View, c: number): Drawing {
+  const x0 = -CAB_W / 2;
+  const top = cabTop - FLOOR;
+  const h = -top;
+  const body = corners({ x: x0, y: top, w: CAB_W, h, seed: c + 60, off: 1.5 });
+  const lit = bodyColour(c);
   return [
-    v.rect(x, 52, 120, 168, { fill: "#2a2723", material: { bevel: 4 } }),
-    v.rect(x + 8, 60, 104, 152, { fill: v.linearGradient(0, 60, 0, 212, [[0, "#1b2a52"], [1, "#31446f"]]), material: { emissive: 0.75 } }),
-    v.circle(x + 84, 96, 7, { fill: "#dfe6f3", material: { emissive: 1 } }),
-    v.rect(x + 58, 60, 4, 152, { fill: "#2a2723" }),
-    v.rect(x + 8, 134, 104, 4, { fill: "#2a2723" }),
-    v.rect(x - 6, 218, 132, 8, { fill: "#3b342d", material: { bevel: 2 } }),
+    // a smudge of shadow on the floor
+    v.ellipse(4, 4, 100, 12, { fill: "rgba(0,0,0,0.5)" }),
+    v.polygon(body, { fill: lit }),
+    v.clip(body, [
+      [0.2, 0.5, 0.8].map((f, i) => v.line(x0 - 4, top + h * f, x0 + CAB_W + 4, top + h * f + 3, { stroke: lit, weight: 26, brush: { preset: "bristle", lightJitter: 0.08, hueJitter: 6, opacity: 0.5 }, gesture: { wobble: 2, seed: c * 9 + i, faint: true } })),
+    ]),
+    pencilHatch(v, { clip: body, x: x0 + 110, y: top, w: 70, h, seed: c + 3, spacing: 6 }),
+    penBox(v, { x: x0, y: top, w: CAB_W, h, seed: c + 20, weight: 3.4 }),
+    penLine(v, { a: [x0 - 6, top - 1], b: [x0 + CAB_W + 6, top - 1], seed: c + 31, weight: 4.5 }),
+    Array.from({ length: ROWS }, (_, row) => {
+      const cy = top + 8 + row * PITCH + 36;
+      return [v.rect(x0 + 10, cy - 36, 150, 72, { fill: "#0d0907" }), v.at({ translate: [0, cy] }, drawerFace(v, { cab: c, row }))];
+    }),
+    // plinth
+    v.polygon(corners({ x: x0 + 4, y: -12, w: CAB_W - 8, h: 12, seed: c + 70, off: 1 }), { fill: "#241a14" }),
+    penLine(v, { a: [x0 + 2, -12], b: [x0 + CAB_W - 2, -12], seed: c + 71, weight: 2 }),
   ];
 }
 
-/** The two high windows: they glow by themselves, so they are drawn after the lighting multiply. */
-export function windowsPicture(v: View): Picture {
-  return v.picture({ key: "windows", width: 1600, height: 900 }, () => [window(v, 240), window(v, 1240)]);
+/** Cabinet `c`, drawn around the middle of its base; its lamp's cord hangs from the dark above. */
+export function cabinetPicture(v: View, c: number): Picture {
+  return v.picture({ key: `cab-${c}`, paper: { scale: 3, contrast: 0.6, seed: c } }, () => [
+    cabinet(v, c),
+    cabAt(c).lamp === "pendant" && penLine(v, { a: [0, lampRim(c).y - 54 - FLOOR], b: [0, -FLOOR], seed: c + 90, weight: 2.4 }),
+    cabAt(c).lamp === "banker" && bankerBase(v, c),
+  ]);
 }
+
+function bankerBase(v: View, c: number): Drawing {
+  const y = cabTop - FLOOR - 7;
+  const pts: Vec2[] = [[-5, y], [5, y], [5, y - 40], [-5, y - 40]];
+  return [
+    v.polygon(corners({ x: -32, y: y - 9, w: 64, h: 9, seed: c + 80, off: 1 }), { fill: "#3a362a" }),
+    penBox(v, { x: -32, y: y - 9, w: 64, h: 9, seed: c + 81, weight: 2 }),
+    v.polygon(pts, { fill: BRASS }),
+    penBox(v, { x: -5, y: y - 40, w: 10, h: 40, seed: c + 82, weight: 1.8 }),
+  ];
+}
+
+/** A faint floor: a pale patch with a few pencil board lines, so lamplight has something to fall on. */
+export function floorPicture(v: View): Picture {
+  return v.picture({ key: "floor", width: 1600, height: 900, paper: { scale: 3, contrast: 0.6, seed: 11 } }, () => [
+    v.ellipse(800, 840, 1000, 120, { fill: v.ellipseGradient(800, 840, 1000, 120, [[0, "#3a3138"], [0.5, "#2a242a"], [1, "rgba(30,26,30,0)"]]) }),
+    Array.from({ length: 14 }, (_, i) => {
+      const x = -200 + i * 150;
+      return v.line(800 + (x - 800) * 0.35, FLOOR + 6, x, 900, { stroke: "rgba(15,10,10,0.6)", weight: 1.6, brush: { preset: "pencil", opacity: 0.7 }, gesture: { wobble: 1, seed: i + 1 } });
+    }),
+    [820, 860].map((y, i) => v.line(0, y, 1600, y + 2, { stroke: "rgba(15,10,10,0.5)", weight: 1.4, brush: { preset: "pencil", opacity: 0.6 }, gesture: { wobble: 1.4, seed: 30 + i } })),
+  ]);
+}
+
+export const CABINET_COUNT = CABS.length;

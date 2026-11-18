@@ -1,15 +1,9 @@
-// Fixed layout and timing of the file-room sketch: where the cabinets, lamps
-// and drawers are, and every motion as a pure function of the frame.
-import type { Vec2 } from "@ianbicking/canvas-loop";
-
+// Fixed layout and timing of the file-room sketch: four cabinets standing
+// apart in the dark, the schedule of the bee's visits, and every motion as a
+// pure function of the frame.
 export const TAU = Math.PI * 2;
 
-// ---- timing -----------------------------------------------------------------
-
-/** Frames per stop segment: a flight, then a dwell at a drawer. */
-export const SEG = 330;
-export const TRAVEL = 120;
-/** The bee flies away during the segment after the last stop; every lamp is dark again by LOOP. */
+/** Frames in one loop (60 s at 60 fps). The room is dark and empty again at the end. */
 export const LOOP = 3600;
 
 export const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
@@ -28,16 +22,29 @@ export const hash = (n: number): number => {
   return s - Math.floor(s);
 };
 
-// ---- room layout ------------------------------------------------------------
+// ---- cabinets ------------------------------------------------------------------
 
-export const FLOOR = 760;
-export const CAB_W = 200;
-export const DRAWER_PITCH = 94;
-export const TALL = [true, false, true, true, false, true, false, true] as const;
-export const STEEL = [false, true, false, false, true, false, true, false] as const;
+/** The line where cabinets stand, and the line the bee's feet stand on (a little nearer the viewer). */
+export const FLOOR = 780;
+export const GROUND = 803;
+export const CAB_W = 170;
+export const ROWS = 4;
+export const PITCH = 78;
+export const cabTop = FLOOR - 12 - 8 - ROWS * PITCH;
 
-export const cabRows = (c: number): number => (TALL[c] === true ? 5 : 3);
-export const cabTop = (c: number): number => FLOOR - 14 - 8 - cabRows(c) * DRAWER_PITCH;
+export interface Cabinet {
+  x: number;
+  lamp: "banker" | "pendant";
+}
+/** Two on the left, two on the right; the page card covers the middle. */
+export const CABS: readonly Cabinet[] = [
+  { x: 210, lamp: "banker" },
+  { x: 500, lamp: "pendant" },
+  { x: 1100, lamp: "pendant" },
+  { x: 1390, lamp: "banker" },
+];
+const FIRST_CAB: Cabinet = { x: 210, lamp: "banker" };
+export const cabAt = (i: number): Cabinet => CABS[i] ?? FIRST_CAB;
 
 export interface Slot {
   x: number;
@@ -45,114 +52,143 @@ export interface Slot {
   w: number;
   h: number;
 }
-export const slotOf = (c: number, row: number): Slot => ({ x: c * CAB_W + 12, y: cabTop(c) + 8 + row * DRAWER_PITCH, w: CAB_W - 24, h: 88 });
+export const slotOf = (cab: number, row: number): Slot => ({ x: cabAt(cab).x - 75, y: cabTop + 8 + row * PITCH, w: 150, h: 72 });
 
-export interface Lamp {
-  kind: "pendant" | "banker";
-  x: number;
-}
-export const LAMPS: readonly Lamp[] = [
-  { kind: "pendant", x: 100 },
-  { kind: "banker", x: 300 },
-  { kind: "pendant", x: 500 },
-  { kind: "banker", x: 900 },
-  { kind: "pendant", x: 1100 },
-  { kind: "banker", x: 1300 },
-  { kind: "pendant", x: 1500 },
-];
+/** Where a lamp's light sits, and the lamp's own anchor (shade rim). */
+export const lampRim = (cab: number): { x: number; y: number } => ({ x: cabAt(cab).x, y: cabAt(cab).lamp === "pendant" ? 300 : cabTop - 7 - 58 });
+export const lampLightAt = (cab: number): readonly [number, number] => [lampRim(cab).x, lampRim(cab).y + 12];
 
-/** Where each lamp's light sits. */
-export const lampLightAt = (l: Lamp): Vec2 => (l.kind === "pendant" ? [l.x, 176] : [l.x, 404]);
+// ---- the bee's schedule ----------------------------------------------------------
 
 export interface Stop {
   cab: number;
+  /** Row 3 is at the bee's hand height on the ground; row 2 needs a hop. */
   row: number;
-  /** The lamp that warms up for this stop. */
-  lamp: number;
+  act: "take" | "file";
+  /** Which side of the cabinet the bee stands on: -1 left, 1 right. */
+  side: -1 | 1;
 }
-/** The drawers the bee visits, in order: right along the wall, then back left. */
 export const STOPS: readonly Stop[] = [
-  { cab: 0, row: 3, lamp: 0 },
-  { cab: 1, row: 1, lamp: 1 },
-  { cab: 2, row: 2, lamp: 2 },
-  { cab: 4, row: 1, lamp: 3 },
-  { cab: 5, row: 3, lamp: 4 },
-  { cab: 6, row: 0, lamp: 5 },
-  { cab: 7, row: 2, lamp: 6 },
-  { cab: 6, row: 2, lamp: 5 },
-  { cab: 4, row: 2, lamp: 3 },
-  { cab: 2, row: 0, lamp: 2 },
+  { cab: 0, row: 3, act: "take", side: -1 },
+  { cab: 1, row: 3, act: "file", side: -1 },
+  { cab: 1, row: 2, act: "take", side: -1 },
+  { cab: 2, row: 3, act: "file", side: -1 },
+  { cab: 2, row: 2, act: "take", side: -1 },
+  { cab: 3, row: 3, act: "file", side: -1 },
+  { cab: 3, row: 2, act: "take", side: -1 },
+  { cab: 2, row: 3, act: "file", side: 1 },
 ];
-const FIRST_STOP: Stop = { cab: 0, row: 3, lamp: 0 };
+const FIRST_STOP: Stop = { cab: 0, row: 3, act: "take", side: -1 };
 export const stopAt = (i: number): Stop => STOPS[i] ?? FIRST_STOP;
 
-const OFFSCREEN: Vec2 = [-110, 330];
+const DWELL = 260;
+const SPEED = 2.6;
+const START = 90;
+const ENTRY_X = -130;
+const EXIT_X = 1730;
+const HOP = 78;
+/** How far from the cabinet's centre the bee stands: beside the cabinet's edge, an arm's reach from the pull. */
+const STAND = 88;
 
-/** The point the bee hovers at for a stop: above the drawer's face. */
-function hoverOf(stop: Stop): Vec2 {
-  const s = slotOf(stop.cab, stop.row);
-  return [s.x + s.w / 2, s.y - 30];
+export interface Visit {
+  x: number;
+  lift: number;
+  dir: 1 | -1;
+  arrive: number;
+  depart: number;
+  /** Distance walked when they arrive. */
+  base: number;
 }
 
-// ---- drawer, card, lamp levels ---------------------------------------------
+const travelFrames = (dist: number): number => Math.max(50, Math.round(dist / SPEED));
 
-/** Frame within a stop's dwell (0 at arrival), or -1 when the bee is flying. */
-export const dwellOf = (t: number): number => (t < TRAVEL ? -1 : t - TRAVEL);
+function buildVisits(): { visits: Visit[]; exitEnd: number } {
+  const visits: Visit[] = [];
+  let t = START;
+  let px = ENTRY_X;
+  let walked = 0;
+  for (const s of STOPS) {
+    const x = cabAt(s.cab).x + s.side * STAND;
+    const arrive = t + travelFrames(Math.abs(x - px));
+    walked += Math.abs(x - px);
+    visits.push({ x, lift: s.row === 3 ? 0 : HOP, dir: s.side === -1 ? 1 : -1, arrive, depart: arrive + DWELL, base: walked });
+    t = arrive + DWELL;
+    px = x;
+  }
+  return { visits, exitEnd: t + travelFrames(EXIT_X - px) };
+}
+const SCHEDULE = buildVisits();
+export const VISITS: readonly Visit[] = SCHEDULE.visits;
+const FIRST_VISIT: Visit = { x: 0, lift: 0, dir: 1, arrive: 0, depart: 0, base: 0 };
+const visitAt = (i: number): Visit => VISITS[i] ?? FIRST_VISIT;
 
-/** How far the stop's drawer is open: 0 closed, 1 fully out. */
+/** How far a stop's drawer is out: 0 closed, 1 fully out. */
 export function openAmount(d: number): number {
-  if (d < 0) return 0;
-  if (d < 45) return smooth((d - 5) / 40);
-  return 1 - smooth((d - 160) / 35);
+  if (d < 30) return 0;
+  if (d < 195) return smooth((d - 30) / 45) - smooth((d - 150) / 45);
+  return 0;
 }
 
-/** How far the card has risen from the drawer to the bee: 0 in the drawer, 1 held. */
-export function liftAmount(d: number): number {
-  if (d < 45) return 0;
-  if (d < 125) return smooth((d - 45) / 45);
-  return 1 - smooth((d - 125) / 35);
+/** 0..1 across the card's move between the drawer (0) and the bee's hands (1) at a take; reversed at a file. */
+export function cardTravel(act: Stop["act"], d: number): number {
+  const k = smooth((d - 75) / 50);
+  return act === "take" ? k : 1 - k;
 }
 
-/** 0..1: how lit a lamp is. Warms over 90 frames once the bee is near, fades over 240 after it leaves. */
-export function lampLevel(lamp: number, frame: number): number {
+/** 0..1: how lit a cabinet's lamp is. Warms over 100 frames as the bee comes near, fades over 240 after they leave. */
+export function lampLevel(cab: number, frame: number): number {
   let level = 0;
-  for (const [s, stop] of STOPS.entries()) {
-    if (stop.lamp !== lamp) continue;
-    const x = frame - (s * SEG + 80);
-    level = Math.max(level, Math.min(smooth(x / 90), 1 - smooth((x - (SEG - 50)) / 240)));
+  for (const [i, s] of STOPS.entries()) {
+    if (s.cab !== cab) continue;
+    const v = visitAt(i);
+    const x = frame - (v.arrive - 90);
+    level = Math.max(level, Math.min(smooth(x / 100), 1 - smooth((x - (v.depart + 20 - (v.arrive - 90))) / 240)));
   }
   return level;
 }
 
-// ---- the bee's path ---------------------------------------------------------
-
 export interface BeeState {
   x: number;
-  y: number;
-  /** -1 facing left, 1 facing right, eased through 0 as it turns. */
-  turn: number;
-  /** The stop being visited (or just left) and the frame within its segment. */
+  /** Height above the ground, for the hop to a higher drawer. */
+  lift: number;
+  dir: 1 | -1;
+  /** Distance walked so far: drives the leg cycle. */
+  walked: number;
+  /** The stop they are at (-1 when walking or away). */
   stop: number;
-  t: number;
+  /** Frames since arriving at the stop (-1 when not at one). */
+  d: number;
+  /** True when they walk holding a card. */
+  carrying: boolean;
+  visible: boolean;
 }
 
-const directionOf = (from: Vec2, to: Vec2): number => Math.sign(to[0] - from[0]) || 1;
-
-/** Where the bee hovers before stop `s` (the last segment, `STOPS.length`, is the way out). */
-const waypoint = (s: number): Vec2 => (s < 0 || s >= STOPS.length ? OFFSCREEN : hoverOf(stopAt(s)));
+const sign = (n: number): 1 | -1 => (n < 0 ? -1 : 1);
+const ease = (u: number): number => 0.5 * u + 0.5 * smooth(u);
 
 export function beeAt(frame: number): BeeState {
-  const s = Math.min(STOPS.length, Math.floor(frame / SEG));
-  const t = frame - s * SEG;
-  const from = waypoint(s - 1);
-  const to = waypoint(s);
-  const prevDir = s === 0 ? 1 : directionOf(waypoint(s - 2), from);
-  const turn = lerp(prevDir, directionOf(from, to))(smooth(t / 24));
-  const u = clamp01(t / TRAVEL);
-  const edge = Math.sin(Math.PI * u);
-  const bob = 5 * Math.sin((TAU * 60 * frame) / LOOP);
-  const sway = 3 * Math.sin((TAU * 83 * frame) / LOOP + 1.3);
-  const x = lerp(from[0], to[0])(smooth(u)) + 18 * Math.sin(TAU * 1.5 * u) * edge + sway;
-  const y = lerp(from[1], to[1])(smooth(u)) - 34 * edge + 15 * Math.sin(TAU * 2.5 * u + 0.6) * edge + bob;
-  return { x, y, turn, stop: s, t };
+  const away: BeeState = { x: ENTRY_X, lift: 0, dir: 1, walked: 0, stop: -1, d: -1, carrying: false, visible: false };
+  if (frame < START) return away;
+  let px = ENTRY_X;
+  let pl = 0;
+  let from = START;
+  let pbase = 0;
+  let pdir: 1 | -1 = 1;
+  for (const [i, v] of VISITS.entries()) {
+    const carrying = i > 0 && stopAt(i - 1).act === "take";
+    if (frame < v.arrive) {
+      const u = (frame - from) / (v.arrive - from);
+      const dir = Math.abs(v.x - px) < 1 ? v.dir : sign(v.x - px);
+      return { x: lerp(px, v.x)(ease(u)), lift: lerp(pl, v.lift)(smooth(u)), dir, walked: pbase + Math.abs(v.x - px) * ease(u), stop: -1, d: -1, carrying, visible: true };
+    }
+    if (frame < v.depart) return { x: v.x, lift: v.lift, dir: v.dir, walked: v.base, stop: i, d: frame - v.arrive, carrying: false, visible: true };
+    px = v.x;
+    pl = v.lift;
+    from = v.depart;
+    pbase = v.base;
+    pdir = v.dir;
+  }
+  const u = clamp01((frame - from) / (SCHEDULE.exitEnd - from));
+  const dir = Math.abs(EXIT_X - px) < 1 ? pdir : sign(EXIT_X - px);
+  return { ...away, x: lerp(px, EXIT_X)(ease(u)), lift: lerp(pl, 0)(smooth(u * 3)), dir, walked: pbase + Math.abs(EXIT_X - px) * ease(u), visible: u < 1 };
 }
