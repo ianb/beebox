@@ -88,6 +88,10 @@ void test("backslash delimiters", async (t) => {
   // `\\` inside is a TeX line break, not part of a closer.
   t.check(render("\\[\na \\\\\nb\n\\]"), "<M d=\"\">a \\\\\nb</M>");
   t.check(render("\\(a \\\\ b\\)"), "<p><m>a \\\\ b</m></p>");
+  // `\\]` is a row break and a literal bracket; the real closer comes later.
+  t.check(render("\\[\n\\begin{gathered}a \\\\] b\\end{gathered}\n\\]"), "<M d=\"\">\\begin{gathered}a \\\\] b\\end{gathered}</M>");
+  // A line holding only `\[…\]` is display math, even if it reads as words.
+  t.check(render("\\[link\\]"), "<M d=\"\">link</M>");
   t.check(render("> \\[\n> y\n> \\]"), "<blockquote><M d=\"\">y</M></blockquote>");
 });
 
@@ -101,6 +105,11 @@ void test("backslash delimiters that are not math", async (t) => {
   t.check(render("Not a \\[link\\] here"), "<p>Not a [link] here</p>");
   t.check(render("A \\(paren\nacross lines\\)"), "<p>A (paren across lines)</p>");
   t.check(render("Empty \\(\\) stays"), "<p>Empty () stays</p>");
+  // A backslash at the end of a line is a hard break, not part of the formula.
+  t.check(render("Before \\(a\\\nb\\) after"), "<p>Before (a<br>b) after</p>");
+  // A closer inside a later code fence does not pair with an open `\[` or `$$`.
+  t.check(render("\\[\n```tex\nx \\]\n```"), "<p>[</p><pre data-language=\"tex\">x \\]\n</pre>");
+  t.check(render("$$\n```tex\nx $$\n```"), "<p>$$</p><pre data-language=\"tex\">x $$\n</pre>");
   t.check(render("Run `echo \\(x\\)` now"), "<p>Run <code>echo \\(x\\)</code> now</p>");
   t.check(render("```tex\n\\[x\\]\n```"), "<pre data-language=\"tex\">\\[x\\]\n</pre>");
 });

@@ -66,7 +66,7 @@ export function createMarkdownParser({ linkify, math }: { linkify: boolean; math
 
 const plain = createMarkdownParser({ linkify: false, math: false });
 
-/** Parse a Markdown body without bare-URL autolinking (backend walkers, publishing). */
+/** Parse a Markdown body without bare-URL autolinking (backend walkers). */
 export function parseMarkdown(source: string): Node {
   return plain.parse(source);
 }

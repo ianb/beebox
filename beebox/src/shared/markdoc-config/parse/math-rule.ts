@@ -4,7 +4,8 @@
  *
  * The rules see the raw source, before Markdown escapes and emphasis, so the
  * TeX reaches the renderer as written (`\\`, `\{`, `a*b*c` intact). Code spans
- * and fences take precedence: their rules match before these do.
+ * and fences take precedence: their rules match before these do, and a block's
+ * search for its closing line stops at a fence.
  *
  * Inline `$…$` follows Pandoc's `tex_math_dollars` rule, so prices and shell
  * text stay text: the opening `$` is not followed by whitespace, the closing
@@ -74,6 +75,7 @@ function findParenClose(state: StateInline, start: number): number {
     if (ch === "\n" || ch === "`") return -1;
     if (ch !== "\\") continue;
     if (src[i + 1] === ")") return i;
+    if (src[i + 1] === "\n") return -1;
     i++;
   }
   return -1;
@@ -143,6 +145,26 @@ const BLOCK_DELIMITERS = [
   ["\\[", "\\]"],
 ] as const;
 
+/**
+ * Where `closer` starts in `text`, or -1. `\]` counts only after an even run
+ * of backslashes, so a TeX row break `\\` before a literal `]` is not a closer.
+ */
+function findCloser(text: string, closer: string): number {
+  if (closer === "$$") return text.indexOf(closer);
+  for (let i = 0; i + 1 < text.length; i++) {
+    if (text[i] !== "\\") continue;
+    if (text[i + 1] === "]") return i;
+    i++;
+  }
+  return -1;
+}
+
+/** A fence line ends the search: a closer inside code is not math. */
+function isFence(text: string): boolean {
+  const trimmed = text.trimStart();
+  return trimmed.startsWith("```") || trimmed.startsWith("~~~");
+}
+
 // eslint-disable-next-line max-params -- markdown-it's block rule signature is (state, startLine, endLine, silent)
 function mathBlock(state: StateBlock, startLine: number, endLine: number, silent: boolean): boolean {
   if (lineMark(state.sCount, startLine) - state.blkIndent >= 4) return false;
@@ -154,7 +176,7 @@ function mathBlock(state: StateBlock, startLine: number, endLine: number, silent
 
   let closeLine: number;
   let tex: string;
-  const sameLineClose = rest.indexOf(closer);
+  const sameLineClose = findCloser(rest, closer);
   if (sameLineClose !== -1) {
     // `$$a$$` alone on its line is a block; `$$a$$ and more` is inline.
     if (sameLineClose + closer.length !== rest.length) return false;
@@ -165,9 +187,9 @@ function mathBlock(state: StateBlock, startLine: number, endLine: number, silent
     closeLine = -1;
     for (let line = startLine + 1; line < endLine; line++) {
       const text = lineText(state, line).trimEnd();
-      if (text.trim() === "") return false;
+      if (text.trim() === "" || isFence(text)) return false;
       if (lineMark(state.sCount, line) < state.blkIndent) return false;
-      const end = text.indexOf(closer);
+      const end = findCloser(text, closer);
       if (end !== -1) {
         if (end + closer.length !== text.length) return false;
         lines.push(text.slice(0, end));
