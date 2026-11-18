@@ -75,22 +75,26 @@ function DetailRow({ chip, onNavigate }: { chip: SourceChip; onNavigate: Navigat
  * keyboard does not reach a link no one can see (and focusing it does not
  * scroll the clipped row into view).
  */
+/** A chip whose top is below the first chip's has wrapped onto the clipped line. */
 function markWrapped(row: HTMLElement): void {
-  const top = row.getBoundingClientRect().top;
+  const first = row.firstElementChild;
+  if (first === null) return;
+  const top = first.getBoundingClientRect().top;
   for (const child of row.children) {
-    if (child instanceof HTMLElement) child.inert = child.getBoundingClientRect().top > top + 1;
+    if (child instanceof HTMLElement) child.inert = child.getBoundingClientRect().top > top;
   }
 }
 
-function useInertWrapped(row: RefObject<HTMLDivElement | null>, active: boolean): void {
+/** Runs on every render: a live edit can change the chips without resizing the row. */
+function useInertWrapped(row: RefObject<HTMLDivElement | null>): void {
   useLayoutEffect(() => {
     const element = row.current;
-    if (!active || element === null) return;
+    if (element === null) return;
     markWrapped(element);
     const observer = new ResizeObserver(() => { markWrapped(element); });
     observer.observe(element);
     return () => { observer.disconnect(); };
-  }); // Every render: a live edit can change the chips without resizing the row.
+  });
 }
 
 export function SourcesSection({ chips, onNavigate }: { chips: readonly SourceChip[]; onNavigate: Navigate }): ReactNode {
@@ -99,7 +103,7 @@ export function SourcesSection({ chips, onNavigate }: { chips: readonly SourceCh
   const hasDetails = sourcesHaveDetails(chips);
   // A live edit can drop the toggle while the list is open; the line then shows.
   const expanded = open && hasDetails;
-  useInertWrapped(row, !expanded && chips.length > 1);
+  useInertWrapped(row);
   if (chips.length === 0) return null;
   const toggle = hasDetails ? (
     <InlineAction intent="subtle" expanded={expanded} onClick={() => { setOpen(!expanded); }} className="shrink-0">
