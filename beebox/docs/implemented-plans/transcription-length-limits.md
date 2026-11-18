@@ -1,6 +1,6 @@
 ---
 title: "Per-service length limits for the HQ transcription job"
-status: draft
+status: implemented
 workstream: transcription-length-limits
 issues: []
 ---
