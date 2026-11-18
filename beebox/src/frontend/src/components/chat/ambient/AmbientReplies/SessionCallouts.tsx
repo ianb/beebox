@@ -58,8 +58,9 @@ function useSessionCallouts(props: Props) {
   const { transcriptVisible, dismissal } = props;
   // A reply that arrives while its transcript is on screen is read there, so it never shows here later.
   useEffect(() => {
-    if (selected && transcriptVisible && attention.attention) setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
-  }, [selected, transcriptVisible, attention.attention]);
+    // Wait for the transcript: acknowledging before it loads would make its reply the unseen baseline.
+    if (loaded && selected && transcriptVisible && attention.attention) setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
+  }, [loaded, selected, transcriptVisible, attention.attention]);
   // Nothing about a failed refresh shows here; the next bus event or reconnect refetches.
   const error = history.error ?? status.error;
   useEffect(() => {
