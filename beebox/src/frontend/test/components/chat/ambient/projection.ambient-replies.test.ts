@@ -21,20 +21,19 @@ void test("line 17", async (t) => {
     complete: true,
     earlier: false,
     callouts: [{ context: "Comparison", body: "See [report](view:report.doc.card)" }],
-    acks: [],
     preview: "",
   });
 
   // The same transcript while the run is still going is not a reply yet:
-  t.check(projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: true }), { identity: null, complete: false, earlier: false, callouts: [], acks: [], preview: "" });
+  t.check(projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: true }), { identity: null, complete: false, earlier: false, callouts: [], preview: "" });
 
   // A bounded tail that cut the question: complete, but no identity and no callouts.
-  t.check(projectAmbientReply("kitchen", { entries: [answer], total: 20, running: false }), { identity: null, complete: true, earlier: true, callouts: [], acks: [], preview: "" });
+  t.check(projectAmbientReply("kitchen", { entries: [answer], total: 20, running: false }), { identity: null, complete: true, earlier: true, callouts: [], preview: "" });
 
   // A legacy assistant entry with no uuid has nothing stable to name:
-  t.check(projectAmbientReply("kitchen", { entries: [question, entry({ uuid: "", type: "assistant", text: "Legacy answer" })], total: 2, running: false }), { identity: null, complete: true, earlier: true, callouts: [], acks: [], preview: "" });
+  t.check(projectAmbientReply("kitchen", { entries: [question, entry({ uuid: "", type: "assistant", text: "Legacy answer" })], total: 2, running: false }), { identity: null, complete: true, earlier: true, callouts: [], preview: "" });
 
-  t.check(projectAmbientReply("kitchen", { entries: [question], total: 1, running: false }), { identity: null, complete: false, earlier: false, callouts: [], acks: [], preview: "" });
+  t.check(projectAmbientReply("kitchen", { entries: [question], total: 1, running: false }), { identity: null, complete: false, earlier: false, callouts: [], preview: "" });
 });
 
 // Old history establishes a baseline. A new reply needs attention; another new
@@ -105,4 +104,17 @@ void test("A plain-text reply is previewed as its own text.", async (t) => {
   t.check(projectAmbientReply("chat", { entries: [question, ok], total: 2, running: false }).preview, "Ok.");
   t.check(projectAmbientReply("chat", { entries: [question, ok], total: 2, running: true }).preview, "");
   t.check(projectAmbientReply("chat", { entries: [question, answer], total: 2, running: false }).preview, "");
+});
+
+// A reply that edited a card carries an ack; the preview drops the ack and keeps
+// the text, so the panel never shows a lone ack icon in place of the reply.
+void test("A reply with an ack is previewed as its text without the ack.", async (t) => {
+  const edited = entry({ uuid: "a3", type: "assistant", text: 'Added two categories.\n<ack kind="edit" target="Trivia.landmark.card"/>' });
+  t.check(projectAmbientReply("chat", { entries: [question, edited], total: 2, running: false }), {
+    identity: "chat:a3",
+    complete: true,
+    earlier: false,
+    callouts: [],
+    preview: "Added two categories.",
+  });
 });

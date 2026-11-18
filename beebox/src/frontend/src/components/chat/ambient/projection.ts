@@ -1,7 +1,7 @@
 /** Bounded transcript projection; bus completion signals never supply reply text. */
 import type { SessionEntry } from "../../../api";
 import { groupMessages } from "../message-parsing";
-import { parseAcks, parseCallouts } from "../../../lib/structured-output-parsing";
+import { parseCallouts, stripStructuredOutputTags } from "../../../lib/structured-output-parsing";
 
 export function projectAmbientReply(sessionId: string, { entries, total, running }: { entries: SessionEntry[]; total: number; running: boolean }) {
   const groups = groupMessages(entries);
@@ -16,10 +16,10 @@ export function projectAmbientReply(sessionId: string, { entries, total, running
   const unsafe = !first?.uuid || (truncated && groups.length === 1);
   const identity = complete && !unsafe ? `${sessionId}:${first.uuid}` : null;
   const callouts = identity ? parseCallouts(text) : [];
-  const acks = identity ? parseAcks(text) : [];
-  // A reply without callouts or acks shows its own persisted text.
-  const preview = identity && callouts.length === 0 && acks.length === 0 ? text.trim() : "";
-  return { identity, complete, earlier: truncated || (complete && unsafe), callouts, acks, preview };
+  // A reply without callouts shows its own persisted text. Acks are dropped here:
+  // they are the least important signal, and a lone ack icon says nothing.
+  const preview = identity && callouts.length === 0 ? stripStructuredOutputTags(text).trim() : "";
+  return { identity, complete, earlier: truncated || (complete && unsafe), callouts, preview };
 }
 
 export interface AmbientAttention {
