@@ -5,7 +5,7 @@ import { LADDER_X, MIDDLE, STOPS, TAU, clamp01, lerp, smooth, standX, standY, st
 
 export { TAU };
 /** Frames in one loop. The room is dark and empty again at the end. */
-export const LOOP = 4000;
+export const LOOP = 2800;
 const START = 60;
 const DWELL = 180;
 const WALK = 4.2;

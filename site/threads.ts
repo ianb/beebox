@@ -50,7 +50,8 @@ export const THREADS_SCRIPT = `
       const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const column = main.getBoundingClientRect();
+      // The card, not the pane: a single card's pane spans the window.
+      const column = (main.querySelector('.bbx-card-surface') || main).getBoundingClientRect();
       const header = document.querySelector('#site-header');
       const top = (header ? header.getBoundingClientRect().bottom : 0) + 30;
       const sides = [[16, column.left - 16], [column.right + 16, w - 16]];

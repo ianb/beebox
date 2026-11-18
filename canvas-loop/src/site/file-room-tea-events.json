@@ -7,12 +7,12 @@
   {
     "frame": 190,
     "type": "snapshot",
-    "label": "left stop: taking a card, one card rises out of the row"
+    "label": "top level, left stop: taking a card, one card rises out of the row"
   },
   {
     "frame": 222,
     "type": "snapshot",
-    "label": "left stop: holding the card up to read it"
+    "label": "top level, left stop: holding the card up to read it"
   },
   {
     "frame": 310,
@@ -44,12 +44,12 @@
   {
     "frame": 596,
     "type": "snapshot",
-    "label": "right stop: card held over the gap in the row"
+    "label": "top level, right stop: card held over the gap in the row"
   },
   {
     "frame": 619,
     "type": "snapshot",
-    "label": "right stop: card lowered into the gap"
+    "label": "top level, right stop: card lowered into the gap"
   },
   {
     "frame": 800,
@@ -85,18 +85,18 @@
     "label": "climbing down the right ladder with the card tucked in"
   },
   {
-    "frame": 1520,
+    "frame": 1530,
     "type": "param",
     "name": "variation",
     "value": "surprise"
   },
   {
-    "frame": 1535,
+    "frame": 1543,
     "type": "snapshot",
     "label": "easter egg: reads the card and is surprised"
   },
   {
-    "frame": 1545,
+    "frame": 1550,
     "type": "param",
     "name": "variation",
     "value": "auto"
@@ -110,7 +110,7 @@
   {
     "frame": 1900,
     "type": "snapshot",
-    "label": "easter egg: a moth circles the lit lamp"
+    "label": "easter egg: a moth circles the lit lamp at the bottom left"
   },
   {
     "frame": 1910,
@@ -119,12 +119,12 @@
     "value": "auto"
   },
   {
-    "frame": 3257,
+    "frame": 2437,
     "type": "snapshot",
-    "label": "bottom level: filing a card in the lowest left cabinet"
+    "label": "bottom level, right stop: filing the last card"
   },
   {
-    "frame": 3999,
+    "frame": 2799,
     "type": "snapshot",
     "label": "last frame: dark again, same as the start"
   }
