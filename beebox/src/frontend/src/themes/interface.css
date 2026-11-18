@@ -182,9 +182,16 @@
 .bbx-box-presentation:has(.bbx-companion-desk[data-card-focused]:not([hidden])) .bbx-app-nav {
   display: none;
 }
+/* The sheet fills the window even when its content is short; long content
+   still scrolls (the sheet grows but never shrinks). */
 .bbx-companion-desk[data-card-focused] .bbx-interface-card-desk[data-card-content="card"] {
   --bbx-card-desk-padding: 8px;
   padding-top: var(--bbx-card-desk-padding);
+  display: flex;
+  flex-direction: column;
+}
+.bbx-companion-desk[data-card-focused] .bbx-interface-card-desk[data-card-content="card"] > .bbx-card-surface {
+  flex: 1 0 auto;
 }
 .bbx-companion-focus-controls > [role="group"] {
   padding: 2px;
