@@ -80,13 +80,15 @@ export function stripUserDisplayTags(
 export interface FileAttachmentRef {
   id: number;
   path: string;
-  /** Best-effort original filename, recovered by stripping the timestamp prefix. */
+  /** The original filename: the basename under a `_tmp/chat/<batch>/` upload
+   * directory, or the older flat `_tmp/<stamp>_<name>` with its stamp removed. */
   displayName: string;
 }
 
 const ATTACHMENTS_BLOCK_RE = /<attachments>([\S\s]*?)<\/attachments>/i;
 const FILE_REF_LINE_RE = /\[file#?(\d+)]:\s*(\S+)/g;
 const TMP_FILENAME_PREFIX_RE = /^_?tmp\/[^/_]+_(.+)$/;
+const CHAT_UPLOAD_BATCH_RE = /^_?tmp\/chat\/[^/]+\/(.+)$/;
 
 export function extractFileAttachments(text: string): FileAttachmentRef[] {
   const inner = text.match(ATTACHMENTS_BLOCK_RE)?.[1];
@@ -96,7 +98,7 @@ export function extractFileAttachments(text: string): FileAttachmentRef[] {
     const idStr = m[1];
     const p = m[2];
     if (idStr === undefined || p === undefined) continue;
-    const stripped = p.match(TMP_FILENAME_PREFIX_RE)?.[1];
+    const stripped = p.match(CHAT_UPLOAD_BATCH_RE)?.[1] ?? p.match(TMP_FILENAME_PREFIX_RE)?.[1];
     refs.push({
       id: parseInt(idStr, 10),
       path: p,
