@@ -6,7 +6,10 @@ labels: [chat, workspace, layout]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — developer used Focus card in the chat workspace, 2026-11-16
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-17):** 2551b8bf2: short cards now fill the window (card scroll area is a column flex box, .bbx-card-surface flex: 1 0 auto); long cards still scroll. Earlier fix missed short cards.
 
 **Reopened 2026-11-18:** After that fix shipped, the developer focused an app card (a trivia board) on production. The card's sheet covered only the top half of the window, with bare desk below it down to the composer. The earlier fix gave the workspace the height, but the sheet still sized to its content: the card's scroll area is a block box and nothing stretches `.bbx-card-surface`. It reproduces on test1 with the Bars figure card. The previous fix missed short cards.
 
