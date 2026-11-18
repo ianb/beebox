@@ -366,3 +366,93 @@ void test("A call recording stores words timed across pieces", async (t) => {
     },
   });
 });
+
+// ## Each service's length limit sets the piece length
+//
+// plan:transcription-length-limits. The job cuts pieces at the service's
+// length limit: 300 s through OpenRouter, 3600 s for Voxtral, which goes
+// direct to Mistral. This seam records the service and WAV size of each
+// request (a 44-byte header plus the piece's PCM).
+const TEN_MINUTES = 32_000 * 600;
+function recordingTranscribe(script: ScriptEntry[]) {
+  const sent: { service: HqTranscriptionService; wavBytes: number }[] = [];
+  const next = scriptedTranscribe(script);
+  const transcribePiece: TranscribePieceFn = async (params, opts) => {
+    sent.push({ service: opts.service, wavBytes: params.audioBuffer.length });
+    return next(params, opts);
+  };
+  return { sent, transcribePiece };
+}
+
+// Ten minutes of diarized Voxtral is one request and one transcript, with no
+// part marker; the same recording on MAI is two 300 s requests.
+void test("Ten minutes of diarized Voxtral is one request; on MAI it is two", async (t) => {
+  const voxtral = recordingTranscribe([{ text: "Speaker 0: hi\nSpeaker 1: hello", diarized: true }]);
+  const voxtralRun = await runJob({ bytes: TEN_MINUTES, service: "voxtral-diarized", script: voxtral.transcribePiece });
+  t.teardown(() => voxtralRun.box.cleanup());
+  const mai = recordingTranscribe([{ text: "Speaker 0: hi", diarized: true }, { text: "Speaker 0: hello", diarized: true }]);
+  const maiRun = await runJob({ bytes: TEN_MINUTES, service: "mai-diarized", script: mai.transcribePiece });
+  t.teardown(() => maiRun.box.cleanup());
+  t.check({ voxtral: voxtral.sent, text: voxtralRun.hq.state === "ready" ? voxtralRun.hq.result.text : null, mai: mai.sent }, {
+    voxtral: [{ service: "voxtral-diarized", wavBytes: 19_200_044 }],
+    text: "Speaker 1A: hi\nSpeaker 2A: hello",
+    mai: [
+      { service: "mai-diarized", wavBytes: 9_600_044 },
+      { service: "mai-diarized", wavBytes: 9_600_044 },
+    ],
+  });
+});
+
+// A 413 on that single ten-minute piece retries with 450 s pieces: halving
+// skips 1800 and 900, which would resend the same ten minutes. A 429 is
+// transient and resends the same piece.
+void test("A 413 on a long piece retries shorter; a 429 resends the same piece", async (t) => {
+  const tooLong = recordingTranscribe([
+    { error: new ScriptedTranscriptionError("too long", { permanent: true, status: 413 }) },
+    { text: "one" },
+    { text: "two" },
+  ]);
+  const tooLongRun = await runJob({ bytes: TEN_MINUTES, service: "voxtral", script: tooLong.transcribePiece });
+  t.teardown(() => tooLongRun.box.cleanup());
+  const busy = recordingTranscribe([
+    { error: new ScriptedTranscriptionError("backend_out_of_capacity", { permanent: false, status: 429 }) },
+    { text: "whole" },
+  ]);
+  const busyRun = await runJob({ bytes: TEN_MINUTES, service: "voxtral", script: busy.transcribePiece });
+  t.teardown(() => busyRun.box.cleanup());
+  t.check({ tooLong: tooLong.sent.map((s) => s.wavBytes), busy: busy.sent.map((s) => s.wavBytes), busyState: busyRun.hq.state }, {
+    tooLong: [19_200_044, 14_400_044, 4_800_044],
+    busy: [19_200_044, 19_200_044],
+    busyState: "ready",
+  });
+});
+
+// A resumed job keeps the piece length it had reached, but never more than the
+// service's current limit: a stored 7200 s resumes at 3600, a stored 300 s
+// stays 300.
+async function resumeAt(storedPieceSeconds: number) {
+  const box = await makeTmpBox({ git: true });
+  await configureBox(box);
+  const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: TEN_MINUTES });
+  await requestHq({ box, session, service: "voxtral" });
+  await applyVoiceEvent({
+    boxRoot: box.root, id: session.id,
+    event: { type: "pieceStarted", piece: 1, pieces: 1, attempt: 1, pieceSeconds: storedPieceSeconds },
+  });
+  const eventBus = createEventBus(box.root);
+  const events = collectBusEvents(eventBus);
+  const transcribePiece = scriptedTranscribe([{ text: "a" }, { text: "b" }]);
+  await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock: fakeClock("2026-09-10T18:05:00.000Z"), transcribePiece });
+  const first = events[0]?.hq;
+  return { box, resumed: first?.state === "transcribing" ? { pieces: first.pieces, pieceSeconds: first.pieceSeconds } : null };
+}
+void test("A resumed job never exceeds the service's current limit", async (t) => {
+  const over = await resumeAt(7200);
+  t.teardown(() => over.box.cleanup());
+  const under = await resumeAt(300);
+  t.teardown(() => under.box.cleanup());
+  t.check({ over: over.resumed, under: under.resumed }, {
+    over: { pieces: 1, pieceSeconds: 3600 },
+    under: { pieces: 2, pieceSeconds: 300 },
+  });
+});

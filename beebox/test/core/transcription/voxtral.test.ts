@@ -18,6 +18,7 @@ import {
   relabelDiarizedSpeakers,
 } from "../../../src/core/transcription/voxtral/core.js";
 import { voxtralContextBias } from "../../../src/core/transcription/voxtral/request.js";
+import { voxtralTimeoutMs } from "../../../src/core/transcription/voxtral/core.js";
 
 // ## joinSegmentTexts — rebuild from segments
 //
@@ -126,4 +127,13 @@ void test("Inner punctuation stays; edge punctuation and empty input go", async 
   t.check(voxtralContextBias("Brian D'Ambrosia, re-image (Kraków) 3rd."), "Brian,D'Ambrosia,re-image,Kraków,3rd");
 
   t.check(voxtralContextBias(" , — ... "), "");
+});
+
+// ## The request timeout grows with the upload
+//
+// The HQ job sends up to an hour of WAV in one request
+// (plan:transcription-length-limits). A small upload keeps 120 s; an hour
+// (115,200,044 bytes) gets 120 s plus 2 s per MB.
+void test("The request timeout grows with the upload", async (t) => {
+  t.check([voxtralTimeoutMs(0), voxtralTimeoutMs(500_000), voxtralTimeoutMs(115_200_044)], [120_000, 122_000, 352_000]);
 });
