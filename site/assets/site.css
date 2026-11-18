@@ -35,6 +35,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 @media (min-width: 701px) {
   #site-workspace.single { max-width: none; }
   #site-workspace.single .pane { padding-inline: max(24px, calc((100% - 772px) / 2)); }
+  /* The row of question cards runs past the column to the window's edges; the first card starts at the column's edge. */
+  /* A percentage in scroll-padding is of the row itself, so the column's edge is worked out from its 708px width. */
+  #site-workspace.single .pane { overflow-x: hidden; }
+  #site-workspace.single .question-strip { --bleed: calc(50vw - 50%); margin-inline: calc(-1 * var(--bleed)); padding-inline: var(--bleed); scroll-padding-inline: max(56px, calc((100vw - 708px) / 2)); scrollbar-width: none; }
+  #site-workspace.single .question-strip .question-card { scroll-snap-align: start; }
 }
 .pane { min-width: 0; overflow: auto; padding: 16px 24px 48px; scrollbar-gutter: stable; }
 .pane + .pane { border-left: 1px solid #c8c1b7; }
