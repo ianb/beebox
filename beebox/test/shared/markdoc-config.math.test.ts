@@ -109,6 +109,8 @@ void test("backslash delimiters that are not math", async (t) => {
   t.check(render("Before \\(a\\\nb\\) after"), "<p>Before (a<br>b) after</p>");
   // A closer inside a later code fence does not pair with an open `\[` or `$$`.
   t.check(render("\\[\n```tex\nx \\]\n```"), "<p>[</p><pre data-language=\"tex\">x \\]\n</pre>");
+  // Indented four columns, `~~~` is TeX spacing, not a fence.
+  t.check(render("\\[\nx +\n    ~~~y\n\\]"), "<M d=\"\">x +\n~~~y</M>");
   t.check(render("$$\n```tex\nx $$\n```"), "<p>$$</p><pre data-language=\"tex\">x $$\n</pre>");
   t.check(render("Run `echo \\(x\\)` now"), "<p>Run <code>echo \\(x\\)</code> now</p>");
   t.check(render("```tex\n\\[x\\]\n```"), "<pre data-language=\"tex\">\\[x\\]\n</pre>");

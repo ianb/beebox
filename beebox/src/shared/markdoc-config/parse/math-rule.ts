@@ -159,10 +159,14 @@ function findCloser(text: string, closer: string): number {
   return -1;
 }
 
-/** A fence line ends the search: a closer inside code is not math. */
-function isFence(text: string): boolean {
-  const trimmed = text.trimStart();
-  return trimmed.startsWith("```") || trimmed.startsWith("~~~");
+/**
+ * A fence line ends the search: a closer inside code is not math. Indented
+ * four or more columns, a line of backticks or tildes is not a fence.
+ */
+function isFence(state: StateBlock, line: number): boolean {
+  if (lineMark(state.sCount, line) - state.blkIndent >= 4) return false;
+  const text = lineText(state, line);
+  return text.startsWith("```") || text.startsWith("~~~");
 }
 
 // eslint-disable-next-line max-params -- markdown-it's block rule signature is (state, startLine, endLine, silent)
@@ -187,7 +191,7 @@ function mathBlock(state: StateBlock, startLine: number, endLine: number, silent
     closeLine = -1;
     for (let line = startLine + 1; line < endLine; line++) {
       const text = lineText(state, line).trimEnd();
-      if (text.trim() === "" || isFence(text)) return false;
+      if (text.trim() === "" || isFence(state, line)) return false;
       if (lineMark(state.sCount, line) < state.blkIndent) return false;
       const end = findCloser(text, closer);
       if (end !== -1) {
