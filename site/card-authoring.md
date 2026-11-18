@@ -212,6 +212,9 @@ kind in words as well as color, and the Markdown twin keeps that line.
 
 `questions` holds only `question` tags; `state` is `answered` or `open`. The
 bold text is set large on a line of its own, so bold the whole question.
+`{% questions layout="strip" %}` sets the cards in one row that scrolls
+sideways, with arrow buttons under it; the front page uses it so the cards take
+less than one screen.
 
 ## Single-column pages
 

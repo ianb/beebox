@@ -21,6 +21,11 @@ test("an unknown state, an empty card, and loose text among the cards fail the b
   assert.throws(() => renderBody("{% questions %}\n{% /questions %}", context), /only question tags/);
 });
 
+test("a strip layout is the same cards in one sideways row", () => {
+  const { html } = renderBody(body.replace("{% questions %}", '{% questions layout="strip" %}'), context);
+  assert.match(html, /<div class="question-cards question-strip"><div class="question-card question-answered">/);
+});
+
 test("the machine-facing twin says which kind each question is", () => {
   const twin = twinMarkdown(body, { nuggets: [], asides: new Map() });
   assert.match(twin, /_Bee Box has an answer:_\n\n?\*\*Does it keep history\?\*\* Yes\./);

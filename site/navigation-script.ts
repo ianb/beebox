@@ -103,6 +103,20 @@ ${ROOM_SCRIPT}
       });
       pre.append(button);
     }
+    for (const strip of document.querySelectorAll('.question-strip')) {
+      const bar = document.createElement('div');
+      bar.className = 'question-strip-bar';
+      const count = document.createElement('span');
+      count.textContent = strip.children.length + ' questions';
+      bar.append(count);
+      for (const [label, name, direction] of [['←', 'Earlier questions', -1], ['→', 'More questions', 1]]) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.textContent = label; button.setAttribute('aria-label', name);
+        button.addEventListener('click', () => strip.scrollBy({ left: direction * (strip.firstElementChild.offsetWidth + 22), behavior: 'smooth' }));
+        bar.append(button);
+      }
+      strip.after(bar);
+    }
     visited.add(page().dataset.page);
     for (const nav of document.querySelectorAll('.next-places')) {
       const links = [...nav.querySelectorAll('[data-next]')].sort((a,b) => Number(a.dataset.order)-Number(b.dataset.order));
