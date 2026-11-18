@@ -1,9 +1,9 @@
 /**
  * The HQ transcription job's IO shell (`plan:resilient-voice-recording`,
  * Track 1). Concatenates a voice recording's staged PCM chunks, cuts pieces
- * with `planPieces`, transcribes each piece in order via `transcribeAudioHq`,
- * retries a transient/piece-too-long failure with backoff or a halved piece
- * length, joins the results (relabeling diarized speakers per piece), and
+ * with `planPieces` at the service's piece length (`hqPieceSeconds`),
+ * transcribes each piece in order via `transcribeAudioHq`, retries a
+ * transient/piece-too-long failure with backoff or a shorter piece length, joins the results (relabeling diarized speakers per piece), and
  * persists every transition through `nextVoiceState` — emitting
  * `voice-recording-status` on the event bus after each one.
  *
@@ -37,7 +37,7 @@ import {
 } from "../../capture/staging-store/core.js";
 import type { HqFailure, VoiceHqResult } from "../../capture/staging-schema.js";
 import { applyVoiceEvent } from "../voice-staging/core.js";
-import { planPieces, nextPieceSeconds, joinPieceWords, HQ_PIECE_SECONDS } from "./pieces.js";
+import { planPieces, shorterPieceSeconds, joinPieceWords, hqPieceSeconds, PCM_BYTES_PER_SECOND } from "./pieces.js";
 import { classifyHqError } from "../classify.js";
 import * as fs from "node:fs/promises";
 
@@ -211,9 +211,12 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
 
   const buffer = await readConcatenatedPcm({ boxRoot, session });
 
-  let pieceSeconds = HQ_PIECE_SECONDS;
+  // A resumed job keeps the length it had reached, but never more than the
+  // service's current limit (a deploy may have lowered it).
+  const servicePieceSeconds = hqPieceSeconds(hqRequest.service);
+  let pieceSeconds = servicePieceSeconds;
   if (session.voice.hq.state === "transcribing" || session.voice.hq.state === "retrying") {
-    pieceSeconds = session.voice.hq.pieceSeconds;
+    pieceSeconds = Math.min(session.voice.hq.pieceSeconds, servicePieceSeconds);
   }
 
   // Resuming into `retrying` (a restart mid-backoff): wait out the remainder
@@ -296,7 +299,7 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
         }
 
         if (classification === "piece-too-long") {
-          const shorter = nextPieceSeconds(pieceSeconds);
+          const shorter = shorterPieceSeconds({ current: pieceSeconds, rejectedSeconds: pieceBytes.length / PCM_BYTES_PER_SECOND });
           if (shorter === null) {
             const failed = await applyVoiceEvent({
               boxRoot,

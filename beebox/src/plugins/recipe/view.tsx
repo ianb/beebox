@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { Markdown, type ViewCard, type ViewProps } from "beebox/view-widgets";
+import { CardLink, Markdown, type ViewCard, type ViewProps } from "beebox/view-widgets";
 import { recipeTags } from "./tags.js";
 import { makeRecipeComponents, RecipeScaleContext } from "./view/tags.js";
 import "./view/recipe.css";
@@ -58,9 +58,8 @@ function RecipeCard({ card }: { card: ViewCard }) {
           {sources.map((source, i) => (
             <span key={i}>
               {i > 0 ? ", " : null}
-              {source.href !== null ? (
-                <a href={source.href} target="_blank" rel="noreferrer" className="underline">{source.text}</a>
-              ) : source.text}
+              <SourceLink source={source} />
+              {source.note === null ? null : ` (${source.note})`}
             </span>
           ))}
         </p>
@@ -105,19 +104,43 @@ function RecipeCard({ card }: { card: ViewCard }) {
   );
 }
 
-/** Each `sources` entry as display text (its label, else its target) and an external link when it has one. */
-function recipeSources(value: unknown): Array<{ text: string; href: string | null }> {
+interface RecipeSource {
+  /** The entry's label; null shows the ref's card title or the URL. */
+  label: string | null;
+  /** An http(s) URL: opens in a new tab. */
+  href: string | null;
+  /** An in-box ref (relative to the card, `attach/…`, or box-absolute): opens in the app. */
+  ref: string | null;
+  note: string | null;
+}
+
+const WEB_URL = /^https?:\/\//i;
+
+/**
+ * Each usable `sources` entry. A `ref` that is a web URL links like an `href`;
+ * an in-box `ref` goes to `CardLink`, which resolves it against the card.
+ */
+function recipeSources(value: unknown): RecipeSource[] {
   if (!Array.isArray(value)) return [];
-  return value.flatMap((entry: unknown) => {
+  return value.flatMap((entry: unknown): RecipeSource[] => {
     if (typeof entry !== "object" || entry === null) return [];
     const str = (key: string): string | null => {
       const field: unknown = Reflect.get(entry, key);
-      return typeof field === "string" && field !== "" ? field : null;
+      return typeof field === "string" && field.trim() !== "" ? field : null;
     };
-    const href = str("href");
-    const text = str("label") ?? href ?? str("ref");
-    return text === null ? [] : [{ text, href }];
+    const rawRef = str("ref");
+    const webRef = rawRef !== null && WEB_URL.test(rawRef) ? rawRef : null;
+    const source = { label: str("label"), href: str("href") ?? webRef, ref: webRef === null ? rawRef : null, note: str("note") };
+    return source.label === null && source.href === null && source.ref === null ? [] : [source];
   });
+}
+
+function SourceLink({ source }: { source: RecipeSource }) {
+  if (source.ref !== null) return <CardLink cardRef={source.ref}>{source.label ?? undefined}</CardLink>;
+  if (source.href !== null && WEB_URL.test(source.href)) {
+    return <a href={source.href} target="_blank" rel="noreferrer" className="underline">{source.label ?? source.href}</a>;
+  }
+  return source.label ?? source.href;
 }
 
 /** Named alias for the box stub to re-export beside the default. */

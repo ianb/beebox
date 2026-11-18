@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import type { TranscriptionError } from "./dispatch/core.js";
-import { truncateUpstreamBody } from "./upstream-body.js";
+import { readUpstreamErrorBody, truncateUpstreamBody } from "./upstream-body.js";
 
 const voxtralErrorBodySchema = z.object({
   error: z.object({ message: z.string().optional(), code: z.string().optional() }).optional(),
@@ -54,19 +54,10 @@ class VoxtralApiError extends Error implements TranscriptionError {
 export async function parseErrorResponse(
   response: Response
 ): Promise<VoxtralApiError> {
-  let errorDetails: string;
-  let errorCode: string | undefined;
-
-  try {
-    const raw: unknown = await response.json();
-    const errorJson = voxtralErrorBodySchema.safeParse(raw).data;
-    errorDetails =
-      errorJson?.error?.message ?? errorJson?.message ?? JSON.stringify(raw);
-    errorCode = errorJson?.error?.code;
-  } catch (e) {
-    console.warn("Voxtral error response was not JSON, falling back to text body:", e);
-    errorDetails = await response.text();
-  }
+  const { text, json } = await readUpstreamErrorBody(response);
+  const errorJson = voxtralErrorBodySchema.safeParse(json).data;
+  const errorDetails = errorJson?.error?.message ?? errorJson?.message ?? text;
+  const errorCode = errorJson?.error?.code;
 
   const permanent = isPermanentError(response.status, errorCode);
 

@@ -32,7 +32,7 @@ void test("line 20", async (t) => {
   const production = storageScopeFor("/test1/api");
   saveConversation(production, { kind: "ready", label: "Old selection", target: { kind: "session", sessionId: "old-chat", contextDir: "" } });
   saveConversation(first, { kind: "ready", label: "First clone", target: { kind: "session", sessionId: "first-chat", contextDir: "" } });
-  writeTrackedSessions(first, [{ sessionId: "first-chat", label: "First clone" }]);
+  writeTrackedSessions(first, [{ sessionId: "first-chat" }]);
   writeActiveSessions(first, ["first-chat"]);
   t.check(readConversation(second), null);
 
@@ -42,7 +42,7 @@ void test("line 20", async (t) => {
 
   t.check(readConversation(first), { kind: "ready", label: "First clone", target: { kind: "session", sessionId: "first-chat", contextDir: "" } });
 
-  t.check(readTrackedSessions(first), [{ sessionId: "first-chat", label: "First clone" }]);
+  t.check(readTrackedSessions(first), [{ sessionId: "first-chat" }]);
 
   t.check(readActiveSessions(first), [
     "first-chat",
