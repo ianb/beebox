@@ -104,7 +104,7 @@ do not reinterpret it as aspirational.
 Read the plan; check every template section is present and every claim cited.
 Re-derive each track's *Depends on* facts instead of trusting them: widen the
 search, follow a flow one hop past where the plan stops, run the command.
-A failure no real input reaches is not a finding (engineering principle 6).
+A failure nothing can reach is not a finding (engineering principle 6).
 Write findings to a sibling `<plan>.review.md`:
 
 ```
