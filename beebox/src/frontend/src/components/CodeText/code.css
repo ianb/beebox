@@ -1,0 +1,68 @@
+/* A code file's panel and syntax colours (`./view.tsx`). Fixed, not themed:
+   the same light panel in every light card theme and the same dark panel in
+   every theme that declares `color-scheme: dark`, so no card theme has to style
+   code and the theme check has nothing here to cover. Plain text (no grammar)
+   keeps the card's own paper and ink. */
+.bbx-code-panel {
+  --bbx-code-fg: light-dark(#1f2328, #e6edf3);
+  --bbx-code-muted: light-dark(#59636e, #9198a1);
+  background: light-dark(#f6f8fa, #0d1117);
+  color: var(--bbx-code-fg);
+  border: 1px solid light-dark(#d1d9e0, #3d444d);
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+}
+.bbx-code-panel :is(.hljs-comment, .hljs-quote, .hljs-meta) {
+  color: var(--bbx-code-muted);
+}
+.bbx-code-panel :is(.hljs-comment, .hljs-quote) {
+  font-style: italic;
+}
+.bbx-code-panel :is(.hljs-keyword, .hljs-selector-tag, .hljs-doctag, .hljs-section, .hljs-name, .hljs-meta .hljs-keyword) {
+  color: light-dark(#cf222e, #ff7b72);
+}
+.bbx-code-panel :is(.hljs-string, .hljs-regexp, .hljs-symbol, .hljs-template-tag, .hljs-meta .hljs-string) {
+  color: light-dark(#0a3069, #a5d6ff);
+}
+.bbx-code-panel :is(.hljs-number, .hljs-literal, .hljs-attr, .hljs-attribute, .hljs-variable.constant_, .hljs-selector-attr) {
+  color: light-dark(#0550ae, #79c0ff);
+}
+.bbx-code-panel :is(.hljs-title, .hljs-selector-id, .hljs-selector-class) {
+  color: light-dark(#8250df, #d2a8ff);
+}
+.bbx-code-panel :is(.hljs-type, .hljs-built_in, .hljs-title.class_) {
+  color: light-dark(#953800, #ffa657);
+}
+.bbx-code-panel .hljs-addition {
+  color: light-dark(#116329, #7ee787);
+}
+.bbx-code-panel .hljs-deletion {
+  color: light-dark(#82071e, #ffa198);
+}
+
+/* Numbered lines: a wrapped line stays beside its number, and continues 2ch
+   past its own indent (a hanging indent from `--bbx-code-indent`). The number
+   is a counter with empty alt text, so it is neither copied nor read aloud. */
+.bbx-code {
+  tab-size: 4; /* TAB_SIZE in ./lines.ts */
+}
+.bbx-code-numbered {
+  counter-reset: bbx-code-line;
+}
+.bbx-code-line {
+  display: block;
+  position: relative;
+  min-height: 1lh; /* an empty file's one line still shows its number */
+  padding-left: calc(var(--bbx-code-gutter, 3ch) + 4ch + var(--bbx-code-indent, 0ch));
+  text-indent: calc(-2ch - var(--bbx-code-indent, 0ch));
+  counter-increment: bbx-code-line;
+}
+.bbx-code-line::before {
+  content: counter(bbx-code-line) / "";
+  position: absolute;
+  left: 0;
+  width: var(--bbx-code-gutter, 3ch);
+  text-align: right;
+  color: var(--bbx-code-muted);
+  user-select: none;
+}

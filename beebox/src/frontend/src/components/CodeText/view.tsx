@@ -6,11 +6,12 @@
  * no grammar, a highlighter chunk that does not load, and a grammar that throws
  * all leave the text uncoloured. Code (a file with a grammar) shows in the
  * small size with numbered lines; plain text keeps body size, unnumbered.
- * Token and gutter styles come from the card theme (`.bbx-code` in
- * `themes/card-themes.css`).
+ * Code sits on a fixed light or dark panel (`./code.css`), the same in every
+ * card theme.
  */
 
 import { useEffect, useState } from "react";
+import "./code.css";
 import { Pre } from "../ui/Pre";
 import type { Grammar } from "../../lib/code-language";
 import { indentWidth, splitHtmlLines, splitTextLines } from "./lines";
@@ -24,7 +25,7 @@ import type * as HighlightModule from "./highlight";
  */
 export const HIGHLIGHT_LIMIT = 64 * 1024;
 
-// The custom properties the numbered view sets inline (`.bbx-code-line` in themes/card-themes.css).
+// The custom properties the numbered view sets inline (`.bbx-code-line` in ./code.css).
 declare module "react" {
   interface CSSProperties {
     "--bbx-code-gutter"?: string;
@@ -85,12 +86,12 @@ export function CodeText({ text, grammar }: { text: string; grammar: Grammar | n
   // highlight.js keeps every line feed, so the markup has the same lines.
   const lines = html === null ? textLines : splitHtmlLines(html);
   if (lines.length > LINE_NUMBER_LIMIT) {
-    return <Pre size="xs" className="bbx-code" title={title}>{html === null ? text : <code dangerouslySetInnerHTML={{ __html: html }} />}</Pre>;
+    return <Pre size="xs" className="bbx-code bbx-code-panel" title={title}>{html === null ? text : <code dangerouslySetInnerHTML={{ __html: html }} />}</Pre>;
   }
   // The gutter fits the widest number; the numbers are CSS counters, so a copy leaves them out.
   const gutter = { "--bbx-code-gutter": `${String(lines.length).length}ch` };
   return (
-    <Pre size="xs" className="bbx-code" title={title}>
+    <Pre size="xs" className="bbx-code bbx-code-panel" title={title}>
       <code className="bbx-code-numbered" style={gutter}>
         {lines.map((line, index) => {
           // A wrapped line continues under its own code, 2ch further in.
