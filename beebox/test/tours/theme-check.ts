@@ -105,15 +105,13 @@ async function openStudio(session: BrowseSession, { c, marker }: { c: StudioCase
   }
   try { await session.run(["wait", ".bbx-app-nav"]); }
   catch (cause) { throw new ThemeCheckError(`normal studio navigation is not visible for ${caseName(c)}: ${cause instanceof Error ? cause.message : String(cause)}`, { cause }); }
-  // Activity lives outside the transcript; expanding it exposes its hint and actions.
-  const ambientToggle = "#bbx-theme-studio-ambient button[aria-expanded]";
+  // Another conversation's callouts show above the composer with nothing to expand.
+  const ambientCallout = "#bbx-theme-studio-ambient .bbx-chat-callout-context";
   try {
-    await session.run(["wait", ambientToggle]);
-    await session.run(["scrollintoview", ambientToggle]);
-    await session.run(["click", ambientToggle]);
-    await session.run(["wait", "--fn", `document.querySelector(${JSON.stringify(ambientToggle)})?.getAttribute("aria-expanded") === "true"`]);
+    await session.run(["wait", ambientCallout]);
+    await session.run(["scrollintoview", ambientCallout]);
   } catch (cause) {
-    throw new ThemeCheckError(`could not expand conversation activity for ${caseName(c)}: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+    throw new ThemeCheckError(`conversation callouts did not render for ${caseName(c)}: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
   }
   await session.run(["mouse", "move", "0", "0"]);
   await session.eval(`${SCROLLER}.scrollTop = 0; ${SCROLLER}.dataset.themeCheckRun = ${JSON.stringify(marker)}`);
