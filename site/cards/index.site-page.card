@@ -1,6 +1,6 @@
 ---
 title: "Bee Box"
-summary: "A personal assistant for a person or a family or small group, built on top of a subscription like Claude Code or Codex, and the questions it is trying to address."
+summary: "A personal assistant for a person or a family or small group, built on top of a Claude or ChatGPT subscription (driven by their coding harnesses), and the questions it is trying to address."
 authorship:
   people:
     - name: Ian Bicking
@@ -9,7 +9,7 @@ authorship:
   ai:
     transcription: Transcribed the talk from Ian's dry runs and earlier notes; some items are trimmed to fit a slide.
     drafting: Drafted the agent prompts, the link labels, and the two labels on the question cards. None of the other prose.
-    editing: Ordered the list at the top and corrected its spelling; trimmed the wording of the list of uses. Chose ten of the talk's questions, set each as a card by whether Bee Box has an answer, and linked each answered question to the documentation page that shows the answer.
+    editing: Trimmed the wording of the list of uses. Chose ten of the talk's questions, set each as a card by whether Bee Box has an answer, and linked each answered question to the documentation page that shows the answer.
 layout: single
 next:
   - card: /questions.site-page.card
@@ -21,23 +21,22 @@ next:
 # Bee Box
 
 Bee Box is a personal assistant for a person or a family or small group, built
-on top of a subscription like Claude Code or Codex.
+on top of a Claude or ChatGPT subscription (driven by their coding harnesses).
 
-- It is not just open source, but highly open; there's a priority on the agent
-  understanding its environment, capabilities, and functions
-- It is good at holding data, structuring and restructuring your data, at
-  human scales (it's not a database, it can hold thousands but not millions of
-  things)
-- It has room to annotate and link data so you can hold everything, and apply
-  structure as it is discovered
-- There are multiple paths to take in data (voice/camera hybrid, uploads,
-  triage processes)
-- It treats voice as a primary input
-- Your words vs its words: provenance is a first class concept, with
-  writing tools that keep AI text well marked so you can maintain your
-  authentic voice
-- It is self-modifiable, the agent is given access and tools to modify your
-  experience within safe guidelines
+- Open source, but also transparent: the agent is given extensive
+  documentation to understand its environment, capabilities, and function
+- Holds both ad hoc and structured data
+- Room for natural language descriptions to annotate and make notes on data;
+  structure what fits the structure, keep the rest in natural language
+- Multiple inputs such as voice (long form and conversational), voice/camera
+  hybrids, uploads; automatic inputs go into a triage process
+- Voice is a first class input, with special annotation and keyword-based
+  control
+- Keeps track of your original words separately from AI-generated language:
+  avoid mushing together your instructions with its inference, your writing
+  with its filler
+- Self-modifiable: the agent is given wide access to change parts of the
+  experience, within safe guidelines
 - It does the normal stuff like schedules and notifications and email, etc.
 - Easiest is the [Mac app](https://beebox.run/docs/capabilities/mac-app.html)
   (it runs a local VM). For always-on access run on a VPS.
