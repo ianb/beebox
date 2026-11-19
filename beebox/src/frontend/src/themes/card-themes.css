@@ -217,6 +217,7 @@
 .bbx-code-line {
   display: block;
   position: relative;
+  min-height: 1lh; /* an empty file's one line still shows its number */
   padding-left: calc(var(--bbx-code-gutter, 3ch) + 4ch + var(--bbx-code-indent, 0ch));
   text-indent: calc(-2ch - var(--bbx-code-indent, 0ch));
   counter-increment: bbx-code-line;

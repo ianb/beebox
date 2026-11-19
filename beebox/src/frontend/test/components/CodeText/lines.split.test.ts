@@ -25,6 +25,13 @@ void test("a span crossing a line feed is balanced on each line", async (t) => {
     '<span class="hljs-comment">three */</span> y\n',
     "z",
   ]);
+
+  // An unclosed comment at the end of a file: highlight.js closes it after the
+  // final line feed, which must not become an empty third line.
+  t.check(splitHtmlLines('<span class="hljs-comment">/* a\nb\n</span>'), [
+    '<span class="hljs-comment">/* a\n</span>',
+    '<span class="hljs-comment">b</span>\n',
+  ]);
 });
 
 void test("indent width counts spaces, and tabs to the next 4-column stop", async (t) => {

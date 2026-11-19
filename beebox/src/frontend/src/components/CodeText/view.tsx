@@ -36,7 +36,8 @@ declare module "react" {
 export const LINE_NUMBER_LIMIT = 20_000;
 
 export function shouldHighlight(text: string, grammar: Grammar | null): grammar is Grammar {
-  return grammar !== null && text.length > 0 && text.length <= HIGHLIGHT_LIMIT;
+  // HTML parsing drops a NUL character, so text with one stays uncoloured to stay exact.
+  return grammar !== null && text.length > 0 && text.length <= HIGHLIGHT_LIMIT && !text.includes("\0");
 }
 
 let highlighter: Promise<typeof HighlightModule> | null = null;

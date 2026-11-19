@@ -36,6 +36,8 @@ void test("TypeScript is coloured; markup in the source stays text", async (t) =
 
 void test("highlighting runs only for a grammar and text within the limit", async (t) => {
   const cases: [string, number, "typescript" | null][] = [["empty", 0, "typescript"], ["at limit", HIGHLIGHT_LIMIT, "typescript"], ["over limit", HIGHLIGHT_LIMIT + 1, "typescript"], ["no grammar", 10, null]];
+  // HTML parsing would drop a NUL character, so text with one is not coloured.
+  t.check(shouldHighlight("a\0b", "typescript"), false);
   t.check(cases.map(([name, size, grammar]) => [name, shouldHighlight("x".repeat(size), grammar)]), [
     ["empty", false],
     ["at limit", true],

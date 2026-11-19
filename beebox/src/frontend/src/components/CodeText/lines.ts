@@ -25,7 +25,10 @@ const TAG = /<span\b[^>]*>|<\/span>/g;
  */
 export function splitHtmlLines(html: string): string[] {
   const open: string[] = [];
-  return splitTextLines(html).map((line) => {
+  // A span open at the end of the file (an unclosed comment) closes after the
+  // final line feed; moved before it, so it adds no empty line.
+  const closed = html.replace(/\n((?:<\/span>)+)$/, "$1\n");
+  return splitTextLines(closed).map((line) => {
     const prefix = open.join("");
     for (const [tag] of line.matchAll(TAG)) {
       if (tag === "</span>") open.pop();
