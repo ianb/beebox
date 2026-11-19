@@ -180,6 +180,34 @@
   padding: var(--bbx-content-padding, 1rem);
   max-width: 54rem;
 }
+/* Syntax colours for a code file (`components/CodeText`). A hued token keeps
+   the theme ink's lightness, held between 0.45 and 0.85 so the hue shows,
+   so it reads on the card's paper about as plain ink does;
+   a browser without relative colours drops the rule and the token stays ink. */
+.bbx-code :is(.hljs-comment, .hljs-quote, .hljs-meta) {
+  color: var(--bbx-ink-soft);
+}
+.bbx-code :is(.hljs-comment, .hljs-quote) {
+  font-style: italic;
+}
+.bbx-code :is(.hljs-keyword, .hljs-selector-tag, .hljs-doctag, .hljs-section, .hljs-name, .hljs-meta .hljs-keyword) {
+  color: var(--bbx-pen);
+}
+.bbx-code :is(.hljs-string, .hljs-regexp, .hljs-symbol, .hljs-template-tag, .hljs-addition, .hljs-meta .hljs-string) {
+  color: oklch(from var(--bbx-ink) clamp(0.45, l, 0.85) max(c, 0.14) 150);
+}
+.bbx-code :is(.hljs-number, .hljs-literal, .hljs-attr, .hljs-attribute, .hljs-variable.constant_, .hljs-selector-attr) {
+  color: oklch(from var(--bbx-ink) clamp(0.45, l, 0.85) max(c, 0.14) 55);
+}
+.bbx-code :is(.hljs-title, .hljs-selector-id, .hljs-selector-class) {
+  color: oklch(from var(--bbx-ink) clamp(0.45, l, 0.85) max(c, 0.14) 300);
+}
+.bbx-code :is(.hljs-type, .hljs-built_in, .hljs-title.class_) {
+  color: oklch(from var(--bbx-ink) clamp(0.45, l, 0.85) max(c, 0.14) 210);
+}
+.bbx-code .hljs-deletion {
+  color: oklch(from var(--bbx-ink) clamp(0.45, l, 0.85) max(c, 0.14) 25);
+}
 .bbx-card-view[data-view-layout="inset"] {
   padding: var(--bbx-content-padding, 1rem);
 }

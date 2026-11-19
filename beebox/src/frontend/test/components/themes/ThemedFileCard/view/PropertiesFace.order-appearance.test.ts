@@ -194,6 +194,6 @@ void test("A plain Markdown file keeps its two rows, then mentions, appearance, 
     ],
     false,
     false,
-    "Appearance Flat neutral · Default appearance Markdown files take the box's appearance; set a theme on a card.",
+    "Appearance Flat neutral · Default appearance Files take the box's appearance; set a theme on a card.",
   ]);
 });
