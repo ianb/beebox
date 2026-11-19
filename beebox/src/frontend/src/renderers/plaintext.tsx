@@ -6,34 +6,24 @@
  * matches. Binary files (images, audio, etc.) use their own renderers.
  */
 
-import { isBinaryPath } from "../lib/binary-files";
+import { isPlaintextPath } from "../components/file-view-data";
+import { CardThemeContent } from "../components/themes/CardThemeContent";
 import { Pre } from "../components/ui/Pre";
 import { StatusMessage } from "../components/ui/StatusMessage";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 
-function PlaintextRenderer({ data }: RendererProps) {
+function PlaintextRenderer({ data, mode }: RendererProps) {
   if (data.content === undefined) {
     return <StatusMessage className="p-4">No text content available</StatusMessage>;
   }
-  return (
-    <div className="p-4">
-      <Pre>{data.content}</Pre>
-    </div>
-  );
+  const body = <Pre>{data.content}</Pre>;
+  // Outside an embed FileView draws the card surface; inside one the host card is the frame.
+  if (mode !== "embed") return <CardThemeContent>{body}</CardThemeContent>;
+  return <div className="p-4">{body}</div>;
 }
 
 export const plaintextRenderer: RendererEntry = {
-  selector: {
-    match: (path) => {
-      // Skip directories (no extension), card files, and known binary types.
-      const base = path.split("/").pop();
-      if (!base || !base.includes(".")) return false;
-      if (path.endsWith(".card")) return false;
-      // JSON has its own renderer that loads on its own terms (size-gated); the
-      // shell doesn't prefetch its text, so plaintext has nothing to show.
-      if (path.endsWith(".json")) return false;
-      return !isBinaryPath(path);
-    },
-  },
+  // JSON has its own size-gated renderer; the shell doesn't prefetch its text.
+  selector: { match: isPlaintextPath },
   renderer: { name: "Plaintext", Component: PlaintextRenderer, priority: 1 },
 };
