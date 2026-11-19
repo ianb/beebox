@@ -45,7 +45,7 @@ shared dependency, schema, build configuration, or test fixture this work uses.
 Run only affected checks: save a `bin/finish-preflight --json --no-merge` sheet
 (re-save after any edit), pass it to each `bin/finish-verify --sheet <file> --only
 tests|typecheck|lint|smoke|site` one at a time (parallel preflights contend), or named
-tests. In Claude Code a call past 180 s moves to the background: wait for its completion notice, never `sleep` or poll its log.
+tests. In Claude Code a call past 180 s (a merge commit's hook, `theme-check --all`) moves to the background: wait for its completion notice; never `sleep`, poll its log, or loop on `pgrep -f`, which matches its own command line.
 
 The verifier reruns failing test files once in isolation. Green proceeds; a named flake (passes alone at the same
 content hash) is green: report it, no flake issue (`beebox/test/careful.txt` owns

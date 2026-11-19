@@ -44,6 +44,12 @@ Add it to `src/browser/app/registry.ts`, then run
 warning and on a scripted input that reads `(unhandled)`. Do not commit PNGs
 or transcripts.
 
+## Before a commit that adds or moves a module
+
+The pre-commit layout check refuses a test or helper in the wrong directory,
+and a module imported from outside its directory becomes an entry. Check a
+destination first: `pnpm --dir beebox layout-check --explain canvas-loop/src/<dir>`.
+
 ## GPU
 
 - One heavy GPU process at a time on a machine: several at once have crashed

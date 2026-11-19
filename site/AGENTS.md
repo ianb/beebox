@@ -71,6 +71,13 @@ a failure surfaces as a 500 with the build's error text. The Pages workflow
 still builds explicitly (with `--base /beebox/`). Run `pnpm --dir site
 build` yourself when you want to see build errors directly.
 
+`bin/browse` cannot open that URL: the router classifies `/<worktree>/site/`
+as a box route for a box named `site`, which the browse key does not
+authenticate, so it lands on the sign-in page. To screenshot a site page, run
+`pnpm --dir site build --base /` and serve `site/dist/` from any static file
+server. The reading pane scrolls internally, so a full-page capture needs a
+style that lets the pane grow to its content.
+
 The build fails closed: malformed frontmatter (named file:line), a broken
 internal link, or a missing source stops it. On success it prints one line and
 writes the input manifest last (so a partial build never masks staleness).
