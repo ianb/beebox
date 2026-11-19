@@ -105,7 +105,7 @@ before the move.
 
 - [x] Create the Bee Box Discord server and choose it as the project's
   community channel.
-- [x] Record the stable invite URL: [join the Bee Box Discord](https://discord.gg/FQYn6zyv).
+- [x] Record the stable invite URL: [join the Bee Box Discord](https://discord.gg/YAgB9CYzmu).
 - [x] Confirm that the README community link opens the invite and joins the
   intended server.
 - [ ] Update any public profiles, repository descriptions, pinned posts,
