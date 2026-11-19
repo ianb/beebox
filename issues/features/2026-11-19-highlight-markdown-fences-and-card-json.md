@@ -2,7 +2,7 @@
 title: "Colour Markdown code fences, and put JSON files on the card"
 workstream: unattached
 area: beebox
-design: ../../beebox/docs/plans/code-file-card.md
+design: ../../beebox/docs/implemented-plans/code-file-card.md
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-code-file-card — text and code files moved onto the card surface with colouring

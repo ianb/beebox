@@ -1,6 +1,6 @@
 ---
 title: "Text and code files on the card surface, with syntax highlighting"
-status: draft
+status: implemented
 workstream: code-file-card
 issues: []
 ---

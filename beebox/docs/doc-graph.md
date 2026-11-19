@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-19T17:20:33Z
-Total documents: 712
+Generated: 2026-11-19T17:39:54Z
+Total documents: 713
 
 ## Issues
 
@@ -210,6 +210,7 @@ Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/clerk-quick-send.md:136 (mention) — - Lint: no rule changes (root `AGENTS.md`).
 - docs/implemented-plans/clerk-webpage-capture.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/code-file-card.md:34 (mention) — - Root AGENTS.md dependency rule: edit `package.json`, `pnpm install --lockfile-only`, check the lockfile diff, `pnpm in
 - docs/implemented-plans/codex-box-engine.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/codex-sdk-backend.md:134 (mention) — generated `AGENTS.md` and installed plugin. If the public SDK cannot preserve this role,
 - docs/implemented-plans/codex-worktree-sessions.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -3123,7 +3124,7 @@ References:
 
 #### docs/box/whats-new.md
 
-Title: "What's new in Bee Box" | 28 lines | current reference
+Title: "What's new in Bee Box" | 29 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/whats-new.md:110 (mention) — `docs/box/whats-new.md` is in every install.
@@ -5335,6 +5336,16 @@ References:
 - → AGENTS.md (mention)
 - → code-style.md (mention)
 - → docs/landmarks.md (mention)
+
+#### docs/implemented-plans/code-file-card.md
+
+Title: "Text and code files on the card surface, with syntax highlighting" | 152 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/features/2026-11-19-highlight-markdown-fences-and-card-json.md:5 (frontmatter) — design: ../../beebox/docs/implemented-plans/code-file-card.md
+
+References:
+- → AGENTS.md (mention)
 
 #### docs/implemented-plans/codex-box-engine.md
 
