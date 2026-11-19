@@ -10,7 +10,8 @@
  */
 
 import { MenuItem, MenuDivider } from "../../ui/menu-item";
-import { BrowserSpeechRow } from "./browser-speech-row";
+import { DeviceSpeechOption } from "./device-speech-option";
+import type { LiveEngine } from "../../../lib/audio/live-engine";
 import type { RouterOutput } from "../../../lib/trpc/client";
 import type { HqTranscriptionService, TranscriptionService } from "@shared/transcription-services.js";
 import type { TtsBackend } from "@shared/tts-backends.js";
@@ -116,6 +117,7 @@ export function hqTranscriptionServiceLabel(service: string | null): string {
 /** "Voice settings" sub-panel: live + HQ transcription service pickers. */
 export function VoiceMenuBody({
   onBack,
+  deviceEngine,
   currentService,
   onSelectTranscriptionService,
   currentHqService,
@@ -125,6 +127,8 @@ export function VoiceMenuBody({
   capabilities,
 }: {
   onBack: () => void;
+  /** This device's live engine; a box service row is checked only under "service". */
+  deviceEngine: LiveEngine;
   /** Comparison-only — may be "fake" (dev/test service) which never appears in the option lists. */
   currentService: string | null;
   onSelectTranscriptionService: (service: TranscriptionServiceOption) => void;
@@ -146,10 +150,10 @@ export function VoiceMenuBody({
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">While you speak</div>
       {TRANSCRIPTION_OPTIONS.map((opt) => (
         <MenuItem key={opt.service} id={`bbx-voice-live-${opt.service}`} onClick={() => onSelectTranscriptionService(opt.service)} keepOpen>
-          {currentService === opt.service ? "✓ " : "  "}{opt.label}
+          {deviceEngine === "service" && currentService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}
-      <BrowserSpeechRow />
+      <DeviceSpeechOption chosen={deviceEngine === "browser"} />
       <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">Final transcript (after recording)</div>
       {HQ_TRANSCRIPTION_OPTIONS.map((opt) => {
