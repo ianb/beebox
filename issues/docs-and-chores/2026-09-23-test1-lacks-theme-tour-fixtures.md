@@ -126,3 +126,11 @@ Same four fixtures missing, same misses: `card-themes` `markdown-file` and
 `CardThemeSurface.tsx`; the landmark card does not). On Deck and Ribbon the
 "Card not found" text sits on the workspace art at 1.0-2.1:1 contrast.
 Artifacts: `beebox/test/tours/.artifacts/<tour>/2026-11-04T21-*`.
+
+## 2026-11-18 (tour check run 20261118-161345)
+
+The gap now also covers `bloom-inherited.doc.card` and `bloom-explicit.doc.card`.
+`bloom-theme`, `deck-theme` and `ribbon-theme` showed "Card not found" and
+failed their heading and material expectations; `card-themes` and
+`system-themes` failed as before. After running the installer on the
+worktree's clone, all five walked without those misses.

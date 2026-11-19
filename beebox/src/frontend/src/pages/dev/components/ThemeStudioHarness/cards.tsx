@@ -208,7 +208,7 @@ function SystemThemePanel() {
     <Heading level={2}>System theme</Heading>
     <Hint>Choose the toolbar and workspace surface for this box.</Hint>
     <SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled={false} idPrefix="bbx-studio-system-theme" onSelect={noop} />
-    <div className="max-h-24 overflow-hidden"><SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled idPrefix="bbx-studio-system-theme-disabled" onSelect={noop} /></div>
+    <div className="max-h-24 overflow-hidden" role="group" aria-label="Disabled system theme"><SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled idPrefix="bbx-studio-system-theme-disabled" onSelect={noop} /></div>
     {/* LandmarkSystemThemePicker's shell; its full picker makes a live box query. */}
     <section className="bbx-landmark-system-theme" aria-label="Landmark system theme"><h4>System theme</h4>
       <Text as="p" size="xs" tone="muted">Scope: This landmark</Text></section>
