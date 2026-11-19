@@ -65,7 +65,7 @@ Per-project details are in each project's `AGENTS.md`.
 ## Community
 
 Questions and discussion happen on Discord:
-[join the Bee Box server](https://discord.gg/FQYn6zyv).
+[join the Bee Box server](https://discord.gg/YAgB9CYzmu).
 
 ## License
 

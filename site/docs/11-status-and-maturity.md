@@ -59,7 +59,7 @@ including known bugs and accepted risks.
 **Where to look and ask.**
 
 - Source: [github.com/ianb/beebox](https://github.com/ianb/beebox)
-- Discussion: [the Bee Box Discord server](https://discord.gg/FQYn6zyv)
+- Discussion: [the Bee Box Discord server](https://discord.gg/YAgB9CYzmu)
 
 See also [what it requires](08-what-it-requires.md) and
 [your data and safety](10-your-data-and-safety.md).
