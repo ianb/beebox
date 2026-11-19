@@ -21,11 +21,11 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 
 ## Smallest fix and budget
 
-<!-- Name the smallest fix, the chosen design's tracks/subprojects, and
-     estimated changed lines (additions plus deletions): source and tests,
-     authored docs, generated output, as three figures; this plan not counted.
-     Explain what the fuller design buys. Over 2,000 lines without generated
-     output is a BIG CHANGE; the skill's *Size and scope review* has the rules. -->
+<!-- Name the smallest fix, the chosen design's tracks, and estimated changed
+     lines (additions plus deletions) as three figures: source and tests,
+     authored docs, generated output. Count the call sites of each type or
+     signature a track changes; a wide spread argues for another seam. Over
+     2,000 lines, generated output aside, is a BIG CHANGE; see the skill. -->
 
 ## Stated preferences this plan trades against
 
@@ -54,10 +54,9 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
      finding. "No prior art found for X" is a finding when it bears on the
      decision; write it. If no decision depends on an external premise, state
      that briefly and skip the search.
-     Mark each item evaluated-only or adopted. An adopted item (used as a
-     direct model, adapted, or copied) gets an entry in ACKNOWLEDGEMENTS.md
-     in the same commit that lands it; the Implementation order names that
-     chunk. -->
+     Mark each item evaluated-only or adopted (modelled on, adapted, copied);
+     an adopted item gets an ACKNOWLEDGEMENTS.md entry in the chunk that
+     lands it. -->
 
 ## Ontology
 
@@ -105,22 +104,22 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 ## Subplans
 
 <!-- Only when a sub-question needs its own design step (research-and-decide,
-     a vocabulary/schema decision table, prerequisite infrastructure).
-     `<topic>.subplan.md`, structured like this file; the parent links to it
-     and both ship together. "none" otherwise. -->
+     a vocabulary/schema decision table, prerequisite infrastructure):
+     `<topic>.subplan.md`, structured like this file, linked, shipped with it. -->
 
 ## Failure modes
 
 <!-- One realistic, specific failure per new codepath — "the ref= points at a
-     card archived between write and read", not "the network might fail". -->
+     card archived between write and read", not "the network might fail" —
+     and per step of a multi-step sequence: its non-success result and the
+     state it leaves. Only failures a real input reaches (principle 6). -->
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 
-<!-- Critical gap = no test AND no handling AND silent. Call each out above the
-     table:  > **Critical gap:** <codepath> — <what happens silently>
-     A plan with an unresolved critical gap is not ready; fix it in the plan
-     or accept it as a documented risk with one sentence of why. -->
+<!-- Critical gap = no test, no handling, and silent. Call each out above the
+     table as > **Critical gap:** <codepath> — <what happens silently>, then
+     fix it in the plan or accept it as a risk with one sentence of why. -->
 
 ## Agent-flow / user-flow edge cases
 
@@ -146,8 +145,7 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 
 ## Open design questions
 
-<!-- Genuinely unsettled, with your lean. None may sit inside a first
-     implementation chunk; settle those in Direction. -->
+<!-- Genuinely unsettled, with your lean; none inside a first chunk. -->
 
 ## Knowledge audits
 
@@ -155,8 +153,7 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
      Each gets at least one `knows_directly` entry in
      beebox/src/dev/knowledge-audits.yaml, and audits land RUN
      (`pnpm knowledge-audit run --box ~/src/boxes/test1 --filter <id>`; record the
-     status comment) — a never-run audit is unverified in both directions.
-     Skip-with-rationale ("purely infrastructural") is fine; say so. -->
+     status comment); a never-run audit is unverified. Or skip, saying why. -->
 
 ## What will hold this after it ships
 
@@ -171,8 +168,10 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 
 ## Implementation order
 
-<!-- Chunks in order, dependencies explicit. Each chunk is a commit or a few:
-     commit boundaries, not ship boundaries. -->
+<!-- Chunks in order, dependencies explicit; each a commit or a few. Before
+     fixing a path or order, run what the commit hook runs: `pnpm layout-check
+     --explain <dir>` per new or destination directory, doc-check for moved or
+     deleted files, and for prompt text the agent-guide ledger.yaml budget. -->
 
 ## Rollout shape
 
