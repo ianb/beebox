@@ -58,7 +58,7 @@ import ky, { isHTTPError, type HTTPError } from "ky";
 import { isRecord } from "../../../shared/is-record.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { OPENROUTER_BASE_URL } from "../../openrouter.js";
-import { buildDiarizedText, joinSegmentTexts, repairMissingSentenceSpaces } from "../voxtral-text.js";
+import { buildDiarizedText, joinSegmentTexts, labeledSpeakers, repairMissingSentenceSpaces } from "../voxtral-text.js";
 import { readUpstreamErrorBody, truncateUpstreamBody } from "../upstream-body.js";
 import type {
   DetailedTranscriptionResult,
@@ -230,19 +230,7 @@ export async function transcribeAudioOpenRouter(
     throw new OpenRouterNetworkError(errorMessage(error));
   }
 
-  const result = shapeOpenRouterResult(body, { diarization, wordTimestamps });
-  // A provider-option passthrough the provider ignores fails silently by
-  // construction, and an unlabeled transcript looks exactly like a
-  // single-speaker recording. Say so rather than let the caller believe
-  // diarization ran — the same guard `warnIfDiarizationUnlabeled` gives the
-  // direct Voxtral arm.
-  if (diarization && result.diarized !== true) {
-    console.warn(
-      "[transcription/openrouter] diarization requested but no speaker labels came back. Either the recording has "
-        + "one speaker, or the provider did not honor the diarization option.",
-    );
-  }
-  return result;
+  return shapeOpenRouterResult(body, { diarization, wordTimestamps });
 }
 
 interface ParsedSegment {
@@ -292,6 +280,16 @@ export function shapeOpenRouterResult(
 
   // Diarized output is speaker-prefixed lines, the shape `voxtral-diarized`
   // already produces, so a reader downstream cannot tell the backends apart.
+  // A provider-option passthrough the provider ignores fails silently by
+  // construction. With no label at all, say so rather than let the caller
+  // believe diarization ran — the same guard `warnIfDiarizationUnlabeled` gives
+  // the direct Voxtral arm. One labeled speaker is a real answer, not a failure.
+  if (diarization && labeledSpeakers(segments ?? []).size === 0) {
+    console.warn(
+      "[transcription/openrouter] diarization requested but no speaker labels came back. Either the recording has "
+        + "one speaker, or the provider did not honor the diarization option.",
+    );
+  }
   const labeledText = diarization ? buildDiarizedText(segments) : null;
   const text = labeledText ?? joinSegmentTexts(segments) ?? repairMissingSentenceSpaces(rawText);
   return { text, duration, language, ...(diarization && { diarized: labeledText !== null }) };

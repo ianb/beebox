@@ -128,6 +128,18 @@ Speaker 1: Hello.
 Speaker 0: Bye.`);
 });
 
+// One labeled speaker is not worth labeling: "Speaker 1A:" on every line says
+// nothing a reader needs. The text comes back plain and `diarized` is false, as
+// for a recording with no labels.
+void test("One labeled speaker comes back as plain text, not speaker lines", async (t) => {
+  const solo = shapeOpenRouterResult({
+    text: "Hi.Bye.",
+    duration: 2,
+    segments: [{ text: "Hi.", start: 0, end: 1, speaker: 0 }, { text: "Bye.", start: 1, end: 2, speaker: 0 }],
+  }, { diarization: true, wordTimestamps: false });
+  t.check(solo, { text: "Hi. Bye.", duration: 2, language: "", diarized: false });
+});
+
 // Diarization requested but no speaker on any segment is the mono-speaker case, or
 // a provider that ignored the option. Either way the text is rebuilt from the
 // segments and `diarized` says plainly that it is not speaker-labeled — which is

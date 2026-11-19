@@ -31,7 +31,7 @@
  * real browser; `body.stable-body.test.ts` holds the rule.
  */
 
-import { Fragment, useContext, useMemo, useRef } from "react";
+import { Fragment, useContext, useId, useMemo, useRef } from "react";
 import * as React from "react";
 import Markdoc, { type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
 import { makeHeadingNode } from "@shared/markdoc-config/tags/core";
@@ -261,9 +261,36 @@ function Blockquote({ children }: { children?: ReactNode }) {
   return <blockquote className="bbx-blockquote">{children}</blockquote>;
 }
 
-/** A Markdown task marker: display-only; the item's own text follows it. */
+/** The id of the `label` that wraps a task-list item, so its checkbox takes the item's text as its name. */
+const TaskLabelContext = React.createContext<string | null>(null);
+
+/** A task-list item's `label`: the task marker and the item's inline text. */
+function TaskLabel({ children }: { children?: ReactNode }) {
+  const id = useId();
+  return <label id={id}><TaskLabelContext.Provider value={id}>{children}</TaskLabelContext.Provider></label>;
+}
+
+/**
+ * The shared transform wraps a task-list item in a plain `label`; Markdoc's
+ * React renderer never maps a lowercase tag to a component, so rename the
+ * wrapper here to reach `TaskLabel`.
+ */
+function nameTaskLabels(node: RenderableTreeNode): RenderableTreeNode {
+  if (!Tag.isTag(node)) return node;
+  const first = node.children[0];
+  if (node.name === "label" && Tag.isTag(first) && first.name === "Task") node.name = "TaskLabel";
+  for (const child of node.children) nameTaskLabels(child);
+  return node;
+}
+
+/**
+ * A Markdown task marker: display-only; the item's own text follows it and
+ * names it. A standalone `{% task /%}` has no text, so it is named "Task".
+ */
 function Task({ done }: { done?: boolean }) {
-  return <Checkbox checked={done === true} disabled aria-label="Task" className="mr-2 align-middle" />;
+  const labelId = useContext(TaskLabelContext);
+  const name = labelId === null ? { "aria-label": "Task" } as const : { "aria-labelledby": labelId } as const;
+  return <Checkbox checked={done === true} disabled {...name} className="mr-2 align-middle" />;
 }
 
 type MarkdownComponent = React.ComponentType<Record<string, unknown>>;
@@ -296,6 +323,7 @@ const MARKDOWN_COMPONENTS: Readonly<Record<string, MarkdownComponent>> = {
   SourceInline: cast(SourceInline),
   SourceBlock: cast(SourceBlock),
   Task: cast(Task),
+  TaskLabel: cast(TaskLabel),
   RedactedInline: cast(RedactedInline),
   RedactedBlock: cast(RedactedBlock),
   TodoInline: cast(TodoInline),
@@ -393,7 +421,7 @@ export function Markdown({
     // The collector's own numbering, so a rendered todo and the todo a write
     // addresses cannot disagree about which one `line#2` is.
     if (bodyLineOffset !== null) stampLocators(assignLocators(ast, bodyLineOffset));
-    return transform(ast, config);
+    return nameTaskLabels(transform(ast, config));
   }, [children, basePath, tags, bodyLineOffset]);
   // `components` is `Partial<...>`, so a plain object spread would carry
   // possibly-`undefined` values into the merged map; only copy overrides

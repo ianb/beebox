@@ -1,39 +1,31 @@
 /**
  * Plaintext renderer — catch-all fallback for any text file.
  *
- * Reads the shell-loaded content and renders as monospace. Registered at
+ * Reads the shell-loaded content and renders it as monospace, coloured by
+ * language where it has one (`CodeText`). Registered at
  * priority 1 for every non-card, non-directory path so something always
  * matches. Binary files (images, audio, etc.) use their own renderers.
  */
 
-import { isBinaryPath } from "../lib/binary-files";
-import { Pre } from "../components/ui/Pre";
+import { isPlaintextPath } from "../components/file-view-data";
+import { CardThemeContent } from "../components/themes/CardThemeContent";
+import { CodeText } from "../components/CodeText/view";
+import { languageForPath } from "../lib/code-language";
 import { StatusMessage } from "../components/ui/StatusMessage";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 
-function PlaintextRenderer({ data }: RendererProps) {
+function PlaintextRenderer({ data, mode }: RendererProps) {
   if (data.content === undefined) {
     return <StatusMessage className="p-4">No text content available</StatusMessage>;
   }
-  return (
-    <div className="p-4">
-      <Pre>{data.content}</Pre>
-    </div>
-  );
+  const body = <CodeText text={data.content} grammar={languageForPath(data.path).grammar} />;
+  // Outside an embed FileView draws the card surface; inside one the host card is the frame.
+  if (mode !== "embed") return <CardThemeContent>{body}</CardThemeContent>;
+  return <div className="p-4">{body}</div>;
 }
 
 export const plaintextRenderer: RendererEntry = {
-  selector: {
-    match: (path) => {
-      // Skip directories (no extension), card files, and known binary types.
-      const base = path.split("/").pop();
-      if (!base || !base.includes(".")) return false;
-      if (path.endsWith(".card")) return false;
-      // JSON has its own renderer that loads on its own terms (size-gated); the
-      // shell doesn't prefetch its text, so plaintext has nothing to show.
-      if (path.endsWith(".json")) return false;
-      return !isBinaryPath(path);
-    },
-  },
+  // JSON has its own size-gated renderer; the shell doesn't prefetch its text.
+  selector: { match: isPlaintextPath },
   renderer: { name: "Plaintext", Component: PlaintextRenderer, priority: 1 },
 };

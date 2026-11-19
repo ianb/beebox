@@ -21,8 +21,11 @@ internally tracked as version 0.1.0 in source; published container images carry
 a stamped version (tagged releases, plus a daily image built from `main`).
 
 **How updates work.** There is only one continuously updated version of the
-software; every change is shipped as soon as it's made, with no list of what
-changed in each update for people, today. The box's own agent does get one: a
+software; every change is shipped as soon as it's made, with no release notes
+for people. Since 2026-11-16 each box does carry a dated
+"What's new in Bee Box" list of changes a person would notice, written by hand
+as work lands and opened from the profile menu or Settings. The box's own agent
+gets a separate list: a
 short dated list of engine changes that affect it (a removed command, a moved
 file), begun on 2026-11-01 and kept by a scheduled job, which the agent is
 told to check when something it remembers fails. Updating means fetching the latest version of
@@ -36,8 +39,9 @@ your existing cards (the files that hold your data) to match any changes in what
 reference material generated for the agent, recording each of those updates
 in your box's history, and it stops to ask for your help at any update that
 needs a decision only you can make. The project's own records name the
-missing part: nothing tells an operator that an update exists or what
-changed in it. Release discipline and an update story are recorded as open
+missing part: nothing tells an operator that an update exists. (A browser tab
+or the iPhone app's web view left open across an update does reload itself when
+you return to it, unless that would lose a draft or other unsaved work.) Release discipline and an update story are recorded as open
 work rather than shipped behavior.
 
 **Backups are new.** Encrypted, restic-based backups of a box arrived in late

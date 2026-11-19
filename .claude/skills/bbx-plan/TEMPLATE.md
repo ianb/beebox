@@ -22,10 +22,11 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 ## Smallest fix and budget
 
 <!-- Name the smallest fix, the chosen design's tracks/subprojects, and
-     estimated changed lines (additions plus deletions): source and tests,
-     authored docs, generated output, as three figures; this plan not counted.
-     Explain what the fuller design buys. Over 2,000 lines without generated
-     output is a BIG CHANGE; the skill's *Size and scope review* has the rules. -->
+     estimated changed lines (additions plus deletions) as three figures:
+     source and tests, authored docs, generated output. Count the uses
+     (callers, constructors, readers) of each type or signature a track
+     changes, per subproject, and weigh that spread when choosing the seam.
+     Over 2,000 lines, generated output aside, is a BIG CHANGE; see the skill. -->
 
 ## Stated preferences this plan trades against
 
@@ -54,10 +55,9 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
      finding. "No prior art found for X" is a finding when it bears on the
      decision; write it. If no decision depends on an external premise, state
      that briefly and skip the search.
-     Mark each item evaluated-only or adopted. An adopted item (used as a
-     direct model, adapted, or copied) gets an entry in ACKNOWLEDGEMENTS.md
-     in the same commit that lands it; the Implementation order names that
-     chunk. -->
+     Mark each item evaluated-only or adopted (modelled on, adapted, copied);
+     an adopted item gets an ACKNOWLEDGEMENTS.md entry in the commit that
+     lands it. -->
 
 ## Ontology
 
@@ -105,22 +105,24 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 ## Subplans
 
 <!-- Only when a sub-question needs its own design step (research-and-decide,
-     a vocabulary/schema decision table, prerequisite infrastructure).
+     a vocabulary/schema decision table, prerequisite infrastructure):
      `<topic>.subplan.md`, structured like this file; the parent links to it
-     and both ship together. "none" otherwise. -->
+     and both ship together. -->
 
 ## Failure modes
 
-<!-- One realistic, specific failure per new codepath — "the ref= points at a
-     card archived between write and read", not "the network might fail". -->
+<!-- Each realistic, specific failure a new codepath can reach ("the ref=
+     points at a card archived between write and read", not "the network
+     might fail"), and for a multi-step sequence each step's reachable
+     non-success results and the state each leaves (propagating the error may
+     be enough); no row for a state types or callers rule out (principle 6). -->
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 
-<!-- Critical gap = no test AND no handling AND silent. Call each out above the
-     table:  > **Critical gap:** <codepath> — <what happens silently>
-     A plan with an unresolved critical gap is not ready; fix it in the plan
-     or accept it as a documented risk with one sentence of why. -->
+<!-- Critical gap = no test, no handling, and silent. Call each out above the
+     table as > **Critical gap:** <codepath> — <what happens silently>, then
+     fix it in the plan or accept it as a risk with one sentence of why. -->
 
 ## Agent-flow / user-flow edge cases
 
@@ -141,22 +143,18 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 
 <!-- Explicit deferrals, one line of rationale each: "considered X, not now
      because Y". If the plan touches >1 module, has a transition state, or adds
-     vocabulary and this section is empty — stop and write it. This is the gate
-     that replaces a size limit. -->
+     vocabulary and this section is empty — stop and write it. -->
 
 ## Open design questions
 
-<!-- Genuinely unsettled, with your lean. None may sit inside a first
-     implementation chunk; settle those in Direction. -->
+<!-- Genuinely unsettled, with your lean; none inside a first chunk. -->
 
 ## Knowledge audits
 
 <!-- New agent-facing concept (tag, convention, card shape, "how you do X")?
-     Each gets at least one `knows_directly` entry in
-     beebox/src/dev/knowledge-audits.yaml, and audits land RUN
-     (`pnpm knowledge-audit run --box ~/src/boxes/test1 --filter <id>`; record the
-     status comment) — a never-run audit is unverified in both directions.
-     Skip-with-rationale ("purely infrastructural") is fine; say so. -->
+     Each gets a `knows_directly` entry in beebox/src/dev/knowledge-audits.yaml,
+     run before landing (`pnpm knowledge-audit run --box ~/src/boxes/test1
+     --filter <id>`, status comment recorded). No new concept: say so. -->
 
 ## What will hold this after it ships
 
@@ -171,15 +169,17 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 
 ## Implementation order
 
-<!-- Chunks in order, dependencies explicit. Each chunk is a commit or a few:
-     commit boundaries, not ship boundaries. -->
+<!-- Chunks in order, dependencies explicit; each a commit or a few. Name the
+     commit that lands an adopted prior-art item. Before fixing a path or
+     order, run from beebox/ the checks that would refuse it later:
+     `pnpm layout-check` with stubs at new paths carrying their planned imports
+     (`--explain <dir>` shows the unit graph), `pnpm doc-check` on each commit
+     that touches docs, and `pnpm lint:guide` for always-loaded text. -->
 
 ## Rollout shape
 
 <!-- Tests first, as a design tool (docs/testing.md): name the test for each
-     substantial codepath while designing it, and state done-when as the tests
-     that must pass. Cover the substantial paths and the Failure-modes "Test
-     exists?" column, not every line. Then: which knowledge audits land with
-     the plan; migration approach if data shape changes (agent-by-hand,
-     scripted, atomic vs gradual — a migration that expects to stop midway is a
-     subplan, not a phase). -->
+     substantial codepath while designing it; done-when is those tests
+     passing. Failure modes' "Test exists?" column records coverage. Migration
+     approach if data shape changes (by hand, scripted, atomic vs gradual);
+     one that expects to stop midway is a subplan, not a phase. -->

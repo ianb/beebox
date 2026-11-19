@@ -59,8 +59,10 @@ changed page is covered by automated tests only. Send to box needs the same Open
 saved and the popup offers recent chats to choose from. The routing model sees the page's
 title, address and site and your note, not the page text.
 Tab arrangements always land in one fixed destination; only the page/comment
-path lets you choose where it goes. The documentation does not describe a
-non-Chrome browser extension.
+path lets you choose where it goes. There is also a Firefox build of the extension (2026-11-13), made from the
+source with a build command; the project's notes call it untested in daily use,
+and its permission prompt for enabling a box differs from Chrome's. No other
+browser is covered.
 
 **Go deeper**
 

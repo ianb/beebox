@@ -40,6 +40,9 @@ one granularity: everyone in a box shares everything in it. Different groups
 need different boxes. Per-member identity beyond the list of who's allowed
 to log in is not designed yet. The narrative in
 [architecture/01-what-is-this.md](architecture/01-what-is-this.md) shows a
-household using one box.
+household using one box. When several members have the same chat open they see
+each other's pictures, with a badge while someone types, and can start a voice
+call from it (up to three people; new, and not yet tried on a real iPhone). See
+[chat](capabilities/chat.md).
 
 Details of the requirements are in [what it requires](08-what-it-requires.md).
