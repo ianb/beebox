@@ -33,7 +33,7 @@ on top of a subscription like Claude Code or Codex.
 - There are multiple paths to take in data (voice/camera hybrid, uploads,
   triage processes)
 - It treats voice as a primary input
-- **Your words vs its words:** provenance is a first class concept, with
+- Your words vs its words: provenance is a first class concept, with
   writing tools that keep AI text well marked so you can maintain your
   authentic voice
 - It is self-modifiable, the agent is given access and tools to modify your
