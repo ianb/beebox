@@ -1,3 +1,4 @@
+import { languageForPath } from "../../../../lib/code-language";
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
 import { themeOriginLabel } from "../../../../themes/registry";
 import { useState, type MouseEvent, type ReactNode } from "react";
@@ -49,7 +50,7 @@ export function ThemedFileCardProperties(props: ThemedFileCardPropertiesProps) {
       <CardFacts data={data} boxSlug={boxSlug} onNavigate={onNavigate} />
       <CardAttachments path={data.path} onNavigate={onNavigate} />
       <CardLastChange path={data.path} onNavigate={onNavigate} />
-    </> : <dl className="mt-4"><dt>Filed at</dt><dd>{data.path}</dd><dt>File type</dt><dd>Markdown</dd></dl>}
+    </> : <dl className="mt-4"><dt>Filed at</dt><dd>{data.path}</dd><dt>File type</dt><dd>{languageForPath(data.path).label}</dd></dl>}
     <CardMentions path={data.path} onNavigate={onNavigate} />
     <Appearance data={data} theme={theme} isCard={isCard} boxSlug={boxSlug} />
     <ViewChooser {...props} />
@@ -77,7 +78,7 @@ function Appearance({ data, theme, isCard, boxSlug }: {
       <ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} />
       {isLandmark ? <LandmarkSystemThemePicker boxKey={boxSlug ?? ""} path={data.path}
         contextDir={data.path.replace(/^\//, "").split("/").slice(0, -1).join("/")} /> : null}
-    </details> : !isCard ? <Text size="xs" tone="muted">Markdown files take the box's appearance; set a theme on a card.</Text>
+    </details> : !isCard ? <Text size="xs" tone="muted">Files take the box's appearance; set a theme on a card.</Text>
       : presentation?.data ? <Text size="xs" tone="muted">Sign in to change this setting.</Text> : null}
   </section>;
 }

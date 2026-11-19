@@ -34,6 +34,14 @@ export function isMarkdownPath(path: string): boolean {
   return path.endsWith(".md");
 }
 
+/**
+ * A text file the plaintext renderer shows: not a directory, card, JSON, or
+ * binary file. FileView puts these on the card surface, as it does `.md`.
+ */
+export function isPlaintextPath(path: string): boolean {
+  return !isDirectoryPath(path) && !isCardPath(path) && !isJsonPath(path) && !isBinaryPath(path);
+}
+
 function isDirectoryPath(path: string): boolean {
   // An extension is a good proxy for "this is a file" except for the one
   // directory convention that carries a suffix: every card's attachments live in

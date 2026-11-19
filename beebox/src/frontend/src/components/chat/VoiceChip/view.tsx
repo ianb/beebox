@@ -27,6 +27,8 @@ import {
   type ServiceCapabilities,
 } from "./panels";
 import { useVoiceCapabilities } from "./capabilities";
+import { DEVICE_OPTION_SUMMARY } from "./device-speech-option";
+import { setLiveEngine, useLiveEngine, type LiveEngine } from "../../../lib/audio/live-engine";
 import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
 import { ConversationIcon, SpeakerIcon, FloorIcon } from "./icons";
 import { VoiceChipButtonFace } from "../../app-bar-faces/VoiceChipButtonFace";
@@ -90,6 +92,7 @@ interface VoiceChipBodyProps {
   onToggleNarration: () => void;
   onOpenVoice: () => void;
   onBackToRoot: () => void;
+  deviceEngine: LiveEngine;
   currentService: string | null;
   onSelectTranscriptionService: (service: TranscriptionServiceOption) => void;
   currentHqService: string | null;
@@ -109,7 +112,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
   const {
     panel, muted, onToggleMute, narrationEnabled, onToggleNarration, narrationDiarizationEnabled,
     onOpenVoice,
-    onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
+    onBackToRoot, deviceEngine, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService, currentTtsBackend, onSelectTtsBackend,
     capabilities,
   } = props;
@@ -137,7 +140,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
               <span className="min-w-0">
                 Voice settings
                 <span className="block text-xs text-warm-700 truncate">
-                  Live: {transcriptionServiceLabel(currentService)}
+                  Live: {deviceEngine === "browser" ? DEVICE_OPTION_SUMMARY : transcriptionServiceLabel(currentService)}
                 </span>
                 <span className="block text-xs text-warm-700 truncate">
                   HQ: {hqTranscriptionServiceLabel(currentHqService)}
@@ -152,6 +155,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
       return (
         <VoiceMenuBody
           onBack={onBackToRoot}
+          deviceEngine={deviceEngine}
           currentService={currentService}
           onSelectTranscriptionService={onSelectTranscriptionService}
           currentHqService={currentHqService}
@@ -218,7 +222,14 @@ export const VoiceChip = memo(function VoiceChip({
   const currentHqService = transcriptionConfigQuery.data?.hqService ?? null;
   const currentTtsBackend = ttsConfigQuery.data?.backend ?? null;
 
+  const deviceEngine = useLiveEngine();
+  // A box service row means "this device uses the box's service": turn the
+  // device's own engine off first, then change the box-wide service if needed.
   const onSelectTranscriptionService = (service: TranscriptionServiceOption) => {
+    if (deviceEngine === "browser" && !setLiveEngine("service")) {
+      toastError("This browser would not save the choice");
+      return;
+    }
     if (currentService === service) return;
     setTranscriptionService.mutate({ service });
   };
@@ -261,6 +272,7 @@ export const VoiceChip = memo(function VoiceChip({
         onToggleNarration={onToggleNarration}
         onOpenVoice={() => { setPanel("voice"); capabilities.refetch(); }}
         onBackToRoot={() => setPanel("root")}
+        deviceEngine={deviceEngine}
         currentService={currentService}
         onSelectTranscriptionService={onSelectTranscriptionService}
         currentHqService={currentHqService}

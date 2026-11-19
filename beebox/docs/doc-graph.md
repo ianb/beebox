@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-18T22:24:04Z
-Total documents: 711
+Generated: 2026-11-19T17:39:54Z
+Total documents: 713
 
 ## Issues
 
@@ -210,6 +210,7 @@ Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/clerk-quick-send.md:136 (mention) — - Lint: no rule changes (root `AGENTS.md`).
 - docs/implemented-plans/clerk-webpage-capture.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/code-file-card.md:34 (mention) — - Root AGENTS.md dependency rule: edit `package.json`, `pnpm install --lockfile-only`, check the lockfile diff, `pnpm in
 - docs/implemented-plans/codex-box-engine.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/codex-sdk-backend.md:134 (mention) — generated `AGENTS.md` and installed plugin. If the public SDK cannot preserve this role,
 - docs/implemented-plans/codex-worktree-sessions.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -953,7 +954,7 @@ Referenced by:
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
-- ../bin/AGENTS.md:210 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
+- ../bin/AGENTS.md:211 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:40 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:90 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
@@ -3123,12 +3124,13 @@ References:
 
 #### docs/box/whats-new.md
 
-Title: "What's new in Bee Box" | 26 lines | current reference
+Title: "What's new in Bee Box" | 29 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/whats-new.md:110 (mention) — `docs/box/whats-new.md` is in every install.
 - docs/unimplemented-plans/bbxdocs.md:211 (mention) — `docs/box/whats-new.md`. Not `agent-changes.md`, whose bar is agent habits.
 - ../.claude/skills/finish/SKILL.md:18 (mention) — Top of `beebox/docs/box/whats-new.md`, committed with the work:
+- ../issues/code-quality/2026-11-19-whats-new-md-conflicts-on-every-concurrent-landing.md:12 (mention) — `context-history.yaml` and `migrations.ts`). `beebox/docs/box/whats-new.md`
 
 ### docs/cards/
 
@@ -4563,6 +4565,13 @@ References:
 - → docs/server/operations.md (mention)
 - → docs/unimplemented-plans/box-user-account-spec.md (mention)
 
+#### docs/implemented-plans/browser-live-text-option.md
+
+Title: "On-device live text as a Voice settings choice" | 202 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/features/2026-09-18-chrome-web-speech-stt-no-key.md:135 (link) — ([plan](../../beebox/docs/implemented-plans/browser-live-text-option.md)). The silent-failure
+
 #### docs/implemented-plans/browser-task-card.md
 
 Title: "browser-task card: a prompt card that is its own inbox" | 739 lines | shipped history | implemented
@@ -4943,7 +4952,7 @@ References:
 Title: "Sources line at the top of a card's front" | 282 lines | shipped history | implemented
 
 Referenced by:
-- ../issues/bugs/2026-11-18-recipe-source-line-shows-box-refs-as-plain-text.md:8 (frontmatter) — design: ../../beebox/docs/implemented-plans/card-source-chips.md
+- ../issues/closed/bugs/2026-11-18-recipe-source-line-shows-box-refs-as-plain-text.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/card-source-chips.md
 
 #### docs/implemented-plans/card-symbol.md
 
@@ -5327,6 +5336,16 @@ References:
 - → AGENTS.md (mention)
 - → code-style.md (mention)
 - → docs/landmarks.md (mention)
+
+#### docs/implemented-plans/code-file-card.md
+
+Title: "Text and code files on the card surface, with syntax highlighting" | 152 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/features/2026-11-19-highlight-markdown-fences-and-card-json.md:5 (frontmatter) — design: ../../beebox/docs/implemented-plans/code-file-card.md
+
+References:
+- → AGENTS.md (mention)
 
 #### docs/implemented-plans/codex-box-engine.md
 
@@ -7656,7 +7675,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 447 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/AGENTS.md:193 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/AGENTS.md:194 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:239 (mention) — - **Lives in:** `bin/private-issues`, `bin/CLAUDE.md` "Private-issues shadow repo", `issues/CLAUDE.md`, `beebox/docs/imp
 
 References:
@@ -10266,7 +10285,7 @@ Title: "Document comments: a communication medium in the workstreams app" | 947 
 Referenced by:
 - docs/implemented-plans/exhibit-comments.md:55 (mention) — about (the plan's job to be done in `document-comments.md`), and it can be
 - docs/plans/general-browser.md:19 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/AGENTS.md:111 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
+- ../bin/AGENTS.md:112 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:94 (mention) — - **Lives in:** cited in plans, e.g. `beebox/docs/plans/document-comments.md:636`, `implemented-plans/doc-structure.md:7
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:179 (mention) — - **Lives in:** `bin/comments`, `bin/comments.ts`, `workstreams-app/src/server/comments-service.ts`, `workstreams-app/sr
 - ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:42 (link) — [document-comments](../../../beebox/docs/plans/document-comments.md) plan
