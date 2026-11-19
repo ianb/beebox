@@ -26,7 +26,7 @@ import { useVisibleCardSelectionSink, selectionReceiver } from "../chat/everywhe
 import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
 import { cardTitle } from "../../lib/card-title";
-import { useFileData, isCardPath, isMarkdownPath, isMissingCardFailure } from "../file-view-data";
+import { useFileData, isCardPath, isMarkdownPath, isPlaintextPath, isMissingCardFailure } from "../file-view-data";
 import type { LoadFailure } from "../../lib/file-load-state";
 import { withBase } from "../../api";
 import { getRenderers, type FileData, type FileRenderer } from "../../file-type-registry";
@@ -147,7 +147,7 @@ function selectedTarget({ path, viewer, params, viewState }: {
 }
 
 function usesThemeSurface(path: string): boolean {
-  return isCardPath(path) || isMarkdownPath(path);
+  return isCardPath(path) || isMarkdownPath(path) || isPlaintextPath(path);
 }
 
 function useMovedCardRecovery({

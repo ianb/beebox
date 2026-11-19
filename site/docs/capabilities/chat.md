@@ -61,7 +61,7 @@ box. Chat is the everyday way you talk to it.
   step".
 - Sets math as math: `$E = mc^2$` in a line, `$$ … $$` as a displayed formula,
   and chemistry such as `$\ce{2H2 + O2 -> 2H2O}$`, in chat and in card
-  bodies. Dollar amounts ("$5 and $10") stay text, and TeX that does not parse
+  bodies (the `\( … \)` and `\[ … \]` forms work too). Dollar amounts ("$5 and $10") stay text, and TeX that does not parse
   shows its source in code style. Pages published from the box render the same
   math ([publishing.md](publishing.md)).
 - Lets the agent link to a view in a particular state (a filter, a tab, a
@@ -85,6 +85,38 @@ box. Chat is the everyday way you talk to it.
   is closed, the agent sets a reminder on your phone instead
   ([notifications.md](notifications.md)), and tells you the time it set so you
   can correct a misread "next Tuesday".
+- Shows who else is in a shared chat. When another member of the box has the
+  same chat open, their picture appears beside your profile menu, with a small
+  badge while they type or dictate. Only the fact that they are typing is
+  shared, never the text, and nothing about presence is stored.
+- Starts a voice call from a chat several members have open. The people in the
+  chat are rung, up to three can be on a call, and anyone on it can turn video
+  on. Anyone can turn transcription on for everyone, and everyone sees that it
+  is on; when the call ends, the transcript lands in the chat as one entry,
+  interleaved with the typed messages and the agent's replies and work.
+- Lets the agent watch how you work in an interactive figure or view it built
+  for you, such as a practice problem, and say something when you seem stuck or
+  finish. The chat shows "Watching: <name>" above the message box while a
+  watcher is on, and a watcher's notice appears as a labelled system row, not
+  as the agent talking. A watcher ends itself when its situation is over and
+  expires by default after twenty of your turns or two hours.
+- Has keyboard shortcuts for speaking and quoting: Ctrl+L puts the cursor in
+  the message box, first adding any text you selected on the page, and while
+  the microphone is on, Enter sends what you said.
+- Attaches iPhone photos in HEIC format in Chrome and Firefox as well as
+  Safari, by decoding them in the browser; the box keeps the original photo.
+- Keeps other conversations quiet. They no longer get a row above the message
+  box; when one replies with a callout (the agent's flag that something is
+  worth your attention) while you are in another chat, only the callout shows
+  there, and × clears it.
+- Reloads a stale tab. A tab or the iPhone app's web view left open across an
+  update of the box reloads itself when you come back to it, unless that would
+  lose something (a draft, a reply still arriving, an upload, a recording,
+  unsaved composition edits); then it shows a dismissible "new version" banner
+  instead.
+- Lists what changed for you. "What's new in Bee Box" in the profile menu and
+  Settings opens a dated list of changes a person would notice, and you can ask
+  the box "what's new?".
 
 **What it needs**
 
@@ -118,6 +150,18 @@ box-wide search is not built. The strip is new (2026-11-12): a
 card type supplied by a box is covered only by unit tests, and the iPhone
 app's shell around the strip and a presenter driving it with spoken
 checkpoints have not been tried.
+Calls are new (2026-11-12) and have not run on a real iPhone: echo
+cancellation, Bluetooth routing, and leaving the call when the app goes to the
+background are unverified, and the iPhone app's composer does not yet report
+typing to others. Calls connect browsers directly to each other, so they need a
+direct network path or a relay the host provides (the host's own relay or a
+Cloudflare one); with neither, a call that cannot connect says which is
+missing. There is no media server, so a call holds three people, and a call
+nobody answers within 45 seconds ends. A transcribed call needs a transcription
+key, and a recording that never arrives is named as missing in the entry.
+Cards you open during a call are not on its timeline, though changes to cards
+are. A watcher sees only what the figure or view logged, not the live state of
+the page, and it runs on the server, so it cannot act in your browser.
 
 **Go deeper**
 

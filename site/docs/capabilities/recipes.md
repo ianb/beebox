@@ -17,7 +17,9 @@ box. A recipe is a card with a structured body the recipe view understands.
 - Links to a sub-recipe (a sauce inside a larger dish) so it can be reused
   across recipes instead of copy-pasted.
 - Records where a recipe came from, whether that's a cookbook, a person, a
-  URL, or a captured web page, so its origin isn't lost.
+  URL, or a captured web page, so its origin isn't lost. A source that is a
+  scan or another card in your box is a link that opens it, and its note shows
+  beside it.
 
 **What it needs**
 

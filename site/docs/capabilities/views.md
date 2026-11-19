@@ -19,6 +19,13 @@ richer look than plain markdown, such as a chart, a table, or a form
   dashboard is itself a card type with a view that reads a collection.
 - Updates live when the underlying files change, so a view is never stale
   against the box.
+- Builds figures: small interactive or animated graphics that show one idea,
+  such as a diagram you can drag or an experiment you can run. A figure is its
+  own card type. Its drawing and animation run in your browser on the graphics
+  chip through WebGPU, and the agent can run one without a screen and look at
+  the frames before it hands the figure over. What you do in a figure beside
+  the chat is logged, so the agent can see it and can arm a watcher that speaks
+  up when you are stuck or done ([chat.md](chat.md)).
 - Runs on any card page by its web address, letting you switch between
   different views of the same file.
 
@@ -44,6 +51,14 @@ the card in the box's own browser and look at it
 ([web-interface.md](web-interface.md)).
 
 **Limits**
+
+A figure needs a browser and device with WebGPU; without it the figure's place
+says it cannot draw on this device. A figure written for an earlier version of
+the drawing library shows "This figure is being updated" until the agent
+rewrites it; the drawing library changed in November 2026, so older figures
+are the likeliest to show that. Views and figures run inside the app's
+own page with your signed-in session, and nothing isolates them from the rest
+of the box (see [your data and safety](../10-your-data-and-safety.md)).
 
 Views are for presenting data that already exists, not for work that needs
 to run separately behind the scenes; that goes through a job or procedure

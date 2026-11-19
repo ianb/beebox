@@ -79,6 +79,23 @@ vendors' models never send them. Codex has its own analytics to OpenAI, off
 unless the owner turns them on, because they include hashes of the lines each
 change adds.
 
+**Views and figures run with your session.** The agent writes views and
+figures (see [views.md](capabilities/views.md)), and they run in the app's own
+page, with the signed-in person's session. Nothing isolates them: such code can
+call the box's own routes directly, whatever helpers it is handed: it can write
+files in the box's working areas (anything outside cards and hidden files) and,
+through the card interface, cards themselves. Because the agent can be
+steered by outside text (see prompt injection above), a poisoned input could
+lead it to write a hostile view that acts with your abilities when you open it.
+The project's security review accepted this on 2026-11-13, with no block and no
+iframes yet, and lists it as a high priority to revisit.
+
+**Calls.** A voice or video call in a shared chat sends audio and video
+directly between the members' browsers, through a relay when no direct path
+exists: the host's own relay server, or a Cloudflare relay if the owner grants
+that key. A transcribed call sends each member's microphone recording through
+the box's transcription vendor, as dictation does.
+
 **Authentication is always on.** Every route sits behind a login wall, with
 no flag that disables it. A box with no member list is owner-only. Pages the
 web app serves refuse to be shown inside another site's frame. The processes a

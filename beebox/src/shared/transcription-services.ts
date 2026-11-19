@@ -44,8 +44,10 @@ const OPENROUTER_JSON_BODY: HqLengthLimit = {
   route: "OpenRouter, base64 WAV in a JSON body",
   source:
     "Measured 2026-09-10 with mai-diarized (plan:resilient-voice-recording, incident): 600 s of WAV "
-    + "(25.6 MB JSON) rejected with 400, ~6 min (~15 MB JSON) accepted. The binding limit is the body size, "
-    + "undocumented; 300 s (12.8 MB JSON) is the policy in production since.",
+    + "(25.6 MB JSON) rejected with 400, ~6 min (~15 MB JSON) accepted. The binding limit is the body size. "
+    + "300 s (12.8 MB JSON) is the policy in production since. https://openrouter.ai/docs/guides/overview/multimodal/stt "
+    + "(read 2026-11-18): \"Multipart uploads are limited to 25 MB\"; \"On other providers, base64 JSON past the "
+    + "multipart cap is rejected\" (OpenAI and Groq excepted); \"The upstream provider timeout is 60 seconds\".",
 };
 
 const OPENAI_DIRECT_UPLOAD: HqLengthLimit = {
@@ -59,7 +61,13 @@ const MAI_DIARIZATION: HqLengthLimit = {
   kind: "seconds",
   maxSeconds: 900,
   route: "MAI-Transcribe-2 diarization",
-  source: "Azure MAI-Transcribe-2 documents a diarization ceiling of about 15 minutes (plan:resilient-voice-recording, Prior art).",
+  source:
+    "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/mai-transcribe said in 2026-09 that diarized "
+    + "requests \"fail for recordings of about 15 minutes and longer\" (plan:resilient-voice-recording, Prior art). "
+    + "Read 2026-11-18: the page still says diarization \"Supports shorter recordings than transcription without "
+    + "diarization; see the note that follows this table\", but the note is gone, and the REST reference gives only "
+    + "the undiarized limit (\"shorter than 2 hours\", \"smaller than 250 MB\"). Unmeasured: the OpenRouter body "
+    + "limit stops a 15-minute WAV first, so this limit never binds today.",
 };
 
 const MISTRAL_DURATION: HqLengthLimit = {

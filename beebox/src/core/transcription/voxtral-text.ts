@@ -45,16 +45,14 @@ export function repairMissingSentenceSpaces(text: string): string {
  * Speakers are numbered from 0 in the order they first speak: providers'
  * own ids may start at 1 or follow another order, and the first voice must
  * read as "Speaker 1A" after `relabelDiarizedSpeakers`.
- * Returns null if no segments have a speaker_id (e.g. mono speaker, or
- * diarization didn't run).
+ * Returns null if fewer than two speakers are labeled (no labels: mono, or
+ * diarization didn't run; one speaker: a "Speaker 1A:" prefix says nothing).
  */
 export function buildDiarizedText(
   segments: Array<{ text: string; speaker_id?: string | null }> | undefined,
 ): string | null {
   if (!segments || segments.length === 0) return null;
-  if (!segments.some((s) => typeof s.speaker_id === "string" && s.speaker_id.length > 0)) {
-    return null;
-  }
+  if (labeledSpeakers(segments).size < 2) return null;
   const lines: string[] = [];
   const order = new Map<string, number>();
   let currentSpeaker: string | null = null;
@@ -76,6 +74,15 @@ export function buildDiarizedText(
   }
   flush();
   return lines.join("\n");
+}
+
+/** The distinct speaker ids the segments carry; unlabeled segments add none. */
+export function labeledSpeakers(segments: Array<{ speaker_id?: string | null }>): Set<string> {
+  const ids = new Set<string>();
+  for (const s of segments) {
+    if (typeof s.speaker_id === "string" && s.speaker_id.length > 0) ids.add(s.speaker_id);
+  }
+  return ids;
 }
 
 /**
