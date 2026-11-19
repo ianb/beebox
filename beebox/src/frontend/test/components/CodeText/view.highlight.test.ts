@@ -2,7 +2,7 @@
 //
 // CodeText paints the source uncoloured, then swaps in highlight.js markup when
 // the grammar loads. The markup keeps every character of the source (markup in
-// the source stays text), a result for older text is never shown after the
+// the source stays text, CRLF stays CRLF), a result for older text is never shown after the
 // text changes, and text over HIGHLIGHT_LIMIT is never coloured.
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
@@ -12,7 +12,8 @@ import "@ianbicking/tap-check/tap";
 import { eventually } from "@ianbicking/tap-check/check";
 import { CodeText, HIGHLIGHT_LIMIT, shouldHighlight } from "../../../src/components/CodeText/view.js";
 
-const source = 'const tag = "<script>alert(1)</script>"; // note\n';
+// CRLF line ends survive the swap to markup (HTML parsing would turn them into LF).
+const source = 'const tag = "<script>alert(1)</script>"; // note\r\nlet x = 1;\r\n';
 
 function shown(container: HTMLElement): { text: string; coloured: boolean; scripts: number } {
   const pre = container.querySelector("pre");

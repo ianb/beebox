@@ -16,9 +16,10 @@ import type * as HighlightModule from "./highlight";
 
 /**
  * In UTF-16 code units (`text.length`). Highlighting runs on the main thread:
- * a 250 KB TypeScript file took one 300 ms task, so the limit is half that.
+ * a 250 KB TypeScript file took one 300 ms task, and dense code is slower per
+ * character, so the limit keeps the worst case near 100 ms.
  */
-export const HIGHLIGHT_LIMIT = 128 * 1024;
+export const HIGHLIGHT_LIMIT = 64 * 1024;
 
 export function shouldHighlight(text: string, grammar: Grammar | null): grammar is Grammar {
   return grammar !== null && text.length > 0 && text.length <= HIGHLIGHT_LIMIT;
@@ -33,32 +34,35 @@ function loadHighlighter(): Promise<typeof HighlightModule> {
   return highlighter;
 }
 
-interface Highlighted {
+/** A highlight outcome, kept with the text and grammar it came from. */
+interface Outcome {
   text: string;
   grammar: Grammar;
-  html: string;
+  html: string | null;
+  failure: string | null;
 }
 
 export function CodeText({ text, grammar }: { text: string; grammar: Grammar | null }) {
-  const [highlighted, setHighlighted] = useState<Highlighted | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
   useEffect(() => {
     if (!shouldHighlight(text, grammar)) return;
     let live = true;
     loadHighlighter()
-      .then((module) => module.highlightHtml(text, grammar))
-      .then((html) => {
-        if (!live) return;
-        setHighlighted({ text, grammar, html });
-        setFailure(null);
-      }, (error: unknown) => {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
+      .then(async (module) => {
+        await module.loadGrammar(grammar);
+        // The view may have closed or changed while the grammar loaded; skip the parse.
+        if (live) setOutcome({ text, grammar, html: module.highlightHtml(text, grammar), failure: null });
+      })
+      .catch((error: unknown) => {
+        if (live) setOutcome({ text, grammar, html: null, failure: error instanceof Error ? error.message : String(error) });
       });
     return () => { live = false; };
   }, [text, grammar]);
 
-  // A result from earlier text (the file changed on disk) is never shown.
-  const html = highlighted !== null && highlighted.text === text && highlighted.grammar === grammar ? highlighted.html : null;
+  // An outcome for earlier text (the file changed on disk) is never shown.
+  const current = outcome !== null && outcome.text === text && outcome.grammar === grammar ? outcome : null;
+  const html = current?.html ?? null;
+  const failure = current?.failure ?? null;
   return (
     <Pre className="bbx-code" title={failure === null ? undefined : `Syntax colouring unavailable: ${failure}`}>
       {/* highlight.js escapes every character of the source; only its own spans are markup. */}

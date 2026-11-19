@@ -32,7 +32,18 @@ const GRAMMARS: Readonly<Record<Grammar, () => GrammarModule>> = {
   yaml: () => import("highlight.js/lib/languages/yaml"),
 };
 
+// HTML colours its <script> and <style> blocks only when these are registered,
+// so they load with it and an HTML file looks the same on every open.
+const COMPANIONS: Readonly<Partial<Record<Grammar, readonly Grammar[]>>> = {
+  xml: ["css", "javascript"],
+};
+
 const registering = new Map<Grammar, Promise<void>>();
+
+/** Load and register `grammar`, and any grammar it embeds. */
+export async function loadGrammar(grammar: Grammar): Promise<void> {
+  await Promise.all([grammar, ...(COMPANIONS[grammar] ?? [])].map(registerGrammar));
+}
 
 function registerGrammar(grammar: Grammar): Promise<void> {
   let pending = registering.get(grammar);
@@ -47,8 +58,12 @@ function registerGrammar(grammar: Grammar): Promise<void> {
   return pending;
 }
 
-/** The source as HTML: every character escaped, tokens wrapped in `hljs-*` spans. */
-export async function highlightHtml(text: string, grammar: Grammar): Promise<string> {
-  await registerGrammar(grammar);
-  return hljs.highlight(text, { language: grammar, ignoreIllegals: true }).value;
+/**
+ * The source as HTML: every character escaped, tokens wrapped in `hljs-*` spans.
+ * `grammar` must be loaded (`loadGrammar`). A carriage return is written as a
+ * character reference: HTML parsing turns a literal CRLF into LF, which would
+ * change the text a selection copies.
+ */
+export function highlightHtml(text: string, grammar: Grammar): string {
+  return hljs.highlight(text, { language: grammar, ignoreIllegals: true }).value.replaceAll("\r", "&#13;");
 }
