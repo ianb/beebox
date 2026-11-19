@@ -16,7 +16,7 @@ No full bbx-design pass: this changes the frame and colouring of an existing vie
 
 - **What a person sees.** Opening `src/foo.ts` shows the same card a `.md` file shows: the box's card theme, the title (the file name), the properties corner, and the "open in panel"/chat actions. The body is the file's text in monospace, with keywords, strings, comments, numbers, and names coloured. A `.txt` or `.log` file gets the card with uncoloured text.
 - **Themes.** Token colours derive from the theme's own ink and pen, so they read on every card theme, light or dark.
-- **Large files.** Above 256 Ki characters (`text.length`) the highlighter does not run; the file shows uncoloured on the card. The text is never hidden behind the highlighter: it shows uncoloured first and gains colour when the highlighter chunk arrives.
+- **Large files.** Above 128 Ki characters (`text.length`) the highlighter does not run; the file shows uncoloured on the card. The text is never hidden behind the highlighter: it shows uncoloured first and gains colour when the highlighter chunk arrives.
 - **Properties face.** The back of the card names the file type ("TypeScript", "Text"), not "Markdown" as it does today for every non-card file (`PropertiesFace.tsx:52`), and the appearance hint says "Files take the box's appearance".
 - **Chat.** In chat a plaintext file loses the old header's Chat/Trash menu (`FileView/view.tsx:113`), as `.md` files already do on the themed card. Accepted for parity; the sidebar and browse links remain.
 - **Embeds.** A text file embedded in another card (`![](view:…)`) stays frameless, as today. It is highlighted.
@@ -56,7 +56,7 @@ Chosen design adds a highlighter component and a token stylesheet. Estimate: sou
 
 - **Plaintext path** — existing: the plaintext renderer's selector (`renderers/plaintext.tsx:26-37`). Exported as `isPlaintextPath(path)` so FileView and the renderer share one definition.
 - **Code language** — new: a highlight.js language name chosen from the file extension by a fixed table. `null` means "no highlighting" (`.txt`, `.log`, unknown extensions).
-- **Highlight limit** — new constant: 256 KiB of text. Above it, no highlighting.
+- **Highlight limit** — new constant: 128 Ki characters. Above it, no highlighting.
 
 ## Tracks / scope
 
@@ -91,8 +91,8 @@ none
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Highlighter chunk fails to load, or `highlight()` throws | planned | text stays uncoloured | clear: text readable |
-| A 256 Ki-character `.ts` file blocks the main thread | timed in browser on `big.ts` at the boundary; limit lowered if slow | size limit | clear: uncoloured text |
+| Highlighter chunk fails to load, or `highlight()` throws | no (as Math; the failure path is one `catch`) | text stays uncoloured | clear: text readable |
+| A 128 Ki-character `.ts` file blocks the main thread | timed in browser on `big.ts` at the boundary; limit lowered if slow | size limit | clear: uncoloured text |
 | Highlight result from older text shown after a file change | planned | result keyed on text+language | — |
 | Token colour unreadable on a theme | browser contrast check, light and dark themes | inherits ink when relative colour unsupported | visible |
 | Source contains `<script>` and is injected as HTML | planned | hljs escaping | — |
@@ -143,5 +143,7 @@ Unit tests (`.test.ts`, `t.check`) for `languageForPath` and the size limit (pur
 Done when: the tests above pass, `pnpm typecheck` and `pnpm layout-check` pass, and the browser check shows the card and colours in two themes. No data migration.
 
 ## Review log
+
+Size gate, measured (gzipped, production build vs. the Track 1 build): startup +0.6 KB (+353 B JS, +247 B CSS); a cold open of a `.ts` file adds 12 KB (highlighter 8.9 KB, TypeScript grammar 3.1 KB). Highlight timing: a 250 KB TypeScript file took one 300 ms main-thread task, so the limit is 128 Ki characters.
 
 Round 1 (codex gpt-6.2-sol): accepted size gate on startup + cold open, properties-face label, `.attach` exclusion, failure/stale handling, `<code>` placement, character-unit limit timed on `.ts`, contrast check. Rejected cutting highlighting from scope (authorized by the developer); it lands as a second commit.

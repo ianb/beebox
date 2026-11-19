@@ -1,14 +1,16 @@
 /**
  * Plaintext renderer — catch-all fallback for any text file.
  *
- * Reads the shell-loaded content and renders as monospace. Registered at
+ * Reads the shell-loaded content and renders it as monospace, coloured by
+ * language where it has one (`CodeText`). Registered at
  * priority 1 for every non-card, non-directory path so something always
  * matches. Binary files (images, audio, etc.) use their own renderers.
  */
 
 import { isPlaintextPath } from "../components/file-view-data";
 import { CardThemeContent } from "../components/themes/CardThemeContent";
-import { Pre } from "../components/ui/Pre";
+import { CodeText } from "../components/CodeText/view";
+import { languageForPath } from "../lib/code-language";
 import { StatusMessage } from "../components/ui/StatusMessage";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 
@@ -16,7 +18,7 @@ function PlaintextRenderer({ data, mode }: RendererProps) {
   if (data.content === undefined) {
     return <StatusMessage className="p-4">No text content available</StatusMessage>;
   }
-  const body = <Pre>{data.content}</Pre>;
+  const body = <CodeText text={data.content} grammar={languageForPath(data.path).grammar} />;
   // Outside an embed FileView draws the card surface; inside one the host card is the frame.
   if (mode !== "embed") return <CardThemeContent>{body}</CardThemeContent>;
   return <div className="p-4">{body}</div>;

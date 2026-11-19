@@ -5,6 +5,7 @@ see or use), **Changed** (something that works differently), or **Agent**
 (something you see only through what the box's agent does). The list started
 on 2026-11-16, with the week before it filled in. Ask the box about any of
 them.
+- 2026-11-19 **Changed**: A text or code file, such as a `.txt`, `.py`, or `.ts` file, now opens on a card like other files, and code is coloured by language.
 - 2026-11-18 **Changed**: The rows above the message box for other conversations are gone. When another conversation replies with a callout while you are elsewhere, only that callout shows there; × clears it.
 - 2026-11-18 **Changed**: On a recipe, a source that is a scan or another card in your box is now a link that opens it, and its note shows beside it.
 - 2026-11-18 **Changed**: A recording with speaker labels, using the Voxtral service, now comes back as one transcript for up to an hour, not in 5-minute parts with new speaker names each part.
