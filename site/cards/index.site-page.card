@@ -37,7 +37,7 @@ on top of a Claude or ChatGPT subscription (driven by their coding harnesses).
   with its filler
 - Self-modifiable: the agent is given wide access to change parts of the
   experience, within safe guidelines
-- It does the normal stuff like schedules and notifications and email, etc.
+- Normal agentic harness stuff: schedules, notifications, calendar input, etc
 - Easiest is the [Mac app](https://beebox.run/docs/capabilities/mac-app.html)
   (it runs a local VM). For always-on access run on a VPS.
 - It is early: self-hosted, one maintainer, changing fast.
