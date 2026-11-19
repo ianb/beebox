@@ -132,7 +132,7 @@ Remaining before any default or visible opt-in:
 
 The settings choice shipped: Voice settings → While you speak → "This device
 (Chrome, on-device)", per device
-([plan](../../beebox/docs/plans/browser-live-text-option.md)). The silent-failure
+([plan](../../beebox/docs/implemented-plans/browser-live-text-option.md)). The silent-failure
 guard is now its own item,
 [on-device live text silent stall](../bugs/2026-11-19-on-device-live-text-silent-stall.md).
 Still open here: a real-voice, real-microphone check, and `liveService`

@@ -1,6 +1,6 @@
 ---
 title: "On-device live text as a Voice settings choice"
-status: draft
+status: implemented
 workstream: browser-live-text-option
 issues: []   # the feature issue stays open: real-mic check, provenance, stall guard remain
 ---
