@@ -122,8 +122,18 @@ Remaining before any default or visible opt-in:
 
 - A check with a real voice on a real microphone (so far only synthetic speech
   through a fake mic device).
-- A settings choice to replace the `localStorage["bbx:live-engine"]` flag.
+- ~~A settings choice to replace the `localStorage["bbx:live-engine"]` flag.~~ Done 2026-11-19.
 - `liveService` provenance for browser-recognized live text.
-- A guard for the recognizer's intermittent silent failure.
+- A guard for the recognizer's intermittent silent failure (moved to its own item, 2026-11-19).
 - Not exercised: a successful HQ pass after browser live text (the test box
   has no key), and Safari recognition.
+
+## Update (2026-11-19)
+
+The settings choice shipped: Voice settings → While you speak → "This device
+(Chrome, on-device)", per device
+([plan](../../beebox/docs/plans/browser-live-text-option.md)). The silent-failure
+guard is now its own item,
+[on-device live text silent stall](../bugs/2026-11-19-on-device-live-text-silent-stall.md).
+Still open here: a real-voice, real-microphone check, and `liveService`
+provenance.
