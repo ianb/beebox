@@ -75,8 +75,8 @@ build` yourself when you want to see build errors directly.
 as a box route for a box named `site`, which the browse key does not
 authenticate, so it lands on the sign-in page. To screenshot a site page, run
 `pnpm --dir site build --base /` and serve `site/dist/` from any static file
-server, then run `pnpm --dir site build` again: the input manifest does not
-record the base, so the router keeps serving the `--base /` build. The reading
+server, then run `pnpm --dir site build` again. The input manifest does not
+record the base, so until that rebuild the router serves the `--base /` build. The reading
 pane scrolls internally, so a full-page capture needs a style that lets the
 pane grow to its content.
 

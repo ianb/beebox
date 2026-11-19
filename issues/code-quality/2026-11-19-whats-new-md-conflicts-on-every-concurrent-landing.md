@@ -7,8 +7,8 @@ filed-by: agent
 discovered-in: worktree-retrospective — retrospective 20261119-010700
 ---
 
-`bin/finish-preflight` merges `main` and resolves conflicts in files it has a
-content rule for (`CONTENT_RULES` in `bin/finish-preflight-merge.ts`:
+`bin/finish-preflight` merges `main` and resolves a conflict only when every
+conflicted path has a content rule and each rule accepts the merge (`CONTENT_RULES` in `bin/finish-preflight-merge.ts`:
 `context-history.yaml` and `migrations.ts`). `beebox/docs/box/whats-new.md`
 has no rule. Each user-facing branch adds one dated line under the intro,
 newest first, so two branches landed on the same day touch adjacent lines and
