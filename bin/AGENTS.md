@@ -11,7 +11,8 @@ file they test (`bin/lib/<name>.ts` → `bin/test/lib/<name>.test.ts`), includin
 shell fixtures and CLI behavior. They run in beebox's
 suite, under its home and secret isolation: `cd beebox && pnpm exec tap
 ../bin/test/<path>.test.ts` (`doc-check` and `layout-check` also run from
-`beebox/`). The `node:test` files at `bin/*.test.ts` are not precedent. Router unit tests live in `workstreams-app/test/router/`.
+`beebox/`). Lint them with `pnpm lint:bin` from the repo root: eslint run from
+`beebox/` reports `bin/` files as ignored and checks nothing. The `node:test` files at `bin/*.test.ts` are not precedent. Router unit tests live in `workstreams-app/test/router/`.
 
 ## Commit safety
 
