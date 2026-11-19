@@ -24,6 +24,6 @@ Evidence:
 - The previous retrospective's watch list recorded the same failure from an
   earlier finish (item `preflight-install-on-lockfile-change`, 2026-11-13).
 
-Possible fixes: finish-preflight runs the frozen install itself whenever the
-merge it starts changes the lockfile, conflicted or not; or the post-commit
-hook repeats the post-merge dependency sync when the commit has two parents.
+Possible fix: finish-preflight runs the frozen install itself whenever the
+merge it starts changes the lockfile, conflicted or not. A post-commit sync
+would not help: the pre-commit typecheck fails first, so post-commit never runs.
