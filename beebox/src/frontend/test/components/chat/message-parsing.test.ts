@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { stripUserDisplayTags } from "../../../src/components/chat/message-parsing.js";
+import { extractFileAttachments, stripUserDisplayTags } from "../../../src/components/chat/message-parsing.js";
 
 // A composed attach message: the block and its declared token both vanish; the
 // prose stays intact.
@@ -88,4 +88,17 @@ void test("A declared token takes its surrounding spaces with it — no stranded
 // sees.
 void test("A wake the server started itself shows nothing", async (t) => {
   t.check(stripUserDisplayTags('<chat-app narration="off"/>\n<interrupted-wake at="2026-11-02T20:00:00.000Z">The Bee Box started this turn by itself.</interrupted-wake>').trim(), "");
+});
+
+// The chip shows the file's own name. Uploads land in one directory per
+// message, `_tmp/chat/<batch>/<name>`; older transcripts used a flat
+// `_tmp/<stamp>_<name>`. Neither prefix means anything to the person who sent it.
+void test("The chip name drops the upload directory or the old timestamp prefix", async (t) => {
+  const sent = [
+    "<attachments>",
+    "[file#1]: _tmp/chat/mwmhx0uq-fu4oekfs/agnostic-on-the-future.md",
+    "[file#2]: _tmp/1723200000_lemon-chicken.txt",
+    "</attachments>",
+  ].join("\n");
+  t.check(extractFileAttachments(sent).map((f) => f.displayName), ["agnostic-on-the-future.md", "lemon-chicken.txt"]);
 });

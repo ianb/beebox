@@ -5,7 +5,10 @@ see or use), **Changed** (something that works differently), or **Agent**
 (something you see only through what the box's agent does). The list started
 on 2026-11-16, with the week before it filled in. Ask the box about any of
 them.
-- 2026-11-17 **Changed**: When another conversation replies while you are elsewhere, its row above the message box shows the start of what it said, not a small icon.
+- 2026-11-18 **Changed**: The rows above the message box for other conversations are gone. When another conversation replies with a callout while you are elsewhere, only that callout shows there; × clears it.
+- 2026-11-18 **Changed**: On a recipe, a source that is a scan or another card in your box is now a link that opens it, and its note shows beside it.
+- 2026-11-18 **Changed**: A recording with speaker labels, using the Voxtral service, now comes back as one transcript for up to an hour, not in 5-minute parts with new speaker names each part.
+- 2026-11-18 **New**: A card made from files, web pages, or other cards lists them under its title. Tap one to open it; tap "All" to see each with its note.
 - 2026-11-17 **New**: Press Ctrl+L to put the cursor in the message box, adding any text you selected on the page. While the microphone is on, Enter sends what you said.
 - 2026-11-17 **Changed**: iPhone photos in HEIC format now attach to a chat in Chrome and Firefox, not only Safari. The box still keeps the original photo.
 

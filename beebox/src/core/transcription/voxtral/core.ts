@@ -36,6 +36,21 @@ export {
 
 const VOXTRAL_ENDPOINT = "https://api.mistral.ai/v1/audio/transcriptions";
 
+const BASE_TIMEOUT_MS = 120_000;
+const TIMEOUT_MS_PER_MB = 2_000;
+
+/**
+ * How long to wait for one Voxtral request. The HQ job sends up to an hour of
+ * WAV (115 MB) in one request (`plan:transcription-length-limits`). Measured
+ * 2026-11-18, such a request answers in 25–43 s after a 5–22 s upload on a fast
+ * uplink. Upload time grows with the bytes sent, so the timeout does too: an
+ * hour gets 350 s, room for a 4 Mbps upload plus processing. A small upload
+ * keeps the 120 s it always had.
+ */
+export function voxtralTimeoutMs(bytes: number): number {
+  return BASE_TIMEOUT_MS + Math.ceil(bytes / 1_000_000) * TIMEOUT_MS_PER_MB;
+}
+
 /**
  * Transcribe audio using Mistral Voxtral API.
  *
@@ -67,7 +82,7 @@ export async function transcribeAudioVoxtral(
           "Content-Type": `multipart/form-data; boundary=${boundary}`,
         },
         retry: 2,
-        timeout: 120_000,
+        timeout: voxtralTimeoutMs(body.length),
       })
       .json<VoxtralResponse>();
 

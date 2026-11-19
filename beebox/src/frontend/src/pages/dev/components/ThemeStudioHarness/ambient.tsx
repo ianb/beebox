@@ -1,7 +1,7 @@
-/** Real off-screen conversation activity, using a fictional already-loaded transcript. */
+/** Real callouts above the composer from an off-screen conversation, using a fictional already-loaded transcript. */
 import { useMemo } from "react";
 import { ComposerMaterial } from "../../../../components/chat/ComposerMaterial";
-import { AmbientSessionReply } from "../../../../components/chat/ambient/AmbientReplies/view";
+import { SessionCallouts } from "../../../../components/chat/ambient/AmbientReplies/view";
 import { SelectedTranscriptRegion } from "../../../../components/chat/ambient/selected-transcript";
 import { NotificationNotice } from "../../../../components/notifications/NotificationNotice";
 import { StatusPill } from "../../../../components/chat/StatusPill";
@@ -13,10 +13,10 @@ import { Card } from "../../../../components/ui/Card";
 import { Text } from "../../../../components/ui/Text";
 import type { SessionEntry } from "../../../../api";
 
-const SESSION = { sessionId: "theme-studio-ambient", label: "Seed exchange" };
+const SESSION = { sessionId: "theme-studio-ambient" };
 const ENTRIES: SessionEntry[] = [
   { uuid: "studio-ambient-user", type: "user", timestamp: "2026-08-01T10:00:00Z", content: [{ type: "text", text: "Prepare the welcome table." }] },
-  { uuid: "studio-ambient-reply", type: "assistant", timestamp: "2026-08-01T10:01:00Z", content: [{ type: "text", text: "The checklist is ready. Bring spare envelopes for new arrivals." }] },
+  { uuid: "studio-ambient-reply", type: "assistant", timestamp: "2026-08-01T10:01:00Z", content: [{ type: "text", text: "The checklist is ready.\n<callout context=\"Welcome table\">Bring spare envelopes for new arrivals.</callout>" }] },
 ];
 function noop() {}
 
@@ -25,9 +25,9 @@ export function AmbientSpecimen() {
   const completion = useMemo(() => crypto.randomUUID(), []);
   return <ComposerMaterial id="bbx-theme-studio-ambient" className="flex flex-col w-full max-w-5xl mx-auto min-w-0">
     <SelectedTranscriptRegion sessionId={SESSION.sessionId} loaded entries={ENTRIES} total={20} busy={false}>
-      <AmbientSessionReply boxSlug="test1" storageScope="theme-studio" sessions={[SESSION]} session={SESSION}
-        selectedSessionId={SESSION.sessionId} transcriptVisible={false} completion={completion}
-        onActivity={noop} onOpenConversation={noop} onInspectCard={noop} />
+      <SessionCallouts boxSlug="test1" storageScope="theme-studio" session={SESSION}
+        selectedSessionId={SESSION.sessionId} transcriptVisible={false} completion={completion} dismissal={0}
+        onActivity={noop} onShowing={noop} onInspectCard={noop} />
     </SelectedTranscriptRegion>
   </ComposerMaterial>;
 }

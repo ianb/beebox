@@ -33,14 +33,16 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.325`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.326`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.326` (SDK), `2.1.326` (Claude Code), `0.169.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.327` (SDK), `2.1.327` (Claude Code), `0.170.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.325` on 2026-11-14 on
+- **Current recommendation:** Agent SDK moved to `0.3.326` on 2026-11-18;
+  next `0.3.327` (settles 2026-11-19T20:35Z; check its breaking option and hook
+  changes). Before that, it moved to `0.3.325` on 2026-11-14 on
   the **act-now** path (taking 0.3.323 and 0.3.324): 2.1.325 fixes a security
   issue in zstd response decoding, which every beebox Claude session uses.
   The 0.3.323 GLM hold is lifted: 2.1.325 also fixes third-party gateway
@@ -74,7 +76,37 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.326 / Claude Code 2.1.326 — pending (published 2026-11-16T18:44Z); re-read 2026-11-17
+### Codex 0.169.1 / 0.170.0 — HELD with 0.165.0–0.169.0 (published 2026-11-17T22:21Z and 2026-11-18T03:40Z)
+
+0.169.1 has no release notes. 0.170.0: oversized WebSocket requests fall back to
+HTTP without needless retries; MCP OAuth credential races fixed; permission
+updates and child threads keep their sandbox restrictions; WebRTC voice, OTel
+header refresh, same-named MCP servers across environments. No memory change.
+Held behind `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
+- **Sources:** [rust-v0.170.0](https://github.com/openai/codex/releases/tag/rust-v0.170.0)
+
+### 0.3.327 / Claude Code 2.1.327 — pending (published 2026-11-17T20:35Z); check before applying
+
+- **Breaking, RUNTIME:** `query()`, `startup()` and `prewarm()` refuse options
+  that can't be sent to Claude Code (circular or BigInt fields); hook options
+  must be real arrays (an event's value and a matcher's `hooks`). beebox's
+  hooks (`core/sdk-hooks.ts`) return `hooks: [...]` arrays; the suite and probe
+  will show any refused option when taken.
+- **SDK:** `createSdkMcpServer()` servers in an agent's `mcpServers` are
+  deprecated (beebox uses none); 0.3.326's SDK MCP reconnect fix and its string
+  ids are reverted; remote MCP servers are retried for about a day after a drop.
+- **RUNTIME fixes:** resumed sessions no longer lose answers after an empty
+  reply or killed command, or stored messages after a resend with the same
+  UUID; a compaction right after an output-limit cut keeps that reply's tool
+  call; `claude -p` no longer hangs when a model-settings fetch stalls; Grep
+  paging with `head_limit`/`offset` no longer repeats or skips results.
+- **HARNESS:** `claude mcp add-json <name> -` reads JSON from stdin;
+  `/status` lists broken agent, skill and hook files; `claude mcp add/remove`
+  no longer deletes other keys from `.mcp.json`.
+- **Action:** Settled path; takeable 2026-11-19T20:35Z.
+- **Sources:** [SDK 0.3.327](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03327), [Claude Code 2.1.327](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21327)
+
+### 0.3.326 / Claude Code 2.1.326 — APPLIED 2026-11-18 (published 2026-11-16T18:44Z); re-read 2026-11-17
 
 - **SDK:** `mcpServersDelivery: 'initialize'` sends `mcpServers` over stdin
   instead of the command line; the command-line default is deprecated, and an
@@ -94,7 +126,12 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   added in `/permissions` now warn when the settings file can't be written;
   `grep` in the Bash tool no longer skips some text files; background service
   no longer ends other users' processes on a reused PID.
-- **Action:** Settled path; takeable 2026-11-18T18:44Z.
+- **Check result (2026-11-18):** a `query()` with `pathToClaudeCodeExecutable`
+  set and no MCP servers raised no process warning, so beebox leaves
+  `mcpServersDelivery` unset.
+- **Action:** Applied 2026-11-18. Verified: typecheck (beebox and
+  workstreams-app), steering probe (4/4) on bundled CLI 2.1.326,
+  `pnpm -C beebox test` (15,820 pass, 5 skip).
 - **Sources:** [SDK 0.3.326](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03326), [Claude Code 2.1.326](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21326)
 
 ### 0.3.324 / 0.3.325 / Claude Code 2.1.324 / 2.1.325 — APPLIED 2026-11-14, act-now (published 2026-11-13T18:47Z and 20:05Z)

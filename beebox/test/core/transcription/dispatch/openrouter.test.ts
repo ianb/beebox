@@ -13,12 +13,14 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { shapeOpenRouterResult, audioFormatToken } from "../../../../src/core/transcription/dispatch/openrouter.js";
+import { shapeOpenRouterResult, audioFormatToken, parseOpenRouterErrorResponse } from "../../../../src/core/transcription/dispatch/openrouter.js";
 import {
   HQ_TRANSCRIPTION_SERVICES,
+  extractHqErrorInput,
   hqRoutesThroughOpenRouter,
   isMaiHqService,
 } from "../../../../src/core/transcription/dispatch/core.js";
+import { classifyHqError } from "../../../../src/core/voice-recording/classify.js";
 
 // ## Which HQ services route here at all
 //
@@ -191,4 +193,17 @@ void test("The verbosejson variants usually return segments, but the LLM audio m
 void test("A body missing its own required field is a contract change, not a bad day — r...", async (t) => {
   const textless = { usage: { seconds: 3 } };
   await t.checkThrows(async () => (shapeOpenRouterResult(textless, { diarization: false, wordTimestamps: false })), "OpenRouterTranscriptionShapeError: OpenRouter transcription response is unusable: expected text");
+});
+
+// ## MAI's too-long-to-diarize code survives truncation
+//
+// The job classifies on the first 500 characters of the error body. MAI's
+// `diarization_unavailable` 503 must still read as `piece-too-long` when the
+// provider pretty-prints a long message before the code, so the body is
+// stored as compact JSON (plan:transcription-length-limits).
+void test("MAI's too-long-to-diarize code survives truncation", async (t) => {
+  const body = JSON.stringify({ error: { message: "m".repeat(440), code: "diarization_unavailable" } }, null, 4);
+  const response = new Response(body, { status: 503, statusText: "Service Unavailable" });
+  const error = await parseOpenRouterErrorResponse({ response });
+  t.check(classifyHqError(extractHqErrorInput(error)), "piece-too-long");
 });

@@ -174,3 +174,20 @@ void test("With no body text, the front shows the type fields (test/lib/card-fie
     front + fieldsSection("Share id", "porch-quotes"),
   ]);
 });
+
+// ## Sources stay on Properties
+//
+// The card header shows `sources` as its Sources line, so Properties lists it
+// even where `splitCardFields` puts it on the front: here, a record with an
+// empty body (plan:card-source-chips).
+void test("An empty-body record lists its sources on Properties", async (t) => {
+  const html = render({
+    path: "_content/house/Boiler.record.card",
+    kind: "frontmatter",
+    type: "record",
+    schema: docSchema,
+    frontmatter: { name: "Boiler manual", sources: [{ ref: "/_content/house/boiler.pdf" }] },
+    body: "",
+  });
+  t.check(rows(html).filter((row) => row.startsWith("Sources")), ["Sources = house/boiler.pdf"]);
+});

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-17T19:53:22Z
-Total documents: 709
+Generated: 2026-11-18T22:24:04Z
+Total documents: 711
 
 ## Issues
 
@@ -89,6 +89,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-studio-shared-coverage.md** — "Restore shared theme rule coverage" (157 lines) · shipped history · implemented
+- **docs/implemented-plans/transcription-length-limits.md** — "Per-service length limits for the HQ transcription job" (427 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
@@ -1557,6 +1558,7 @@ Referenced by:
 - docs/implemented-plans/todo-annotation.md:54 (mention) — - `beebox/docs/engineering-principles.md` — especially
 - docs/implemented-plans/top-nav-ia.md:117 (mention) — - `beebox/docs/engineering-principles.md` — reuse-over-rebuild,
 - docs/implemented-plans/transcript-confidence.md:68 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: confidence rides
+- docs/implemented-plans/transcription-length-limits.md:66 (mention) — - `docs/engineering-principles.md` #2 (exhaustiveness): each service is
 - docs/implemented-plans/tts-streamed-playback.md:73 (mention) — (`docs/engineering-principles.md:49`). Streaming moves the moment of failure
 - docs/implemented-plans/typescript-7.md:63 (mention) — - `beebox/docs/engineering-principles.md` §8 "One way to do each thing": every
 - docs/implemented-plans/ui-primitives-dedup.md:130 (mention) — - **`beebox/docs/engineering-principles.md` §8, "One way to do each thing":**
@@ -2866,9 +2868,9 @@ Referenced by:
 - docs/plans/canvas-loop-box-figures.subplan.md:276 (mention) — - **Box changelog.** `docs/box/agent-changes.md` is written by the
 
 References:
+- → docs/box/markdown.md (mention)
 - → docs/box/triggers.md (mention)
 - → docs/box/conversation-strip.md (mention)
-- → docs/box/markdown.md (mention)
 - → docs/box/phone-photos.md (mention)
 - → docs/box/todos.md (mention)
 - → docs/box/schemas.md (mention)
@@ -2891,7 +2893,7 @@ Referenced by:
 Title: "Conversation strip" | 40 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:18 (mention) — - 2026-11-12 (d57ab0b4f): New: `bbx chat strip set <card>` docks a `tour` card, or a view listing `strip` in `modes`, ac
+- docs/box/agent-changes.md:19 (mention) — - 2026-11-12 (d57ab0b4f): New: `bbx chat strip set <card>` docks a `tour` card, or a view listing `strip` in `modes`, ac
 - docs/implemented-plans/conversation-strip.md:363 (mention) — - Box doc `docs/box/conversation-strip.md` with a `read-when`, mapped in
 
 #### docs/box/history.md
@@ -2930,7 +2932,7 @@ Referenced by:
 Title: "Markdown in card bodies" | 142 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:22 (mention) — - 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemis
+- docs/box/agent-changes.md:14 (mention) — - 2026-11-17 (43e6d9d8c): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, `\(…\)`, `\[…\]`,
 - docs/implemented-plans/chat-math-rendering.md:73 (mention) — - Docs: `docs/box/markdown.md` (~15 lines), agent-guide ledger/guide line (~2),
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
 - docs/implemented-plans/published-math.md:142 (mention) — `docs/box/markdown.md`.
@@ -3089,7 +3091,7 @@ Referenced by:
 Title: "Activity triggers" | 167 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:15 (mention) — - 2026-11-14 (c9951d645): Activity triggers: a function in `src/triggers/` watches the person in a view or figure; `bbx
+- docs/box/agent-changes.md:16 (mention) — - 2026-11-14 (c9951d645): Activity triggers: a function in `src/triggers/` watches the person in a view or figure; `bbx
 - docs/implemented-plans/activity-triggers.md:183 (mention) — Docs about 220 lines (`box-docs/triggers.md`, views and figure instruction
 - docs/unimplemented-plans/bbxdocs.md:52 (mention) — | Agent cites a doc | Show | Chat link `_bbxdocs/triggers.md` opens the doc as a card | Waits to be found |
 
@@ -3121,7 +3123,7 @@ References:
 
 #### docs/box/whats-new.md
 
-Title: "What's new in Bee Box" | 23 lines | current reference
+Title: "What's new in Bee Box" | 26 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/whats-new.md:110 (mention) — `docs/box/whats-new.md` is in every install.
@@ -4935,6 +4937,13 @@ References:
 - → ../issues/closed/bugs/2026-09-16-bbx-mv-directory-leaves-self-refs-stale.md (frontmatter)
 - → ../issues/closed/bugs/2026-09-16-reactor-lock-guard-dir-blocks-every-commit.md (frontmatter)
 - → docs/cards/migrations.md (mention)
+
+#### docs/implemented-plans/card-source-chips.md
+
+Title: "Sources line at the top of a card's front" | 282 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/bugs/2026-11-18-recipe-source-line-shows-box-refs-as-plain-text.md:8 (frontmatter) — design: ../../beebox/docs/implemented-plans/card-source-chips.md
 
 #### docs/implemented-plans/card-symbol.md
 
@@ -8112,6 +8121,7 @@ Title: "Resilient voice recording and HQ transcription" | 1200 lines | shipped h
 
 Referenced by:
 - docs/implemented-plans/native-hq-fallback-resilience.md:31 (mention) — - The shipped resilience precedent deliberately says “Track 6 (iOS) is reverted. The native app keeps its one-shot path”
+- docs/implemented-plans/transcription-length-limits.md:146 (mention) — (`docs/implemented-plans/resilient-voice-recording.md`, incident section):
 - ../issues/bugs/2026-09-10-live-transcription-failure-loses-the-hq-pass.md:4 (frontmatter) — design: ../../beebox/docs/implemented-plans/resilient-voice-recording.md
 - ../issues/closed/bugs/2026-09-11-codex-landed-probe-scans-oldest-page.md:39 (mention) — `docs/plans/resilient-voice-recording.md`). It was found while designing that
 
@@ -9029,6 +9039,14 @@ References:
 - → ../issues/features/2026-08-12-show-retranscription-in-chat.md (frontmatter)
 - → AGENTS.md (mention)
 - → docs/engineering-principles.md (mention)
+
+#### docs/implemented-plans/transcription-length-limits.md **[ORPHAN]**
+
+Title: "Per-service length limits for the HQ transcription job" | 427 lines | shipped history | implemented
+
+References:
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/resilient-voice-recording.md (mention)
 
 #### docs/implemented-plans/triage-compiled-instructions.md
 
