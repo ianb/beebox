@@ -149,3 +149,5 @@ Size gate, measured (gzipped, production build vs. the Track 1 build): startup +
 Round 1 (codex gpt-6.2-sol): accepted size gate on startup + cold open, properties-face label, `.attach` exclusion, failure/stale handling, `<code>` placement, character-unit limit timed on `.ts`, contrast check. Rejected cutting highlighting from scope (authorized by the developer); it lands as a second commit.
 
 Diff review round 1 (codex gpt-6.2-sol): accepted all five — limit to 64 Ki, skip parse after the view closes, keep CR through the markup swap, load CSS/JS grammars with XML, key the failure tooltip to its text. NUL characters in source: rejected (exotic input).
+
+Follow-up (developer request after landing): code files (a file with a grammar) show at the small text size with numbered lines. The numbers are CSS counters (not copied, empty alt text); each line is a block, so a wrapped line stays beside its number and continues 2ch past its own indent. Highlighted markup is split per line with spans balanced (`components/CodeText/lines.ts`). Over 20,000 lines the view is unnumbered. Plain text (`.txt`) keeps body size, unnumbered.

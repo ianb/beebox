@@ -4,13 +4,16 @@
  * The text paints uncoloured at once; the highlighter (`./highlight.ts`, its
  * own chunk) colours it when it arrives. Text over HIGHLIGHT_LIMIT, a file with
  * no grammar, a highlighter chunk that does not load, and a grammar that throws
- * all leave the text uncoloured. Token colours come from the card theme
- * (`.bbx-code` in `themes/card-themes.css`).
+ * all leave the text uncoloured. Code (a file with a grammar) shows in the
+ * small size with numbered lines; plain text keeps body size, unnumbered.
+ * Token and gutter styles come from the card theme (`.bbx-code` in
+ * `themes/card-themes.css`).
  */
 
 import { useEffect, useState } from "react";
 import { Pre } from "../ui/Pre";
 import type { Grammar } from "../../lib/code-language";
+import { indentWidth, splitHtmlLines, splitTextLines } from "./lines";
 // Type-only: erased at build, so highlight.js stays out of this chunk.
 import type * as HighlightModule from "./highlight";
 
@@ -21,8 +24,20 @@ import type * as HighlightModule from "./highlight";
  */
 export const HIGHLIGHT_LIMIT = 64 * 1024;
 
+// The custom properties the numbered view sets inline (`.bbx-code-line` in themes/card-themes.css).
+declare module "react" {
+  interface CSSProperties {
+    "--bbx-code-gutter"?: string;
+    "--bbx-code-indent"?: string;
+  }
+}
+
+/** Above this many lines a code file shows unnumbered: one row per line costs an element each. */
+export const LINE_NUMBER_LIMIT = 20_000;
+
 export function shouldHighlight(text: string, grammar: Grammar | null): grammar is Grammar {
-  return grammar !== null && text.length > 0 && text.length <= HIGHLIGHT_LIMIT;
+  // HTML parsing drops a NUL character, so text with one stays uncoloured to stay exact.
+  return grammar !== null && text.length > 0 && text.length <= HIGHLIGHT_LIMIT && !text.includes("\0");
 }
 
 let highlighter: Promise<typeof HighlightModule> | null = null;
@@ -63,10 +78,29 @@ export function CodeText({ text, grammar }: { text: string; grammar: Grammar | n
   const current = outcome !== null && outcome.text === text && outcome.grammar === grammar ? outcome : null;
   const html = current?.html ?? null;
   const failure = current?.failure ?? null;
+  const title = failure === null ? undefined : `Syntax colouring unavailable: ${failure}`;
+  // Prose in a .txt file reads better at body size and without numbers.
+  if (grammar === null) return <Pre className="bbx-code" title={title}>{text}</Pre>;
+  const textLines = splitTextLines(text);
+  // highlight.js keeps every line feed, so the markup has the same lines.
+  const lines = html === null ? textLines : splitHtmlLines(html);
+  if (lines.length > LINE_NUMBER_LIMIT) {
+    return <Pre size="xs" className="bbx-code" title={title}>{html === null ? text : <code dangerouslySetInnerHTML={{ __html: html }} />}</Pre>;
+  }
+  // The gutter fits the widest number; the numbers are CSS counters, so a copy leaves them out.
+  const gutter = { "--bbx-code-gutter": `${String(lines.length).length}ch` };
   return (
-    <Pre className="bbx-code" title={failure === null ? undefined : `Syntax colouring unavailable: ${failure}`}>
-      {/* highlight.js escapes every character of the source; only its own spans are markup. */}
-      {html === null ? text : <code dangerouslySetInnerHTML={{ __html: html }} />}
+    <Pre size="xs" className="bbx-code" title={title}>
+      <code className="bbx-code-numbered" style={gutter}>
+        {lines.map((line, index) => {
+          // A wrapped line continues under its own code, 2ch further in.
+          const indent = { "--bbx-code-indent": `${indentWidth(textLines[index] ?? "")}ch` };
+          return html === null
+            ? <span key={index} className="bbx-code-line" style={indent}>{line}</span>
+            // highlight.js escapes every character of the source; only its own spans are markup.
+            : <span key={index} className="bbx-code-line" style={indent} dangerouslySetInnerHTML={{ __html: line }} />;
+        })}
+      </code>
     </Pre>
   );
 }

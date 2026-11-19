@@ -5,7 +5,7 @@ see or use), **Changed** (something that works differently), or **Agent**
 (something you see only through what the box's agent does). The list started
 on 2026-11-16, with the week before it filled in. Ask the box about any of
 them.
-- 2026-11-19 **Changed**: A text or code file, such as a `.txt`, `.py`, or `.ts` file, now opens on a card like other files, and code is coloured by language.
+- 2026-11-19 **Changed**: A text or code file, such as `.txt`, `.py`, or `.ts`, now opens on a card. Code is coloured by language, in a smaller font, with numbered lines.
 - 2026-11-19 **New**: In desktop Chrome, Voice settings → While you speak has "This device": live text made in the browser, no key needed. First use downloads about 220 MB.
 - 2026-11-18 **Changed**: The rows above the message box for other conversations are gone. When another conversation replies with a callout while you are elsewhere, only that callout shows there; × clears it.
 - 2026-11-18 **Changed**: On a recipe, a source that is a scan or another card in your box is now a link that opens it, and its note shows beside it.

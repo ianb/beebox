@@ -205,6 +205,33 @@
 .bbx-code :is(.hljs-type, .hljs-built_in, .hljs-title.class_) {
   color: oklch(from var(--bbx-ink) clamp(0.45, l, 0.85) max(c, 0.14) 210);
 }
+/* Numbered lines: a wrapped line stays beside its number, and continues 2ch
+   past its own indent (a hanging indent from `--bbx-code-indent`). The number
+   is a counter with empty alt text, so it is neither copied nor read aloud. */
+.bbx-code {
+  tab-size: 4; /* TAB_SIZE in components/CodeText/lines.ts */
+}
+.bbx-code-numbered {
+  counter-reset: bbx-code-line;
+}
+.bbx-code-line {
+  display: block;
+  position: relative;
+  min-height: 1lh; /* an empty file's one line still shows its number */
+  padding-left: calc(var(--bbx-code-gutter, 3ch) + 4ch + var(--bbx-code-indent, 0ch));
+  text-indent: calc(-2ch - var(--bbx-code-indent, 0ch));
+  counter-increment: bbx-code-line;
+}
+.bbx-code-line::before {
+  content: counter(bbx-code-line) / "";
+  position: absolute;
+  left: 0;
+  width: var(--bbx-code-gutter, 3ch);
+  text-align: right;
+  color: var(--bbx-ink-soft);
+  opacity: 0.7;
+  user-select: none;
+}
 .bbx-code .hljs-deletion {
   color: oklch(from var(--bbx-ink) clamp(0.45, l, 0.85) max(c, 0.14) 25);
 }
