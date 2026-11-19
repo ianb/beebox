@@ -1,6 +1,6 @@
 ---
 title: "Offer browser Web Speech as a live-transcription option, and as the no-key fallback"
-workstream: browser-live-stt
+workstream: browser-live-text-option
 area: beebox
 labels: [voice, transcription]
 filed-by: agent
