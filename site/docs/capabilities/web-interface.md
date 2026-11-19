@@ -39,7 +39,10 @@ desktop and phone.
   through it, and takes a picture of the whole card, which also says whether
   the card fit. It acts as the agent, not as you, through a credential that
   lasts an hour, so Settings, pairing, Secrets, and Admin stay out of its
-  reach, and it does not touch the tab you have open. See the limits below.
+  reach, and it does not touch the tab you have open. The browser presents
+  itself to websites as an ordinary Chrome, because sites' human checks fail
+  a browser that announces itself as headless, and it plays no sound. See the
+  limits below.
 - **Questions** — the queue of things the agent is asking you.
 - **Landmarks** — a curated map of the box's notable places. Opening a place
   shows a place page: a few lines the agent keeps current on where things stand
@@ -69,6 +72,11 @@ about a dozen illustrated ones, light and dark (Night Atlas, Goldfish,
 Doodlebit, Tempest, and others), each with its own artwork. The theme also sets the colour of selected
 text, and each interface theme names the card themes that go with it, so a card
 with no theme of its own follows whichever interface theme it is shown under.
+A card made from other material (scanned files, web pages, other cards) lists
+those sources on one line under its title; tapping one opens it, and "All"
+shows each with its note. A focused card (Focus card) gets the whole window:
+the top bar and tabs step aside, the message box stays, and a button at the
+right returns to the split.
 Turning a card over also offers to copy its original text, or for a photo the
 image itself, and to print the card on its own (the printed page ends with the
 box and the card's path, and, if you tick a box beside Print, a QR code of the
@@ -77,9 +85,18 @@ are making, as distinct from the notes and agent remarks around it. The card
 shows that region as its own block with an Edit button and a Copy button. Edit
 opens a text editor on the region only. It saves to disk as you type without
 making a commit, folds in changes the agent makes to the region at the same
-time, and commits when you press Save. Inside a composition the text is yours
+time, and commits when you press Commit. Inside a composition the text is yours
 by default; anything the agent adds there carries a mark that says it is the
-agent's. A long document, one with four or more headings, gets a
+agent's. An Accept button (or Ctrl or Cmd with Shift and Enter) turns the
+agent's words at your selection into your own. A marks menu in the editor's
+header lists every open mark, with actions to remove all notes, keep all
+checked words, or accept all the agent's words (with a warning, because that
+changes whose words they are); each of those is its own commit. Copy gives a
+publishing copy: the agent's words go out as plain text and stay marked in the
+box. If a gap or a note is still open, Copy instead says what is left and how to
+clear each one, so nothing publishes with a hole in it. A "Copy draft with
+marks" option gives another reader a copy that labels the agent's words. A long
+document, one with four or more headings, gets a
 Contents button that lists them and jumps to one. A code block in a card or
 chat has a Copy button, which is how a message the agent drafted for you gets
 into another app. A search result for a section opens the card at that section. When you have more than twenty landmarks, the landmark menu
@@ -111,9 +128,10 @@ some other links still go through the older Browse address, and following one
 still works. A scanned photo's rotation comes from a second check that picks
 the upright copy; if that check fails, the first guess is kept and the page is
 flagged for review, so a photo can occasionally still come out turned. The
-composition editor has had no pass on a phone or in dark mode, and Save commits
-the whole card, so the agent's uncommitted edits outside the composition go
-into the same commit. The web browser was built on 2026-10-30 and is only partly proven: its
+composition editor has had no pass on a phone or in dark mode, and Commit
+commits the whole card, so the agent's uncommitted edits outside the composition
+go into the same commit, labelled as the person's button press, not as the
+agent's work (the project's plan leaves this as the boxholder's open decision). The web browser was built on 2026-10-30 and is only partly proven: its
 install on the maintainer's server had not run when it landed, memory during a
 real agent turn was not measured, and the log-in-then-agent-continues walk is
 only partly exercised. A box has a browser only where a Chrome can be found; the

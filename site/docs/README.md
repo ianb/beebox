@@ -111,7 +111,9 @@ the ones that bear on what the person is asking and open the pages named.
   itself came to be. ([how it works](07-how-it-works.md),
   [durability and provenance](design/durability-and-provenance.md))
 - **Your words, kept distinct from the agent's.** What the person said is kept
-  as they said it; what the agent inferred is marked as the agent's.
+  as they said it; what the agent inferred is marked as the agent's. In a
+  piece the person is writing, the agent's words stay marked until the person
+  accepts them, and publishing a copy never requires accepting them.
   ([provenance](capabilities/provenance.md),
   [enriched markdown](concepts/enriched-markdown.md))
 - **Cards: typed records that are also containers.** A card is a file named
@@ -124,7 +126,10 @@ the ones that bear on what the person is asking and open the pages named.
 - **It extends itself.** How a kind of card is displayed, what kinds exist,
   what runs on a schedule: the agent can build those inside the box, and read
   them to understand how the box works. Recipes and courses are the first
-  bundled add-ons a box switches on, but there are only two.
+  bundled add-ons a box switches on, but there are only two. The agent can
+  also build interactive figures and small watchers that notice when the
+  person is stuck; that code runs with the person's session and nothing
+  isolates it from the rest of the box yet.
   ([making it yours](13-making-it-yours.md), [views](capabilities/views.md),
   [procedures](capabilities/procedures.md))
 - **Expressive capture.** A way in suited to each kind of thing, and the
@@ -143,8 +148,10 @@ the ones that bear on what the person is asking and open the pages named.
   ([questions](capabilities/questions.md), [triage](capabilities/triage.md),
   [how the box is taught](design/teaching.md))
 - **Groups get a box each.** Everyone in a box shares everything in it, and a
-  different group gets a different box; primitive, and it works.
-  ([who it is for](04-who-it-is-for.md),
+  different group gets a different box; primitive, and it works. Members in
+  the same chat see each other and can start a voice call, new and not yet tried
+  on a real iPhone.
+  ([chat](capabilities/chat.md), [who it is for](04-who-it-is-for.md),
   [identity](design/identity.md))
 - **Open, so it can be understood.** Source-available for the same reason the
   history is readable, and the process the agents work from is in the
