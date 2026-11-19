@@ -56,7 +56,8 @@ that click (the browser requires a click). The size shows before the click.
   box's provider).
 - The browser loses support while chosen: the row stays, checked, with "Not
   available in this browser", so the person sees why and can pick a box
-  service. Hiding it would leave no row checked and no reason.
+  service. The row is disabled, since a click there does nothing. Hiding it
+  would leave no row checked and no reason.
 
 ## Smallest fix and budget
 

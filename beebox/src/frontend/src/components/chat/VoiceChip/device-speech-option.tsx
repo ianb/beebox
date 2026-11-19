@@ -69,7 +69,7 @@ export function DeviceSpeechOption({ chosen }: { chosen: boolean }) {
   };
 
   return (
-    <MenuItem id="bbx-voice-live-device" onClick={choose} keepOpen>
+    <MenuItem id="bbx-voice-live-device" onClick={choose} keepOpen disabled={availability === "unavailable"}>
       <span>
         {chosen ? "✓ " : "  "}{DEVICE_OPTION_LABEL}
         {availability !== null && <span className="block pl-4 text-xs text-warm-700">{optionNote(availability, chosen)}</span>}
