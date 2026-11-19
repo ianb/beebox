@@ -42,7 +42,11 @@ phone, not a bolt-on to typing.
 - On the phone, speech recognition runs on the device itself. On iOS 26 the
   high-quality pass over the recording can run there too, so the recording is
   not sent to the box for transcription (it still goes to the box when you ask
-  for speakers to be told apart).
+  for speakers to be told apart). Speakers are numbered in the order they
+  first speak. A recording sent to the Mistral service (Voxtral) comes back as
+  one transcript for up to an hour; other services still transcribe in
+  five-minute pieces, so on those a long recording can name the same person
+  differently in each part.
 - Your exact spoken words are kept as a quote when the agent turns them into
   a card or note, not smoothed into the agent's own phrasing. See
   [provenance.md](provenance.md).

@@ -131,11 +131,16 @@ verbatim, summarized, inferred. Spoken words kept as a quote when a memo
 becomes a record. Personality beliefs carrying `source: user-stated` or
 `inferred`. A document card can mark one region as a composition, the piece the
 person is writing: text inside it is the person's by default, and the agent's
-contributions carry a mark.
+contributions carry a mark. The person turns agent words into their own with
+Accept (one selection, or all of them, each a separate commit). Copy for
+publishing sends the agent's words out as plain text and leaves them marked in
+the box, and refuses to copy while a gap or note is open; it never asks the
+person to accept agent words to get past it, a choice the boxholder made so
+publishing does not teach people to launder the agent's text.
 
 **Where it is thin.** The design docs call full provenance an aspiration and
 these the partial attempts. Naming the speaker is an agent convention that
-the system does not enforce. The composition editor's Save commits the whole
+the system does not enforce. The composition editor's Commit button (renamed from Save on 2026-11-16) commits the whole
 card, so the agent's uncommitted edits outside the region go into the person's
 commit under a trailer that names the button press, not the content (the
 plan records this as the boxholder's open decision).
@@ -194,7 +199,11 @@ guides, and a personality the agent reads before acting. Plugins, added
 October 2026: bundled typed libraries (recipes, courses) that a box turns on by
 naming them in its configuration and writing small stub files, the same files
 a box-local type or view would be. A card type can declare its own body tags,
-valid only in that type.
+valid only in that type. Figures, animated or interactive graphics the agent
+writes, draw in the browser on WebGPU, and the agent can render one without a
+screen and look at it. Activity triggers (November 2026) let the agent write a
+small watcher that reads what the person does in a view or figure and speaks up
+when they are stuck or done.
 
 **Where it is thin.** Building these is agent work with real capability, so
 the quality is the agent's. Nothing gates a badly-built view, but the agent
@@ -202,7 +211,13 @@ can now look at its own work: `bbx view check` renders each card type and
 prints advice for patterns the views guide forbids, and the box browser opens
 the box's own pages as the agent and screenshots a card (November 2026). Both
 are checks the agent runs, not gates, and the browser check is partly
-unexercised on a deployed box. There are two
+unexercised on a deployed box. Views and figures run in the app's own page with
+the person's session and nothing isolates them from the rest of the box; the
+security review accepted that on 2026-11-13 and marks it a high priority to
+revisit, so agent-written code is the one place the extensibility theme and the
+safety page pull against each other. A figure needs WebGPU and says so on a
+device without it, and the drawing library changed shape twice that month, so
+older figures can show "being updated" until rewritten. There are two
 plugins, both written by the project; the stated position is no registry and
 no marketplace. Recipes and courses stopped being on by default when they
 became plugins, and activation is a manual, agent-run step that no one has
@@ -235,7 +250,11 @@ path: the box screen, which the iPhone app opens on,
 has one text box, a routing model sends the thought to the fitting
 conversation, and an unclear thought waits for the person to choose.
 
-**Where it is thin.** Telling speakers apart in a recording is not solved.
+**Where it is thin.** Telling speakers apart in a recording is only partly
+solved: speakers are numbered by first appearance, and a Voxtral recording up to
+an hour comes back as one transcript, but other transcription services still cut
+at five minutes and can rename a person in each piece, and the same speaker
+across separate recordings is not tracked.
 Several capture paths are code-verified rather
 than exercised end to end; the Siri, voice-note control, and share paths have
 passed simulator and automated tests, and the project's plan lists the
@@ -304,14 +323,19 @@ different box. This is primitive, and it works.
 
 **How it is expressed.** Member invites and passwords, an allowed-users
 list, one hub running many boxes on one machine, the web chat
-as the shared surface, a calendar and lists everyone sees. The identity
+as the shared surface, a calendar and lists everyone sees. A chat several
+members have open shows their pictures, with a typing or dictating badge, and
+can start a voice call (up to three people, optional video, transcription on
+request that lands in the chat as one entry). The identity
 design ruling: shared boxes, one sharing granularity each.
 
 **Where it is thin.** In the maintainer's own server pipeline (not a supported
 install path) each box now runs as its own OS user behind a service sandbox, but
 the security overview still says boxes share a user; the sharing granularity
 inside a box is unchanged. No per-person areas or permissions inside a box;
-per-member identity beyond the login list is not designed yet; the household narrative describes an aspiration in places.
+per-member identity beyond the login list is not designed yet; calls are new
+(2026-11-12), have not run on a real iPhone, and need a direct path or a relay
+the host provides; the household narrative describes an aspiration in places.
 
 **Pages.** `04-who-it-is-for.md`, `design/identity.md`, `architecture/01-what-is-this.md`.
 
